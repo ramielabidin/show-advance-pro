@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import ShowCard from "@/components/ShowCard";
 import CreateShowDialog from "@/components/CreateShowDialog";
 import PasteAdvanceDialog from "@/components/PasteAdvanceDialog";
+import BulkUploadDialog from "@/components/BulkUploadDialog";
 import EmptyState from "@/components/EmptyState";
 
 export default function ShowsPage() {
