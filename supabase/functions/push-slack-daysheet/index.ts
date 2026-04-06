@@ -200,7 +200,9 @@ serve(async (req) => {
       );
     }
 
-    const message = formatDaySheet(show);
+    const allSections = ["contact","venue","departure","schedule","band","venueDetails","dealTerms","production","projections","parking","loadIn","greenRoom","guestList","wifi","settlement","hotel","travel","additional"];
+    const sections = new Set<string>(Array.isArray(sectionsArr) ? sectionsArr : allSections);
+    const message = formatDaySheet(show, sections);
 
     const slackRes = await fetch(webhookUrl, {
       method: "POST",
