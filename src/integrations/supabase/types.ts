@@ -14,7 +14,188 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      schedule_entries: {
+        Row: {
+          id: string
+          is_band: boolean
+          label: string
+          show_id: string
+          sort_order: number
+          time: string
+        }
+        Insert: {
+          id?: string
+          is_band?: boolean
+          label: string
+          show_id: string
+          sort_order?: number
+          time: string
+        }
+        Update: {
+          id?: string
+          is_band?: boolean
+          label?: string
+          show_id?: string
+          sort_order?: number
+          time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_entries_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      show_party_members: {
+        Row: {
+          id: string
+          member_id: string
+          show_id: string
+        }
+        Insert: {
+          id?: string
+          member_id: string
+          show_id: string
+        }
+        Update: {
+          id?: string
+          member_id?: string
+          show_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "show_party_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "touring_party_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "show_party_members_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shows: {
+        Row: {
+          additional_info: string | null
+          city: string
+          created_at: string
+          date: string
+          departure_location: string | null
+          departure_time: string | null
+          dos_contact_name: string | null
+          dos_contact_phone: string | null
+          green_room_info: string | null
+          guest_list_details: string | null
+          hotel_address: string | null
+          hotel_checkin: string | null
+          hotel_checkout: string | null
+          hotel_confirmation: string | null
+          hotel_name: string | null
+          id: string
+          is_reviewed: boolean
+          load_in_details: string | null
+          parking_notes: string | null
+          settlement_guarantee: string | null
+          settlement_method: string | null
+          travel_notes: string | null
+          updated_at: string
+          venue_address: string | null
+          venue_name: string
+          wifi_network: string | null
+          wifi_password: string | null
+        }
+        Insert: {
+          additional_info?: string | null
+          city: string
+          created_at?: string
+          date: string
+          departure_location?: string | null
+          departure_time?: string | null
+          dos_contact_name?: string | null
+          dos_contact_phone?: string | null
+          green_room_info?: string | null
+          guest_list_details?: string | null
+          hotel_address?: string | null
+          hotel_checkin?: string | null
+          hotel_checkout?: string | null
+          hotel_confirmation?: string | null
+          hotel_name?: string | null
+          id?: string
+          is_reviewed?: boolean
+          load_in_details?: string | null
+          parking_notes?: string | null
+          settlement_guarantee?: string | null
+          settlement_method?: string | null
+          travel_notes?: string | null
+          updated_at?: string
+          venue_address?: string | null
+          venue_name: string
+          wifi_network?: string | null
+          wifi_password?: string | null
+        }
+        Update: {
+          additional_info?: string | null
+          city?: string
+          created_at?: string
+          date?: string
+          departure_location?: string | null
+          departure_time?: string | null
+          dos_contact_name?: string | null
+          dos_contact_phone?: string | null
+          green_room_info?: string | null
+          guest_list_details?: string | null
+          hotel_address?: string | null
+          hotel_checkin?: string | null
+          hotel_checkout?: string | null
+          hotel_confirmation?: string | null
+          hotel_name?: string | null
+          id?: string
+          is_reviewed?: boolean
+          load_in_details?: string | null
+          parking_notes?: string | null
+          settlement_guarantee?: string | null
+          settlement_method?: string | null
+          travel_notes?: string | null
+          updated_at?: string
+          venue_address?: string | null
+          venue_name?: string
+          wifi_network?: string | null
+          wifi_password?: string | null
+        }
+        Relationships: []
+      }
+      touring_party_members: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string
+          id?: string
+          name: string
+          phone?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
