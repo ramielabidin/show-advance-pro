@@ -41,6 +41,18 @@ export interface Show {
   travel_notes: string | null;
   additional_info: string | null;
   tour_id: string | null;
+  venue_capacity: string | null;
+  ticket_price: string | null;
+  age_restriction: string | null;
+  guarantee: string | null;
+  backend_deal: string | null;
+  hospitality: string | null;
+  support_act: string | null;
+  support_pay: string | null;
+  merch_split: string | null;
+  walkout_potential: string | null;
+  net_gross: string | null;
+  artist_comps: string | null;
   is_reviewed: boolean;
   created_at: string;
   updated_at: string;

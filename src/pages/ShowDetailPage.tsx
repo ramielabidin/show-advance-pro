@@ -290,6 +290,38 @@ export default function ShowDetailPage() {
 
         <Separator />
 
+        <FieldGroup title="Venue Info">
+          {editField("venue_capacity", "Capacity")}
+          {editField("ticket_price", "Ticket Price", { mono: true })}
+          {editField("age_restriction", "Age Restriction")}
+        </FieldGroup>
+
+        <Separator />
+
+        <FieldGroup title="Deal Terms">
+          {editField("guarantee", "Guarantee", { mono: true })}
+          {editField("backend_deal", "Backend Deal")}
+        </FieldGroup>
+
+        <Separator />
+
+        <FieldGroup title="Production & Logistics">
+          {editField("hospitality", "Hospitality", { multiline: true })}
+          {editField("support_act", "Support Act")}
+          {editField("support_pay", "Support Pay", { mono: true })}
+          {editField("merch_split", "Merch Split")}
+        </FieldGroup>
+
+        <Separator />
+
+        <FieldGroup title="Projections & Comps">
+          {editField("walkout_potential", "Walkout Potential", { mono: true })}
+          {editField("net_gross", "Net Gross", { mono: true })}
+          {editField("artist_comps", "Artist Comps")}
+        </FieldGroup>
+
+        <Separator />
+
         <FieldGroup title="Venue Details">
           {editField("parking_notes", "Parking", { multiline: true })}
           {editField("load_in_details", "Load In", { multiline: true })}

@@ -41,7 +41,37 @@ const TEMPLATE_COLUMNS = [
   "hotel_name",
   "hotel_address",
   "tour_name",
+  "venue_capacity",
+  "ticket_price",
+  "age_restriction",
+  "guarantee",
+  "backend_deal",
+  "hospitality",
+  "support_act",
+  "support_pay",
+  "merch_split",
+  "walkout_potential",
+  "net_gross",
+  "artist_comps",
 ];
+
+// Map CSV header slugs (after transformHeader) to DB column names
+const CSV_COLUMN_MAP: Record<string, string> = {
+  cap: "venue_capacity",
+  venue_capacity: "venue_capacity",
+  ticket_price: "ticket_price",
+  age: "age_restriction",
+  age_restriction: "age_restriction",
+  guarantee: "guarantee",
+  backend_deal: "backend_deal",
+  hospitality: "hospitality",
+  support_act: "support_act",
+  support_pay: "support_pay",
+  merch_split: "merch_split",
+  walkout_potential: "walkout_potential",
+  net_gross: "net_gross",
+  artist_comps: "artist_comps",
+};
 
 const REQUIRED = ["date", "venue_name", "city"] as const;
 
@@ -148,6 +178,14 @@ export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: st
         const tourName = r.data.tour_name?.trim();
         const tourFallbackId = selectedTourId !== "none" ? selectedTourId : null;
         const tour_id = tourName ? tourNameMap.get(tourName.toLowerCase()) ?? tourFallbackId : tourFallbackId;
+
+        // Map extra CSV columns to DB columns
+        const extras: Record<string, string | null> = {};
+        for (const [csvKey, dbCol] of Object.entries(CSV_COLUMN_MAP)) {
+          const val = r.data[csvKey]?.trim();
+          if (val) extras[dbCol] = val;
+        }
+
         return {
           date: r.data.date.trim(),
           venue_name: r.data.venue_name.trim(),
@@ -158,6 +196,7 @@ export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: st
           hotel_name: r.data.hotel_name?.trim() || null,
           hotel_address: r.data.hotel_address?.trim() || null,
           tour_id,
+          ...extras,
         };
       });
 
