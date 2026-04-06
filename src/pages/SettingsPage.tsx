@@ -77,6 +77,23 @@ export default function SettingsPage() {
     enabled: !!teamId,
   });
 
+  // Fetch emails for team members
+  const { data: emailMap = {} } = useQuery({
+    queryKey: ["team-member-emails", teamId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_team_member_emails", {
+        _team_id: teamId!,
+      });
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data ?? []).forEach((r: { user_id: string; email: string }) => {
+        map[r.user_id] = r.email;
+      });
+      return map;
+    },
+    enabled: !!teamId,
+  });
+
   // Pending invites
   const { data: invites = [] } = useQuery({
     queryKey: ["team-invites", teamId],
