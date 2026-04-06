@@ -25,6 +25,7 @@ import ExportPdfDialog from "@/components/ExportPdfDialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Show } from "@/lib/types";
+import RevenueSimulator, { parseDollar } from "@/components/RevenueSimulator";
 
 export default function ShowDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -316,6 +317,25 @@ export default function ShowDetailPage() {
             </FieldGroup>
           </>
         )}
+
+        {!editing && (() => {
+          const wp = parseDollar(show.walkout_potential);
+          if (wp === null) return null;
+          const g = parseDollar(show.guarantee) ?? 0;
+          const cap = show.venue_capacity ? parseInt(show.venue_capacity.replace(/[^0-9]/g, ""), 10) : null;
+          return (
+            <>
+              <Separator />
+              <FieldGroup title="Revenue Simulator">
+                <RevenueSimulator
+                  guarantee={g}
+                  walkoutPotential={wp}
+                  venueCapacity={isNaN(cap as number) ? null : cap}
+                />
+              </FieldGroup>
+            </>
+          );
+        })()}
 
         {(editing || show.hospitality || show.support_act || show.support_pay || show.merch_split) && (
           <>

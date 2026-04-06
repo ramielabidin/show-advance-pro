@@ -21,6 +21,7 @@ import ShowCard from "@/components/ShowCard";
 import CreateShowDialog from "@/components/CreateShowDialog";
 import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState";
+import TourRevenueSimulator from "@/components/TourRevenueSimulator";
 
 export default function TourDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -201,6 +202,12 @@ export default function TourDetailPage() {
 
       {!editing && tour.notes && (
         <p className="text-sm text-muted-foreground mb-6">{tour.notes}</p>
+      )}
+
+      {!editing && sortedShows.length > 0 && (
+        <div className="mb-6">
+          <TourRevenueSimulator shows={sortedShows} />
+        </div>
       )}
 
       <Separator className="mb-6" />
