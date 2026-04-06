@@ -19,6 +19,7 @@ import {
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
 import SlackPushDialog from "@/components/SlackPushDialog";
+import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Show } from "@/lib/types";
@@ -158,6 +159,14 @@ export default function ShowDetailPage() {
           ) : (
             <>
               <SlackPushDialog showId={id!} />
+              <ParseAdvanceForShowDialog
+                showId={id!}
+                currentShow={show as Show}
+                onUpdated={() => {
+                  queryClient.invalidateQueries({ queryKey: ["show", id] });
+                  queryClient.invalidateQueries({ queryKey: ["shows"] });
+                }}
+              />
               <Button variant="outline" size="sm" onClick={startEdit}>
                 <Edit className="h-4 w-4 mr-1" /> Edit
               </Button>
