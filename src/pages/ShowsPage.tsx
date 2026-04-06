@@ -42,7 +42,7 @@ export default function ShowsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <PasteAdvanceDialog onParsed={() => {}} />
+          <PasteAdvanceDialog />
           <CreateShowDialog />
         </div>
       </div>
