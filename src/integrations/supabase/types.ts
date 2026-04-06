@@ -105,6 +105,7 @@ export type Database = {
           parking_notes: string | null
           settlement_guarantee: string | null
           settlement_method: string | null
+          tour_id: string | null
           travel_notes: string | null
           updated_at: string
           venue_address: string | null
@@ -134,6 +135,7 @@ export type Database = {
           parking_notes?: string | null
           settlement_guarantee?: string | null
           settlement_method?: string | null
+          tour_id?: string | null
           travel_notes?: string | null
           updated_at?: string
           venue_address?: string | null
@@ -163,6 +165,7 @@ export type Database = {
           parking_notes?: string | null
           settlement_guarantee?: string | null
           settlement_method?: string | null
+          tour_id?: string | null
           travel_notes?: string | null
           updated_at?: string
           venue_address?: string | null
@@ -170,7 +173,15 @@ export type Database = {
           wifi_network?: string | null
           wifi_password?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shows_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       touring_party_members: {
         Row: {
@@ -193,6 +204,36 @@ export type Database = {
           id?: string
           name?: string
           phone?: string
+        }
+        Relationships: []
+      }
+      tours: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          name: string
+          notes: string | null
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          start_date?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
