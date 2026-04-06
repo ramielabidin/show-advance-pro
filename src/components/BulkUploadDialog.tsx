@@ -251,6 +251,7 @@ export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: st
     onSuccess: (count) => {
       toast.success(`Imported ${count} show${count !== 1 ? "s" : ""}`);
       queryClient.invalidateQueries({ queryKey: ["shows"] });
+      queryClient.invalidateQueries({ queryKey: ["tours"] });
       setRows([]);
       setFileName("");
       setOpen(false);
