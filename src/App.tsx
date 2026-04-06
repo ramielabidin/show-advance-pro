@@ -9,6 +9,7 @@ import ShowDetailPage from "@/pages/ShowDetailPage";
 import ToursPage from "@/pages/ToursPage";
 import TourDetailPage from "@/pages/TourDetailPage";
 import TouringPartyPage from "@/pages/TouringPartyPage";
+import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/tours" element={<ToursPage />} />
             <Route path="/tours/:id" element={<TourDetailPage />} />
             <Route path="/party" element={<TouringPartyPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
