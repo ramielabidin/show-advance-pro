@@ -159,6 +159,14 @@ export default function ShowDetailPage() {
           ) : (
             <>
               <SlackPushDialog showId={id!} />
+              <ParseAdvanceForShowDialog
+                showId={id!}
+                currentShow={show as Show}
+                onUpdated={() => {
+                  queryClient.invalidateQueries({ queryKey: ["show", id] });
+                  queryClient.invalidateQueries({ queryKey: ["shows"] });
+                }}
+              />
               <Button variant="outline" size="sm" onClick={startEdit}>
                 <Edit className="h-4 w-4 mr-1" /> Edit
               </Button>
