@@ -209,6 +209,7 @@ export default function TourDetailPage() {
         <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Shows</h2>
         <div className="flex items-center gap-2">
           <CreateShowDialog defaultTourId={id} />
+          <BulkUploadDialog defaultTourId={id} />
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAddingShow(!addingShow)}>
             <Plus className="h-4 w-4" />
             Link Existing
