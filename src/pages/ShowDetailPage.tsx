@@ -19,6 +19,7 @@ import {
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
 import SlackPushDialog from "@/components/SlackPushDialog";
+import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Show } from "@/lib/types";
