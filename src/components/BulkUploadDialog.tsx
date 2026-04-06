@@ -3,6 +3,7 @@ import Papa from "papaparse";
 import { Upload, Download, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTeam } from "@/components/TeamProvider";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -131,6 +132,7 @@ export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: st
   const [selectedTourId, setSelectedTourId] = useState(defaultTourId ?? "none");
   const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const { teamId } = useTeam();
 
   const { data: tours = [] } = useQuery({
     queryKey: ["tours"],
