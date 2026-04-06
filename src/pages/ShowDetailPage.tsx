@@ -160,6 +160,7 @@ export default function ShowDetailPage() {
           ) : (
             <>
               <SlackPushDialog showId={id!} />
+              <ExportPdfDialog show={show as Show} />
               <ParseAdvanceForShowDialog
                 showId={id!}
                 currentShow={show as Show}
