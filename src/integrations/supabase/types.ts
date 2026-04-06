@@ -106,6 +106,9 @@ export type Database = {
       shows: {
         Row: {
           additional_info: string | null
+          age_restriction: string | null
+          artist_comps: string | null
+          backend_deal: string | null
           city: string
           created_at: string
           date: string
@@ -114,7 +117,9 @@ export type Database = {
           dos_contact_name: string | null
           dos_contact_phone: string | null
           green_room_info: string | null
+          guarantee: string | null
           guest_list_details: string | null
+          hospitality: string | null
           hotel_address: string | null
           hotel_checkin: string | null
           hotel_checkout: string | null
@@ -123,19 +128,29 @@ export type Database = {
           id: string
           is_reviewed: boolean
           load_in_details: string | null
+          merch_split: string | null
+          net_gross: string | null
           parking_notes: string | null
           settlement_guarantee: string | null
           settlement_method: string | null
+          support_act: string | null
+          support_pay: string | null
+          ticket_price: string | null
           tour_id: string | null
           travel_notes: string | null
           updated_at: string
           venue_address: string | null
+          venue_capacity: string | null
           venue_name: string
+          walkout_potential: string | null
           wifi_network: string | null
           wifi_password: string | null
         }
         Insert: {
           additional_info?: string | null
+          age_restriction?: string | null
+          artist_comps?: string | null
+          backend_deal?: string | null
           city: string
           created_at?: string
           date: string
@@ -144,7 +159,9 @@ export type Database = {
           dos_contact_name?: string | null
           dos_contact_phone?: string | null
           green_room_info?: string | null
+          guarantee?: string | null
           guest_list_details?: string | null
+          hospitality?: string | null
           hotel_address?: string | null
           hotel_checkin?: string | null
           hotel_checkout?: string | null
@@ -153,19 +170,29 @@ export type Database = {
           id?: string
           is_reviewed?: boolean
           load_in_details?: string | null
+          merch_split?: string | null
+          net_gross?: string | null
           parking_notes?: string | null
           settlement_guarantee?: string | null
           settlement_method?: string | null
+          support_act?: string | null
+          support_pay?: string | null
+          ticket_price?: string | null
           tour_id?: string | null
           travel_notes?: string | null
           updated_at?: string
           venue_address?: string | null
+          venue_capacity?: string | null
           venue_name: string
+          walkout_potential?: string | null
           wifi_network?: string | null
           wifi_password?: string | null
         }
         Update: {
           additional_info?: string | null
+          age_restriction?: string | null
+          artist_comps?: string | null
+          backend_deal?: string | null
           city?: string
           created_at?: string
           date?: string
@@ -174,7 +201,9 @@ export type Database = {
           dos_contact_name?: string | null
           dos_contact_phone?: string | null
           green_room_info?: string | null
+          guarantee?: string | null
           guest_list_details?: string | null
+          hospitality?: string | null
           hotel_address?: string | null
           hotel_checkin?: string | null
           hotel_checkout?: string | null
@@ -183,14 +212,21 @@ export type Database = {
           id?: string
           is_reviewed?: boolean
           load_in_details?: string | null
+          merch_split?: string | null
+          net_gross?: string | null
           parking_notes?: string | null
           settlement_guarantee?: string | null
           settlement_method?: string | null
+          support_act?: string | null
+          support_pay?: string | null
+          ticket_price?: string | null
           tour_id?: string | null
           travel_notes?: string | null
           updated_at?: string
           venue_address?: string | null
+          venue_capacity?: string | null
           venue_name?: string
+          walkout_potential?: string | null
           wifi_network?: string | null
           wifi_password?: string | null
         }
