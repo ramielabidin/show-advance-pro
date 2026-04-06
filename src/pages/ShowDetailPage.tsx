@@ -62,7 +62,7 @@ export default function ShowDetailPage() {
 
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<Show>) => {
-      const { schedule_entries, show_party_members, ...showUpdates } = updates as any;
+      const { schedule_entries, show_party_members, tours, ...showUpdates } = updates as any;
       const { error } = await supabase.from("shows").update(showUpdates).eq("id", id!);
       if (error) throw error;
     },
