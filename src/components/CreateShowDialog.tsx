@@ -20,6 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useTeam } from "@/components/TeamProvider";
 import { toast } from "sonner";
 
 interface CreateShowDialogProps {
@@ -34,6 +35,7 @@ export default function CreateShowDialog({ defaultTourId }: CreateShowDialogProp
   const [date, setDate] = useState("");
   const [tourId, setTourId] = useState(defaultTourId ?? "none");
   const navigate = useNavigate();
+  const { teamId } = useTeam();
 
   const { data: tours = [] } = useQuery({
     queryKey: ["tours"],
@@ -59,6 +61,7 @@ export default function CreateShowDialog({ defaultTourId }: CreateShowDialogProp
         date,
         is_reviewed: true,
         tour_id: tourId === "none" ? null : tourId,
+        team_id: teamId,
       })
       .select()
       .single();
