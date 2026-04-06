@@ -44,21 +44,22 @@ function CreateTeamScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { data: team, error } = await supabase
+      const teamId = crypto.randomUUID();
+
+      const { error } = await supabase
         .from("teams")
-        .insert({ name: name.trim(), created_by: user.id })
-        .select()
-        .single();
+        .insert({ id: teamId, name: name.trim(), created_by: user.id });
       if (error) throw error;
 
       // Add self as owner
       const { error: memberError } = await supabase
         .from("team_members")
-        .insert({ team_id: team.id, user_id: user.id, role: "owner" });
+        .insert({ team_id: teamId, user_id: user.id, role: "owner" });
       if (memberError) throw memberError;
 
       // Create app_settings row for this team
-      await supabase.from("app_settings").insert({ team_id: team.id });
+      const { error: settingsError } = await supabase.from("app_settings").insert({ team_id: teamId });
+      if (settingsError) throw settingsError;
 
       queryClient.invalidateQueries({ queryKey: ["user-teams"] });
       toast.success("Team created!");
