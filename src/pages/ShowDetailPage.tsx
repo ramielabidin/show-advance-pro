@@ -15,6 +15,31 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Show } from "@/lib/types";
 
+function SlackPushButton({ showId }: { showId: string }) {
+  const [pushing, setPushing] = useState(false);
+  const handlePush = async () => {
+    setPushing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("push-slack-daysheet", {
+        body: { showId },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast.success("Day sheet pushed to Slack!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to push to Slack");
+    } finally {
+      setPushing(false);
+    }
+  };
+  return (
+    <Button variant="outline" size="sm" onClick={handlePush} disabled={pushing} className="gap-1.5">
+      {pushing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+      Slack
+    </Button>
+  );
+}
+
 export default function ShowDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
