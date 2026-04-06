@@ -171,8 +171,8 @@ export default function SettingsPage() {
           {members.map((m) => (
             <div key={m.id} className="flex items-center justify-between rounded-md border px-3 py-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-foreground font-mono">
-                  {m.user_id === session?.user.id ? "You" : m.user_id.slice(0, 8) + "…"}
+                <span className="text-sm text-foreground">
+                  {m.user_id === session?.user.id ? "You" : (emailMap[m.user_id] || m.user_id.slice(0, 8) + "…")}
                 </span>
                 {m.role === "owner" && (
                   <Crown className="h-3.5 w-3.5 text-amber-500" />
