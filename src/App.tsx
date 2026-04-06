@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
+import { TeamProvider } from "@/components/TeamProvider";
 import AppLayout from "@/components/AppLayout";
 import AuthPage from "@/pages/AuthPage";
 import ShowsPage from "@/pages/ShowsPage";
@@ -32,17 +33,19 @@ function ProtectedRoutes() {
   }
 
   return (
-    <Routes>
-      <Route element={<AppLayout />}>
-        <Route path="/" element={<ShowsPage />} />
-        <Route path="/shows/:id" element={<ShowDetailPage />} />
-        <Route path="/tours" element={<ToursPage />} />
-        <Route path="/tours/:id" element={<TourDetailPage />} />
-        <Route path="/party" element={<TouringPartyPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-      </Route>
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <TeamProvider>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<ShowsPage />} />
+          <Route path="/shows/:id" element={<ShowDetailPage />} />
+          <Route path="/tours" element={<ToursPage />} />
+          <Route path="/tours/:id" element={<TourDetailPage />} />
+          <Route path="/party" element={<TouringPartyPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </TeamProvider>
   );
 }
 
