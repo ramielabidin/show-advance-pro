@@ -147,21 +147,41 @@ export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: st
 
   const handleFile = useCallback((file: File) => {
     setFileName(file.name);
-    Papa.parse<ParsedRow>(file, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (h) => h.trim().toLowerCase().replace(/\s+/g, "_"),
-      complete: (results) => {
-        const normalized = results.data
-          .map(normalizeRow)
-          .filter((d) => !isJunkRow(d));
-        const validated = normalized.map((d) => ({
-          data: d,
-          errors: validateRow(d),
-        }));
-        setRows(validated);
-      },
-    });
+
+    // Read file as text first so we can skip preamble rows before the real header
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result as string;
+      if (!text) return;
+
+      // Find the header row: first line containing "date" as a field
+      const lines = text.split(/\r?\n/);
+      let headerIdx = 0;
+      for (let i = 0; i < Math.min(lines.length, 10); i++) {
+        if (lines[i].toLowerCase().split(",").some((h) => h.trim() === "date")) {
+          headerIdx = i;
+          break;
+        }
+      }
+      const trimmedCsv = lines.slice(headerIdx).join("\n");
+
+      Papa.parse<ParsedRow>(trimmedCsv, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (h) => h.trim().toLowerCase().replace(/\s+/g, "_"),
+        complete: (results) => {
+          const normalized = results.data
+            .map(normalizeRow)
+            .filter((d) => !isJunkRow(d));
+          const validated = normalized.map((d) => ({
+            data: d,
+            errors: validateRow(d),
+          }));
+          setRows(validated);
+        },
+      });
+    };
+    reader.readAsText(file);
   }, []);
 
   const onDrop = useCallback(
