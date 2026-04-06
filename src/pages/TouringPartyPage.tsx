@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Users, Plus, Pencil, Trash2, Save, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTeam } from "@/components/TeamProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ const emptyForm: MemberForm = { name: "", email: "", phone: "" };
 
 export default function TouringPartyPage() {
   const queryClient = useQueryClient();
+  const { teamId } = useTeam();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<MemberForm>(emptyForm);
@@ -43,7 +45,7 @@ export default function TouringPartyPage() {
 
   const createMutation = useMutation({
     mutationFn: async (m: MemberForm) => {
-      const { error } = await supabase.from("touring_party_members").insert(m);
+      const { error } = await supabase.from("touring_party_members").insert({ ...m, team_id: teamId });
       if (error) throw error;
     },
     onSuccess: () => {

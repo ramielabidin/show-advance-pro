@@ -3,6 +3,7 @@ import Papa from "papaparse";
 import { Upload, Download, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTeam } from "@/components/TeamProvider";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -131,6 +132,7 @@ export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: st
   const [selectedTourId, setSelectedTourId] = useState(defaultTourId ?? "none");
   const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const { teamId } = useTeam();
 
   const { data: tours = [] } = useQuery({
     queryKey: ["tours"],
@@ -209,7 +211,7 @@ export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: st
       if (newTourNames.size > 0) {
         const { data: created, error } = await supabase
           .from("tours")
-          .insert([...newTourNames].map((name) => ({ name })))
+          .insert([...newTourNames].map((name) => ({ name, team_id: teamId })))
           .select("id, name");
         if (error) throw error;
         created?.forEach((t) => tourNameMap.set(t.name.toLowerCase(), t.id));
@@ -237,6 +239,7 @@ export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: st
           hotel_name: r.data.hotel_name?.trim() || null,
           hotel_address: r.data.hotel_address?.trim() || null,
           tour_id,
+          team_id: teamId,
           ...extras,
         };
       });

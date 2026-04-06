@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { FolderOpen, Plus, ChevronRight, Calendar, MapPin } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { useTeam } from "@/components/TeamProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,7 @@ import { toast } from "sonner";
 
 export default function ToursPage() {
   const queryClient = useQueryClient();
+  const { teamId } = useTeam();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -43,6 +45,7 @@ export default function ToursPage() {
         name,
         start_date: startDate || null,
         end_date: endDate || null,
+        team_id: teamId,
       });
       if (error) throw error;
     },

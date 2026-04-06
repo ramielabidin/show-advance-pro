@@ -4,6 +4,7 @@ import { FileText, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useTeam } from "@/components/TeamProvider";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ export default function PasteAdvanceDialog() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { teamId } = useTeam();
 
   const handleParse = async () => {
     if (!text.trim()) {
@@ -93,7 +95,7 @@ export default function PasteAdvanceDialog() {
         // Create new show
         const { data: newShow, error: insertError } = await supabase
           .from("shows")
-          .insert({ ...parsed, is_reviewed: false })
+          .insert({ ...parsed, is_reviewed: false, team_id: teamId })
           .select()
           .single();
 

@@ -19,21 +19,32 @@ export type Database = {
           created_at: string
           id: string
           slack_webhook_url: string | null
+          team_id: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
           slack_webhook_url?: string | null
+          team_id?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
           slack_webhook_url?: string | null
+          team_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "app_settings_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       schedule_entries: {
         Row: {
@@ -140,6 +151,7 @@ export type Database = {
           settlement_method: string | null
           support_act: string | null
           support_pay: string | null
+          team_id: string | null
           ticket_price: string | null
           tour_id: string | null
           travel_notes: string | null
@@ -187,6 +199,7 @@ export type Database = {
           settlement_method?: string | null
           support_act?: string | null
           support_pay?: string | null
+          team_id?: string | null
           ticket_price?: string | null
           tour_id?: string | null
           travel_notes?: string | null
@@ -234,6 +247,7 @@ export type Database = {
           settlement_method?: string | null
           support_act?: string | null
           support_pay?: string | null
+          team_id?: string | null
           ticket_price?: string | null
           tour_id?: string | null
           travel_notes?: string | null
@@ -247,6 +261,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "shows_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "shows_tour_id_fkey"
             columns: ["tour_id"]
             isOneToOne: false
@@ -255,6 +276,91 @@ export type Database = {
           },
         ]
       }
+      team_invites: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          invited_by: string
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          invited_by: string
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invites_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_members: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["team_role"]
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["team_role"]
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["team_role"]
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       touring_party_members: {
         Row: {
           created_at: string
@@ -262,6 +368,7 @@ export type Database = {
           id: string
           name: string
           phone: string
+          team_id: string | null
         }
         Insert: {
           created_at?: string
@@ -269,6 +376,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string
+          team_id?: string | null
         }
         Update: {
           created_at?: string
@@ -276,8 +384,17 @@ export type Database = {
           id?: string
           name?: string
           phone?: string
+          team_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "touring_party_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tours: {
         Row: {
@@ -287,6 +404,7 @@ export type Database = {
           name: string
           notes: string | null
           start_date: string | null
+          team_id: string | null
           updated_at: string
         }
         Insert: {
@@ -296,6 +414,7 @@ export type Database = {
           name: string
           notes?: string | null
           start_date?: string | null
+          team_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -305,19 +424,36 @@ export type Database = {
           name?: string
           notes?: string | null
           start_date?: string | null
+          team_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tours_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_team_member: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_team_owner: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_team_ids: { Args: { _user_id: string }; Returns: string[] }
     }
     Enums: {
-      [_ in never]: never
+      team_role: "owner" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -444,6 +580,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      team_role: ["owner", "member"],
+    },
   },
 } as const
