@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Edit, Trash2, Save, X } from "lucide-react";
 import { useState } from "react";
@@ -116,6 +116,14 @@ export default function ShowDetailPage() {
           )}
           <p className="text-sm text-muted-foreground mt-0.5">
             {show.city} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
+            {(show as any).tours && (
+              <>
+                {" · "}
+                <Link to={`/tours/${(show as any).tours.id}`} className="text-foreground hover:underline">
+                  {(show as any).tours.name}
+                </Link>
+              </>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
