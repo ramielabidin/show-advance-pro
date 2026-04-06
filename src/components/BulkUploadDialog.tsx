@@ -6,6 +6,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -138,7 +146,8 @@ export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: st
 
       const showRows = validRows.map((r) => {
         const tourName = r.data.tour_name?.trim();
-        const tour_id = tourName ? tourNameMap.get(tourName.toLowerCase()) ?? null : null;
+        const tourFallbackId = selectedTourId !== "none" ? selectedTourId : null;
+        const tour_id = tourName ? tourNameMap.get(tourName.toLowerCase()) ?? tourFallbackId : tourFallbackId;
         return {
           date: r.data.date.trim(),
           venue_name: r.data.venue_name.trim(),
