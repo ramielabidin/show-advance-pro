@@ -106,6 +106,53 @@ function formatDaySheet(show: any): string {
     blocks.push("");
   }
 
+  // Band / Performance
+  if (show.set_length || show.curfew || show.changeover_time || show.backline_provided || show.catering_details) {
+    blocks.push(`🎸 *Band / Performance*`);
+    if (show.set_length) blocks.push(`    Set Length: ${show.set_length}`);
+    if (show.curfew) blocks.push(`    Curfew: ${show.curfew}`);
+    if (show.changeover_time) blocks.push(`    Changeover: ${show.changeover_time}`);
+    if (show.backline_provided) blocks.push(`    Backline: ${show.backline_provided}`);
+    if (show.catering_details) blocks.push(`    Catering: ${show.catering_details}`);
+    blocks.push("");
+  }
+
+  // Venue Details
+  if (show.venue_capacity || show.ticket_price || show.age_restriction) {
+    blocks.push(`🏟️ *Venue Details*`);
+    if (show.venue_capacity) blocks.push(`    Capacity: ${show.venue_capacity}`);
+    if (show.ticket_price) blocks.push(`    Ticket Price: ${show.ticket_price}`);
+    if (show.age_restriction) blocks.push(`    Age Restriction: ${show.age_restriction}`);
+    blocks.push("");
+  }
+
+  // Deal Terms
+  if (show.guarantee || show.backend_deal) {
+    blocks.push(`💵 *Deal Terms*`);
+    if (show.guarantee) blocks.push(`    Guarantee: ${show.guarantee}`);
+    if (show.backend_deal) blocks.push(`    Backend: ${show.backend_deal}`);
+    blocks.push("");
+  }
+
+  // Production
+  if (show.hospitality || show.support_act || show.support_pay || show.merch_split) {
+    blocks.push(`🎤 *Production*`);
+    if (show.hospitality) blocks.push(`    Hospitality: ${show.hospitality}`);
+    if (show.support_act) blocks.push(`    Support Act: ${show.support_act}`);
+    if (show.support_pay) blocks.push(`    Support Pay: ${show.support_pay}`);
+    if (show.merch_split) blocks.push(`    Merch Split: ${show.merch_split}`);
+    blocks.push("");
+  }
+
+  // Projections
+  if (show.walkout_potential || show.net_gross || show.artist_comps) {
+    blocks.push(`📊 *Projections*`);
+    if (show.walkout_potential) blocks.push(`    Walkout Potential: ${show.walkout_potential}`);
+    if (show.net_gross) blocks.push(`    Net/Gross: ${show.net_gross}`);
+    if (show.artist_comps) blocks.push(`    Artist Comps: ${show.artist_comps}`);
+    blocks.push("");
+  }
+
   // Travel
   if (show.travel_notes) {
     blocks.push(`🗺️ *Travel*`);
