@@ -1,33 +1,29 @@
 
 
-## Add Band Day-of-Show Fields to Shows
+## Fix Slack Day Sheet to Include All Show Fields
 
-Add 5 new fields to the `shows` table for information typically found in advance emails but not on booking spreadsheets.
+### Problem
+The `formatDaySheet` function in `push-slack-daysheet` was written before the 17 new columns were added (venue details, deal terms, production, projections, band/performance). It only formats the original fields — and since this CSV-imported show only has data in the newer columns (e.g. guarantee = "$500"), the Slack message shows just the header.
 
-### New columns (all nullable text)
+### Solution
+Update `formatDaySheet` in `supabase/functions/push-slack-daysheet/index.ts` to include sections for all the new field groups:
 
-| Column | Label | Purpose |
-|--------|-------|---------|
-| `set_length` | Set Length | e.g. "75 min", "60-90 min" |
-| `curfew` | Curfew | Stage/venue curfew time |
-| `backline_provided` | Backline Provided | What gear the venue supplies |
-| `catering_details` | Catering / Meals | Meal times, buyouts, rider info |
-| `changeover_time` | Changeover Time | Time between acts |
+| New Section | Fields |
+|-------------|--------|
+| **Band / Performance** | `set_length`, `curfew`, `changeover_time`, `backline_provided`, `catering_details` |
+| **Venue Details** | `venue_capacity`, `ticket_price`, `age_restriction` |
+| **Deal Terms** | `guarantee`, `backend_deal` |
+| **Production** | `hospitality`, `support_act`, `support_pay`, `merch_split` |
+| **Projections** | `walkout_potential`, `net_gross`, `artist_comps` |
+
+Each section follows the existing pattern: only render the block if at least one field in the group has a value.
 
 ### Files to change
 
 | File | Change |
 |------|--------|
-| **DB migration** | `ALTER TABLE shows ADD COLUMN` for 5 fields |
-| `src/lib/types.ts` | Add 5 optional string fields to `Show` interface |
-| `src/pages/ShowDetailPage.tsx` | Add a new "Band / Performance" FieldGroup with the 5 fields (view + edit modes) |
-| `supabase/functions/parse-advance/index.ts` | Add the 5 fields to the AI tool schema so they get extracted from advance emails automatically |
+| `supabase/functions/push-slack-daysheet/index.ts` | Add formatting blocks for all 5 new field groups in `formatDaySheet()` |
 
-### Detail page placement
-
-A new **"Band / Performance"** section will appear after the existing schedule section, containing: Set Length, Curfew, Changeover Time, Backline Provided, and Catering / Meals (multiline).
-
-### Advance email parser
-
-The `parse-advance` edge function's tool schema will include the new fields so pasting an advance email auto-populates set length, curfew, backline, catering, and changeover when mentioned.
+### No other changes needed
+The edge function already does `select("*, schedule_entries(*)")` which returns all columns including the new ones — we just need to format them.
 
