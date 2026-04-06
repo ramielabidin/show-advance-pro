@@ -262,6 +262,7 @@ serve(async (req) => {
     const { data: settings } = await supabase
       .from("app_settings")
       .select("slack_webhook_url")
+      .eq("team_id", show.team_id)
       .limit(1)
       .single();
 
