@@ -20,6 +20,7 @@ import { toast } from "sonner";
 
 export default function ToursPage() {
   const queryClient = useQueryClient();
+  const { teamId } = useTeam();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
