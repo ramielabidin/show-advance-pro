@@ -57,6 +57,7 @@ const TEMPLATE_COLUMNS = [
 
 // Map CSV header slugs (after transformHeader) to DB column names
 const CSV_COLUMN_MAP: Record<string, string> = {
+  venue: "venue_name",
   cap: "venue_capacity",
   venue_capacity: "venue_capacity",
   ticket_price: "ticket_price",
@@ -72,6 +73,23 @@ const CSV_COLUMN_MAP: Record<string, string> = {
   net_gross: "net_gross",
   artist_comps: "artist_comps",
 };
+
+/** Remap parsed row keys using CSV_COLUMN_MAP so validation/import use canonical names */
+function normalizeRow(raw: ParsedRow): ParsedRow {
+  const out: ParsedRow = {};
+  for (const [key, value] of Object.entries(raw)) {
+    const mapped = CSV_COLUMN_MAP[key] ?? key;
+    out[mapped] = value;
+  }
+  return out;
+}
+
+/** Detect preamble / junk rows that sneak in before the real header */
+function isJunkRow(row: ParsedRow): boolean {
+  const hasDate = row.date?.trim() && !isNaN(Date.parse(row.date.trim()));
+  const hasVenue = !!(row.venue_name?.trim() || row.venue?.trim());
+  return !hasDate && !hasVenue;
+}
 
 const REQUIRED = ["date", "venue_name", "city"] as const;
 
@@ -134,7 +152,10 @@ export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: st
       skipEmptyLines: true,
       transformHeader: (h) => h.trim().toLowerCase().replace(/\s+/g, "_"),
       complete: (results) => {
-        const validated = results.data.map((d) => ({
+        const normalized = results.data
+          .map(normalizeRow)
+          .filter((d) => !isJunkRow(d));
+        const validated = normalized.map((d) => ({
           data: d,
           errors: validateRow(d),
         }));
