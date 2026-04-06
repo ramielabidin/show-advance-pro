@@ -226,19 +226,25 @@ export default function ShowDetailPage() {
           {editField("city", "City")}
         </FieldGroup>
 
-        <Separator />
+        {(editing || show.dos_contact_name || show.dos_contact_phone) && (
+          <>
+            <Separator />
+            <FieldGroup title="Day of Show Contact">
+              {editField("dos_contact_name", "Name")}
+              {editField("dos_contact_phone", "Phone", { mono: true })}
+            </FieldGroup>
+          </>
+        )}
 
-        <FieldGroup title="Day of Show Contact">
-          {editField("dos_contact_name", "Name")}
-          {editField("dos_contact_phone", "Phone", { mono: true })}
-        </FieldGroup>
-
-        <Separator />
-
-        <FieldGroup title="Departure">
-          {editField("departure_time", "Time", { mono: true })}
-          {editField("departure_location", "Location")}
-        </FieldGroup>
+        {(editing || show.departure_time || show.departure_location) && (
+          <>
+            <Separator />
+            <FieldGroup title="Departure">
+              {editField("departure_time", "Time", { mono: true })}
+              {editField("departure_location", "Location")}
+            </FieldGroup>
+          </>
+        )}
 
         {scheduleEntries.length > 0 && (
           <>
@@ -264,88 +270,118 @@ export default function ShowDetailPage() {
           </>
         )}
 
-        <Separator />
+        {(editing || show.set_length || show.curfew || show.changeover_time || show.backline_provided || show.catering_details) && (
+          <>
+            <Separator />
+            <FieldGroup title="Band / Performance">
+              {editField("set_length", "Set Length")}
+              {editField("curfew", "Curfew")}
+              {editField("changeover_time", "Changeover Time")}
+              {editField("backline_provided", "Backline Provided", { multiline: true })}
+              {editField("catering_details", "Catering / Meals", { multiline: true })}
+            </FieldGroup>
+          </>
+        )}
 
-        <FieldGroup title="Band / Performance">
-          {editField("set_length", "Set Length")}
-          {editField("curfew", "Curfew")}
-          {editField("changeover_time", "Changeover Time")}
-          {editField("backline_provided", "Backline Provided", { multiline: true })}
-          {editField("catering_details", "Catering / Meals", { multiline: true })}
-        </FieldGroup>
+        {(editing || show.venue_capacity || show.ticket_price || show.age_restriction) && (
+          <>
+            <Separator />
+            <FieldGroup title="Venue Info">
+              {editField("venue_capacity", "Capacity")}
+              {editField("ticket_price", "Ticket Price", { mono: true })}
+              {editField("age_restriction", "Age Restriction")}
+            </FieldGroup>
+          </>
+        )}
 
-        <Separator />
+        {(editing || show.guarantee || show.backend_deal) && (
+          <>
+            <Separator />
+            <FieldGroup title="Deal Terms">
+              {editField("guarantee", "Guarantee", { mono: true })}
+              {editField("backend_deal", "Backend Deal")}
+            </FieldGroup>
+          </>
+        )}
 
-        <FieldGroup title="Venue Info">
-          {editField("venue_capacity", "Capacity")}
-          {editField("ticket_price", "Ticket Price", { mono: true })}
-          {editField("age_restriction", "Age Restriction")}
-        </FieldGroup>
+        {(editing || show.hospitality || show.support_act || show.support_pay || show.merch_split) && (
+          <>
+            <Separator />
+            <FieldGroup title="Production & Logistics">
+              {editField("hospitality", "Hospitality", { multiline: true })}
+              {editField("support_act", "Support Act")}
+              {editField("support_pay", "Support Pay", { mono: true })}
+              {editField("merch_split", "Merch Split")}
+            </FieldGroup>
+          </>
+        )}
 
-        <Separator />
+        {(editing || show.walkout_potential || show.net_gross || show.artist_comps) && (
+          <>
+            <Separator />
+            <FieldGroup title="Projections & Comps">
+              {editField("walkout_potential", "Walkout Potential", { mono: true })}
+              {editField("net_gross", "Net Gross", { mono: true })}
+              {editField("artist_comps", "Artist Comps")}
+            </FieldGroup>
+          </>
+        )}
 
-        <FieldGroup title="Deal Terms">
-          {editField("guarantee", "Guarantee", { mono: true })}
-          {editField("backend_deal", "Backend Deal")}
-        </FieldGroup>
+        {(editing || show.parking_notes || show.load_in_details || show.green_room_info || show.guest_list_details) && (
+          <>
+            <Separator />
+            <FieldGroup title="Venue Details">
+              {editField("parking_notes", "Parking", { multiline: true })}
+              {editField("load_in_details", "Load In", { multiline: true })}
+              {editField("green_room_info", "Green Room", { multiline: true })}
+              {editField("guest_list_details", "Guest List", { multiline: true })}
+            </FieldGroup>
+          </>
+        )}
 
-        <Separator />
+        {(editing || show.wifi_network || show.wifi_password) && (
+          <>
+            <Separator />
+            <FieldGroup title="WiFi">
+              {editField("wifi_network", "Network", { mono: true })}
+              {editField("wifi_password", "Password", { mono: true })}
+            </FieldGroup>
+          </>
+        )}
 
-        <FieldGroup title="Production & Logistics">
-          {editField("hospitality", "Hospitality", { multiline: true })}
-          {editField("support_act", "Support Act")}
-          {editField("support_pay", "Support Pay", { mono: true })}
-          {editField("merch_split", "Merch Split")}
-        </FieldGroup>
+        {(editing || show.settlement_method || show.settlement_guarantee) && (
+          <>
+            <Separator />
+            <FieldGroup title="Settlement">
+              {editField("settlement_method", "Method")}
+              {editField("settlement_guarantee", "Guarantee", { mono: true })}
+            </FieldGroup>
+          </>
+        )}
 
-        <Separator />
+        {(editing || show.hotel_name || show.hotel_address || show.hotel_confirmation || show.hotel_checkin || show.hotel_checkout) && (
+          <>
+            <Separator />
+            <FieldGroup title="Hotel">
+              {editField("hotel_name", "Name")}
+              {editField("hotel_address", "Address")}
+              {editField("hotel_confirmation", "Confirmation #", { mono: true })}
+              {editField("hotel_checkin", "Check In", { mono: true })}
+              {editField("hotel_checkout", "Check Out", { mono: true })}
+            </FieldGroup>
+          </>
+        )}
 
-        <FieldGroup title="Projections & Comps">
-          {editField("walkout_potential", "Walkout Potential", { mono: true })}
-          {editField("net_gross", "Net Gross", { mono: true })}
-          {editField("artist_comps", "Artist Comps")}
-        </FieldGroup>
+        {(editing || show.travel_notes) && (
+          <>
+            <Separator />
+            <FieldGroup title="Travel">
+              {editField("travel_notes", "Notes", { multiline: true })}
+            </FieldGroup>
+          </>
+        )}
 
-        <Separator />
-
-        <FieldGroup title="Venue Details">
-          {editField("parking_notes", "Parking", { multiline: true })}
-          {editField("load_in_details", "Load In", { multiline: true })}
-          {editField("green_room_info", "Green Room", { multiline: true })}
-          {editField("guest_list_details", "Guest List", { multiline: true })}
-        </FieldGroup>
-
-        <Separator />
-
-        <FieldGroup title="WiFi">
-          {editField("wifi_network", "Network", { mono: true })}
-          {editField("wifi_password", "Password", { mono: true })}
-        </FieldGroup>
-
-        <Separator />
-
-        <FieldGroup title="Settlement">
-          {editField("settlement_method", "Method")}
-          {editField("settlement_guarantee", "Guarantee", { mono: true })}
-        </FieldGroup>
-
-        <Separator />
-
-        <FieldGroup title="Hotel">
-          {editField("hotel_name", "Name")}
-          {editField("hotel_address", "Address")}
-          {editField("hotel_confirmation", "Confirmation #", { mono: true })}
-          {editField("hotel_checkin", "Check In", { mono: true })}
-          {editField("hotel_checkout", "Check Out", { mono: true })}
-        </FieldGroup>
-
-        <Separator />
-
-        <FieldGroup title="Travel">
-          {editField("travel_notes", "Notes", { multiline: true })}
-        </FieldGroup>
-
-        {(show.additional_info || editing) && (
+        {(editing || show.additional_info) && (
           <>
             <Separator />
             <FieldGroup title="Additional Info">
