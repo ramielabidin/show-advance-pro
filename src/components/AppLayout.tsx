@@ -1,5 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { Calendar, Users, FolderOpen, Settings } from "lucide-react";
+import { Calendar, Users, FolderOpen, Settings, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -39,6 +41,15 @@ export default function AppLayout() {
               ))}
             </nav>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => supabase.auth.signOut()}
+            className="text-muted-foreground hover:text-foreground gap-1.5"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </Button>
         </div>
       </header>
       <main className="container py-8">
