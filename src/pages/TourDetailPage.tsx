@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Edit, Trash2, Save, X, Plus, Calendar, MapPin } from "lucide-react";
+import BulkUploadDialog from "@/components/BulkUploadDialog";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -208,6 +209,7 @@ export default function TourDetailPage() {
         <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Shows</h2>
         <div className="flex items-center gap-2">
           <CreateShowDialog defaultTourId={id} />
+          <BulkUploadDialog defaultTourId={id} />
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAddingShow(!addingShow)}>
             <Plus className="h-4 w-4" />
             Link Existing
