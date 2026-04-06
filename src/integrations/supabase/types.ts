@@ -442,6 +442,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_team_member_emails: {
+        Args: { _team_id: string }
+        Returns: {
+          email: string
+          user_id: string
+        }[]
+      }
       is_team_member: {
         Args: { _team_id: string; _user_id: string }
         Returns: boolean

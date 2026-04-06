@@ -77,6 +77,23 @@ export default function SettingsPage() {
     enabled: !!teamId,
   });
 
+  // Fetch emails for team members
+  const { data: emailMap = {} } = useQuery({
+    queryKey: ["team-member-emails", teamId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_team_member_emails", {
+        _team_id: teamId!,
+      });
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data ?? []).forEach((r: { user_id: string; email: string }) => {
+        map[r.user_id] = r.email;
+      });
+      return map;
+    },
+    enabled: !!teamId,
+  });
+
   // Pending invites
   const { data: invites = [] } = useQuery({
     queryKey: ["team-invites", teamId],
@@ -154,8 +171,8 @@ export default function SettingsPage() {
           {members.map((m) => (
             <div key={m.id} className="flex items-center justify-between rounded-md border px-3 py-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-foreground font-mono">
-                  {m.user_id === session?.user.id ? "You" : m.user_id.slice(0, 8) + "…"}
+                <span className="text-sm text-foreground">
+                  {m.user_id === session?.user.id ? "You" : (emailMap[m.user_id] || m.user_id.slice(0, 8) + "…")}
                 </span>
                 {m.role === "owner" && (
                   <Crown className="h-3.5 w-3.5 text-amber-500" />
