@@ -1,9 +1,10 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { Calendar, Users, Settings } from "lucide-react";
+import { Calendar, Users, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/", icon: Calendar, label: "Shows" },
+  { to: "/tours", icon: FolderOpen, label: "Tours" },
   { to: "/party", icon: Users, label: "Touring Party" },
 ];
 

@@ -40,6 +40,7 @@ export interface Show {
   hotel_checkout: string | null;
   travel_notes: string | null;
   additional_info: string | null;
+  tour_id: string | null;
   is_reviewed: boolean;
   created_at: string;
   updated_at: string;
@@ -52,4 +53,15 @@ export interface ShowPartyMember {
   show_id: string;
   member_id: string;
   touring_party_members?: TouringPartyMember;
+}
+
+export interface Tour {
+  id: string;
+  name: string;
+  start_date: string | null;
+  end_date: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  shows?: Show[];
 }
