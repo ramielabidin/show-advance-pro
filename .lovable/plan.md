@@ -1,41 +1,32 @@
 
 
-## Bulk CSV Upload for Shows
+## Better Tour ↔ Show Management
 
-Add a "CSV Upload" button to the Shows page that lets you upload a spreadsheet of shows in one go.
+### What already works
+- Creating a show with a tour assignment (CreateShowDialog has tour dropdown)
+- Adding/removing standalone shows on TourDetailPage
+- CSV bulk upload with `tour_name` column
 
-### How it works
+### What to add
 
-1. Click **Import CSV** on the Shows page
-2. A dialog opens with a drag-and-drop file zone and a link to download a template CSV
-3. Upload a `.csv` file with columns like: `date`, `venue_name`, `city`, `venue_address`, `tour_name` (optional), plus any other show fields
-4. The app previews the parsed rows in a table so you can review before committing
-5. Click **Import** to bulk-insert all rows into the database
-6. If a `tour_name` is provided, it matches to an existing tour (or creates one)
+**1. Tour selector on ShowDetailPage (edit mode)**
+- Add a tour dropdown in the show edit form so you can reassign or remove a show from a tour without leaving the page
+- Query existing tours, show current assignment, allow changing to another tour or "Standalone"
 
-### CSV Template columns
+**2. "Add Show" button on TourDetailPage that pre-fills tour**
+- Render the existing `CreateShowDialog` component with `defaultTourId={tour.id}` on the tour detail page
+- This already works — just needs to be wired up in the UI alongside the existing "link standalone show" dropdown
 
-`date, venue_name, city, venue_address, dos_contact_name, dos_contact_phone, hotel_name, hotel_address, tour_name`
+**3. Tour pre-select option in BulkUploadDialog**
+- Add an optional tour dropdown at the top of the dialog (before/after file upload)
+- If a tour is selected there, all imported rows get that `tour_id` unless the CSV row has its own `tour_name` (CSV column takes priority)
+- Reuse the existing tours query already in the component
 
-### Technical details
+### Files to change
 
-- **New component**: `src/components/BulkUploadDialog.tsx`
-  - File input accepting `.csv` files
-  - Client-side CSV parsing using `papaparse` (lightweight, already common in JS projects)
-  - Preview table showing parsed rows with validation (highlight missing required fields: date, venue_name, city)
-  - Tour name resolution: query existing tours, match by name, optionally create new ones
-  - Bulk insert via `supabase.from("shows").insert([...rows])`
-  - Success toast with count of imported shows
-
-- **ShowsPage.tsx**: Add the `BulkUploadDialog` button next to "Paste Advance" and "Add Show"
-
-- **Template download**: Generate a small CSV template string as a downloadable blob link inside the dialog
-
-- **Dependency**: Install `papaparse` + `@types/papaparse` for reliable CSV parsing (handles quoted fields, commas in values, etc.)
-
-### Validation rules
-- Skip empty rows
-- Require `date`, `venue_name`, and `city` per row
-- Show error count in preview if any rows are invalid
-- Only enable the Import button when all rows pass validation
+| File | Change |
+|---|---|
+| `src/pages/ShowDetailPage.tsx` | Add tour `<Select>` in edit mode, query tours list, include `tour_id` in save payload |
+| `src/pages/TourDetailPage.tsx` | Add `<CreateShowDialog defaultTourId={tour.id} />` button next to the "Add existing show" UI |
+| `src/components/BulkUploadDialog.tsx` | Add optional tour dropdown above the file drop zone; apply selected tour_id to rows missing a tour_name |
 
