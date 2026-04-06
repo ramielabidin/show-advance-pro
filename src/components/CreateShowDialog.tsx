@@ -1,10 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Calendar as CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
+import { Plus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -15,13 +22,28 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export default function CreateShowDialog() {
+interface CreateShowDialogProps {
+  defaultTourId?: string;
+}
+
+export default function CreateShowDialog({ defaultTourId }: CreateShowDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [venue, setVenue] = useState("");
   const [city, setCity] = useState("");
   const [date, setDate] = useState("");
+  const [tourId, setTourId] = useState(defaultTourId ?? "none");
   const navigate = useNavigate();
+
+  const { data: tours = [] } = useQuery({
+    queryKey: ["tours"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("tours").select("id, name").order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
 
   const handleCreate = async () => {
     if (!venue || !city || !date) {
@@ -31,7 +53,13 @@ export default function CreateShowDialog() {
     setLoading(true);
     const { data, error } = await supabase
       .from("shows")
-      .insert({ venue_name: venue, city, date, is_reviewed: true })
+      .insert({
+        venue_name: venue,
+        city,
+        date,
+        is_reviewed: true,
+        tour_id: tourId === "none" ? null : tourId,
+      })
       .select()
       .single();
     setLoading(false);
@@ -43,6 +71,7 @@ export default function CreateShowDialog() {
     setVenue("");
     setCity("");
     setDate("");
+    setTourId(defaultTourId ?? "none");
     toast.success("Show created");
     navigate(`/shows/${data.id}`);
   };
@@ -72,6 +101,22 @@ export default function CreateShowDialog() {
             <Label htmlFor="date">Date</Label>
             <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
+          {tours.length > 0 && (
+            <div className="space-y-2">
+              <Label>Tour (optional)</Label>
+              <Select value={tourId} onValueChange={setTourId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Standalone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Standalone</SelectItem>
+                  {tours.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <Button onClick={handleCreate} disabled={loading} className="w-full">
             {loading ? "Creating…" : "Create Show"}
           </Button>

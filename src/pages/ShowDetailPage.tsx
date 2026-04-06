@@ -27,7 +27,7 @@ export default function ShowDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shows")
-        .select("*, schedule_entries(*)")
+        .select("*, schedule_entries(*), tours(*)")
         .eq("id", id!)
         .single();
       if (error) throw error;
