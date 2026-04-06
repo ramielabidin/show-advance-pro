@@ -19,6 +19,7 @@ import {
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
 import SlackPushDialog from "@/components/SlackPushDialog";
+import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
 import ExportPdfDialog from "@/components/ExportPdfDialog";
 import { toast } from "sonner";
@@ -160,6 +161,7 @@ export default function ShowDetailPage() {
           ) : (
             <>
               <SlackPushDialog showId={id!} />
+              <EmailBandDialog show={show as Show} />
               <ExportPdfDialog show={show as Show} />
               <ParseAdvanceForShowDialog
                 showId={id!}
