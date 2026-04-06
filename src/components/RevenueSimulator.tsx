@@ -5,6 +5,8 @@ interface RevenueSimulatorProps {
   guarantee: number;
   walkoutPotential: number;
   venueCapacity?: number | null;
+  ticketPrice?: number | null;
+  backendDeal?: string | null;
 }
 
 function parseDollar(val: string | null | undefined): number | null {
@@ -17,13 +19,37 @@ function formatDollar(val: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
 }
 
-export { parseDollar, formatDollar };
+/** Extract a percentage from strings like "70% of GBOR", "$500 vs 80% of gross", "85%" */
+function parseBackendPct(deal: string | null | undefined): number | null {
+  if (!deal) return null;
+  const match = deal.match(/(\d{1,3}(?:\.\d+)?)\s*%/);
+  if (!match) return null;
+  const pct = parseFloat(match[1]);
+  return pct > 0 && pct <= 100 ? pct : null;
+}
 
-export default function RevenueSimulator({ guarantee, walkoutPotential, venueCapacity }: RevenueSimulatorProps) {
+export { parseDollar, formatDollar, parseBackendPct };
+
+export default function RevenueSimulator({ guarantee, walkoutPotential, venueCapacity, ticketPrice, backendDeal }: RevenueSimulatorProps) {
   const [pct, setPct] = useState(75);
 
-  const projected = guarantee + (walkoutPotential - guarantee) * (pct / 100);
   const ticketCount = venueCapacity ? Math.round(venueCapacity * (pct / 100)) : null;
+  const backendPct = parseBackendPct(backendDeal);
+
+  // Smart calculation when we have ticket price + capacity
+  const hasGborData = ticketPrice != null && ticketPrice > 0 && ticketCount != null;
+  const gbor = hasGborData ? ticketCount * ticketPrice : null;
+
+  // When we have GBOR + backend deal percentage, calculate artist take
+  const hasBackendCalc = gbor != null && backendPct != null;
+  const backendTake = hasBackendCalc ? gbor * (backendPct / 100) : null;
+  const artistTake = hasBackendCalc ? Math.max(guarantee, backendTake!) : null;
+
+  // Fallback: linear interpolation between guarantee and walkout
+  const interpolated = guarantee + (walkoutPotential - guarantee) * (pct / 100);
+
+  // Use the smarter calculation when available, otherwise fallback
+  const projected = artistTake ?? interpolated;
 
   return (
     <div className="space-y-4">
@@ -32,11 +58,22 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
           Projected Walkout
         </p>
         <p className="text-sm text-muted-foreground">
-          {pct}%{ticketCount !== null && ` · ~${ticketCount} tickets`}
+          {pct}%{ticketCount !== null && ` · ~${ticketCount.toLocaleString()} tickets`}
         </p>
       </div>
 
       <p className="text-3xl font-semibold tracking-tight">{formatDollar(projected)}</p>
+
+      {hasGborData && (
+        <div className="space-y-1 text-sm text-muted-foreground font-mono">
+          <p>~{ticketCount!.toLocaleString()} tickets × {formatDollar(ticketPrice!)} = {formatDollar(gbor!)} GBOR</p>
+          {hasBackendCalc && (
+            <p>
+              Artist take: max({formatDollar(guarantee)} guarantee, {backendPct}% × {formatDollar(gbor!)}) = {formatDollar(artistTake!)}
+            </p>
+          )}
+        </div>
+      )}
 
       <Slider
         value={[pct]}
@@ -47,7 +84,11 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
       />
 
       <p className="text-xs text-muted-foreground">
-        Estimate based on linear interpolation between guarantee and walkout potential
+        {hasBackendCalc
+          ? `Calculated from backend deal: ${formatDollar(guarantee)} guarantee vs ${backendPct}% of GBOR`
+          : hasGborData
+            ? "GBOR calculated from ticket price × estimated tickets sold"
+            : "Estimate based on linear interpolation between guarantee and walkout potential"}
       </p>
     </div>
   );
