@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Edit, Trash2, Save, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Save, X, Loader2, MapPin } from "lucide-react";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +33,7 @@ export default function ShowDetailPage() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<Show>>({});
+  const [lookingUpAddress, setLookingUpAddress] = useState(false);
 
   const { data: show, isLoading } = useQuery({
     queryKey: ["show", id],
@@ -237,6 +238,37 @@ export default function ShowDetailPage() {
 
         <FieldGroup title="Venue">
           {editField("venue_address", "Address")}
+          {!editing && !show.venue_address && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              disabled={lookingUpAddress}
+              onClick={async () => {
+                setLookingUpAddress(true);
+                try {
+                  const { data, error } = await supabase.functions.invoke("lookup-venue-address", {
+                    body: { venue_name: show.venue_name, city: show.city },
+                  });
+                  if (error || data?.error) throw new Error(data?.error || error.message);
+                  const { error: updateError } = await supabase
+                    .from("shows")
+                    .update({ venue_address: data.address })
+                    .eq("id", show.id);
+                  if (updateError) throw updateError;
+                  queryClient.invalidateQueries({ queryKey: ["show", id] });
+                  toast.success("Address found and saved");
+                } catch (err: any) {
+                  toast.error(err.message || "Could not find address");
+                } finally {
+                  setLookingUpAddress(false);
+                }
+              }}
+            >
+              {lookingUpAddress ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
+              Lookup Address
+            </Button>
+          )}
           {editField("city", "City")}
         </FieldGroup>
 
