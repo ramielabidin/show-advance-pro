@@ -80,7 +80,12 @@ Your job is to extract all structured data from the email thread.
                   hotel_checkin: { type: "string", description: "Hotel check-in time" },
                   hotel_checkout: { type: "string", description: "Hotel check-out time" },
                   travel_notes: { type: "string", description: "Travel/drive notes" },
-                  additional_info: { type: "string", description: "Any other relevant info from the email that doesn't fit the structured fields above — catering, merch, production specs, curfew, age restrictions, dressing room codes, etc." },
+                  set_length: { type: "string", description: "Duration of the band's set, e.g. '75 min', '60-90 min'" },
+                  curfew: { type: "string", description: "Stage or venue curfew time, e.g. '11:00 PM'" },
+                  backline_provided: { type: "string", description: "Backline/gear provided by the venue, e.g. 'Full backline, no amps'" },
+                  catering_details: { type: "string", description: "Catering info, meal times, buyouts, rider details" },
+                  changeover_time: { type: "string", description: "Changeover time between acts, e.g. '20 min'" },
+                  additional_info: { type: "string", description: "Any other relevant info from the email that doesn't fit the structured fields above — merch, production specs, age restrictions, dressing room codes, etc." },
                   schedule: {
                     type: "array",
                     description: "All timed events for the day",
