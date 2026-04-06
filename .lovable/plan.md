@@ -1,50 +1,33 @@
 
 
-## Add Deal & Venue Fields to Shows + Update CSV Importer
+## Add Band Day-of-Show Fields to Shows
 
-### What changes
+Add 5 new fields to the `shows` table for information typically found in advance emails but not on booking spreadsheets.
 
-Add 11 new columns to the `shows` table and wire them through the entire stack: database → types → detail page → CSV importer.
+### New columns (all nullable text)
 
-### New database columns (all nullable text)
-
-| Column | Maps to CSV | Group |
-|--------|------------|-------|
-| `venue_capacity` | Cap | Venue details |
-| `ticket_price` | Ticket Price | Venue details |
-| `age_restriction` | Age | Venue details |
-| `guarantee` | Guarantee | Financial |
-| `backend_deal` | Backend Deal | Financial |
-| `hospitality` | Hospitality | Production |
-| `support_act` | Support Act | Production |
-| `support_pay` | Support Pay | Production |
-| `merch_split` | Merch Split | Production |
-| `walkout_potential` | Walkout Potential | Projections |
-| `net_gross` | Net Gross | Projections |
-| `artist_comps` | Artist Comps | Projections |
-
-All text type since values are often mixed formats (e.g. "$20/$25", "vs 60% of GBOR", "TBD").
+| Column | Label | Purpose |
+|--------|-------|---------|
+| `set_length` | Set Length | e.g. "75 min", "60-90 min" |
+| `curfew` | Curfew | Stage/venue curfew time |
+| `backline_provided` | Backline Provided | What gear the venue supplies |
+| `catering_details` | Catering / Meals | Meal times, buyouts, rider info |
+| `changeover_time` | Changeover Time | Time between acts |
 
 ### Files to change
 
 | File | Change |
 |------|--------|
-| **DB migration** | `ALTER TABLE shows ADD COLUMN` for all 12 new fields |
-| `src/lib/types.ts` | Add the 12 new optional fields to the `Show` interface |
-| `src/pages/ShowDetailPage.tsx` | Add new FieldGroups: "Venue Details", "Deal Terms", "Production", "Projections" in both view and edit modes |
-| `src/components/BulkUploadDialog.tsx` | Add the new column names to `TEMPLATE_COLUMNS`, map CSV headers to DB columns (handle the header row format from the real CSV — e.g. "Ticket Price" → `ticket_price`) |
-| `src/components/ShowCard.tsx` | Optionally show capacity or guarantee as a subtitle line |
+| **DB migration** | `ALTER TABLE shows ADD COLUMN` for 5 fields |
+| `src/lib/types.ts` | Add 5 optional string fields to `Show` interface |
+| `src/pages/ShowDetailPage.tsx` | Add a new "Band / Performance" FieldGroup with the 5 fields (view + edit modes) |
+| `supabase/functions/parse-advance/index.ts` | Add the 5 fields to the AI tool schema so they get extracted from advance emails automatically |
 
-### CSV importer updates
+### Detail page placement
 
-The uploaded CSV has a different header format than the template (e.g. "Ticket Price" not "ticket_price", plus extra header rows). The importer already normalizes headers via `transformHeader` (lowercasing + replacing spaces with underscores), so most columns will auto-map. We'll add the new column names to `TEMPLATE_COLUMNS` and handle the mapping in the import mutation (e.g. `cap` → `venue_capacity`, `age` → `age_restriction`).
+A new **"Band / Performance"** section will appear after the existing schedule section, containing: Set Length, Curfew, Changeover Time, Backline Provided, and Catering / Meals (multiline).
 
-### Detail page layout
+### Advance email parser
 
-New sections added after existing fields:
-
-- **Venue Details**: Capacity, Ticket Price, Age Restriction
-- **Deal Terms**: Guarantee, Backend Deal
-- **Production & Logistics**: Hospitality, Support Act, Support Pay, Merch Split
-- **Projections**: Walkout Potential, Net Gross, Artist Comps
+The `parse-advance` edge function's tool schema will include the new fields so pasting an advance email auto-populates set length, curfew, backline, catering, and changeover when mentioned.
 
