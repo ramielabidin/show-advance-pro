@@ -27,9 +27,9 @@ function parseNumberedList(text: string): string[] | null {
 }
 
 export default function FieldRow({ label, value, mono }: FieldRowProps) {
-  if (!value) return null;
+  const listItems = useMemo(() => value ? parseNumberedList(value) : null, [value]);
 
-  const listItems = useMemo(() => parseNumberedList(value), [value]);
+  if (!value) return null;
 
   return (
     <div className="flex items-start gap-4">
