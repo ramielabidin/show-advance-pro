@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ShowCard from "@/components/ShowCard";
+import CreateShowDialog from "@/components/CreateShowDialog";
 import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState";
 
@@ -205,10 +206,13 @@ export default function TourDetailPage() {
 
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Shows</h2>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAddingShow(!addingShow)}>
-          <Plus className="h-4 w-4" />
-          Add Show
-        </Button>
+        <div className="flex items-center gap-2">
+          <CreateShowDialog defaultTourId={id} />
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAddingShow(!addingShow)}>
+            <Plus className="h-4 w-4" />
+            Link Existing
+          </Button>
+        </div>
       </div>
 
       {addingShow && (

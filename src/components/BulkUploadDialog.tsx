@@ -68,10 +68,11 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
-export default function BulkUploadDialog() {
+export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: string }) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ValidatedRow[]>([]);
   const [fileName, setFileName] = useState("");
+  const [selectedTourId, setSelectedTourId] = useState(defaultTourId ?? "none");
   const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
