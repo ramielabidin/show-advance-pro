@@ -6,6 +6,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -68,10 +76,11 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
-export default function BulkUploadDialog() {
+export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: string }) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ValidatedRow[]>([]);
   const [fileName, setFileName] = useState("");
+  const [selectedTourId, setSelectedTourId] = useState(defaultTourId ?? "none");
   const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -137,7 +146,8 @@ export default function BulkUploadDialog() {
 
       const showRows = validRows.map((r) => {
         const tourName = r.data.tour_name?.trim();
-        const tour_id = tourName ? tourNameMap.get(tourName.toLowerCase()) ?? null : null;
+        const tourFallbackId = selectedTourId !== "none" ? selectedTourId : null;
+        const tour_id = tourName ? tourNameMap.get(tourName.toLowerCase()) ?? tourFallbackId : tourFallbackId;
         return {
           date: r.data.date.trim(),
           venue_name: r.data.venue_name.trim(),
@@ -170,6 +180,7 @@ export default function BulkUploadDialog() {
   const reset = () => {
     setRows([]);
     setFileName("");
+    setSelectedTourId(defaultTourId ?? "none");
   };
 
   return (
@@ -189,6 +200,20 @@ export default function BulkUploadDialog() {
 
         {rows.length === 0 ? (
           <div className="space-y-4">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Assign to Tour (optional)</Label>
+              <Select value={selectedTourId} onValueChange={setSelectedTourId}>
+                <SelectTrigger className="text-sm">
+                  <SelectValue placeholder="Standalone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Standalone</SelectItem>
+                  {tours.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div
               onDragOver={(e) => e.preventDefault()}
               onDrop={onDrop}

@@ -9,6 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
 import { toast } from "sonner";
@@ -60,9 +67,20 @@ export default function ShowDetailPage() {
     },
   });
 
+  const { data: toursList = [] } = useQuery({
+    queryKey: ["tours"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("tours").select("id, name").order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: editing,
+  });
+
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<Show>) => {
       const { schedule_entries, show_party_members, tours, ...showUpdates } = updates as any;
+      if (showUpdates.tour_id === "" || showUpdates.tour_id === "none") showUpdates.tour_id = null;
       const { error } = await supabase.from("shows").update(showUpdates).eq("id", id!);
       if (error) throw error;
     },
@@ -141,7 +159,7 @@ export default function ShowDetailPage() {
           )}
           <p className="text-sm text-muted-foreground mt-0.5">
             {show.city} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
-            {(show as any).tours && (
+            {!editing && (show as any).tours && (
               <>
                 {" · "}
                 <Link to={`/tours/${(show as any).tours.id}`} className="text-foreground hover:underline">
@@ -198,6 +216,35 @@ export default function ShowDetailPage() {
       )}
 
       <div className="space-y-8">
+        <FieldGroup title="Tour">
+          {editing ? (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Tour</Label>
+              <Select
+                value={f("tour_id") ?? "none"}
+                onValueChange={(v) => setF("tour_id" as keyof Show, v === "none" ? "" : v)}
+              >
+                <SelectTrigger className="text-sm">
+                  <SelectValue placeholder="Standalone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Standalone</SelectItem>
+                  {toursList.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <FieldRow
+              label="Tour"
+              value={(show as any).tours?.name ?? "Standalone"}
+            />
+          )}
+        </FieldGroup>
+
+        <Separator />
+
         <FieldGroup title="Venue">
           {editField("venue_address", "Address")}
           {editField("city", "City")}
