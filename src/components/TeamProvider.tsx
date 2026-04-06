@@ -32,7 +32,7 @@ export function useTeam() {
   return useContext(TeamContext);
 }
 
-function CreateTeamScreen() {
+function CreateTeamScreen({ userId }: { userId: string }) {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
@@ -41,25 +41,35 @@ function CreateTeamScreen() {
     if (!name.trim()) return;
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      // Verify we have an active session before proceeding
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No active session. Please sign out and sign in again.");
 
       const teamId = crypto.randomUUID();
 
       const { error } = await supabase
         .from("teams")
-        .insert({ id: teamId, name: name.trim(), created_by: user.id });
-      if (error) throw error;
+        .insert({ id: teamId, name: name.trim(), created_by: userId });
+      if (error) {
+        console.error("Team insert failed:", error);
+        throw error;
+      }
 
       // Add self as owner
       const { error: memberError } = await supabase
         .from("team_members")
-        .insert({ team_id: teamId, user_id: user.id, role: "owner" });
-      if (memberError) throw memberError;
+        .insert({ team_id: teamId, user_id: userId, role: "owner" });
+      if (memberError) {
+        console.error("Team member insert failed:", memberError);
+        throw memberError;
+      }
 
       // Create app_settings row for this team
       const { error: settingsError } = await supabase.from("app_settings").insert({ team_id: teamId });
-      if (settingsError) throw settingsError;
+      if (settingsError) {
+        console.error("App settings insert failed:", settingsError);
+        throw settingsError;
+      }
 
       queryClient.invalidateQueries({ queryKey: ["user-teams"] });
       toast.success("Team created!");
@@ -142,7 +152,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   }
 
   if (!team) {
-    return <CreateTeamScreen />;
+    return <CreateTeamScreen userId={session!.user.id} />;
   }
 
   return (
