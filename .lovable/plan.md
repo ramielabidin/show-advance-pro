@@ -1,55 +1,53 @@
 
 
-# Google Sign-In + Team-Based Access Control
+# Enhanced Revenue Simulator with Ticket Price and Backend Deal Data
 
-## The Problem
-Right now, anyone who signs up gets access to all your Juice band data. We need two things:
-1. **Google sign-in** for convenience
-2. **Team-based access** so only people you invite can see your data
+## Overview
 
-## How It Works
+Upgrade the Revenue Simulator on both ShowDetailPage and TourDetailPage to use ticket price, capacity, and backend deal data when available. This makes the simulator calculate gross revenue from ticket sales and apply backend deal logic (e.g., "70% of GBOR") rather than relying solely on the walkout_potential interpolation.
 
-You'll be the owner of a "team" (e.g., "Juice"). You can invite people by email. When someone signs in (via Google or email), they only see data belonging to teams they're a member of. If they're not on any team, they see an empty state.
+## How It Works for Users
 
-## Plan
+- **When ticket price + capacity are available**: The simulator calculates gross box office revenue (GBOR) as `tickets_sold × ticket_price`, then shows both the GBOR line and the artist's projected take based on the backend deal
+- **When a backend deal like "70% of GBOR" is present**: The simulator shows which is higher — the guarantee or the backend percentage — since deals are typically "guarantee vs % of gross, whichever is greater"
+- **Fallback**: When only guarantee + walkout_potential exist (no ticket price), it continues using the current linear interpolation
 
-### 1. Add Google Sign-In
-- Use Lovable Cloud's managed Google OAuth (no API keys needed)
-- Add a "Sign in with Google" button to the auth page
+## Technical Plan
 
-### 2. Create Teams + Membership Tables (Migration)
+### 1. Update `RevenueSimulator.tsx`
+
+- Add `ticketPrice` and `backendDeal` props (both optional)
+- Add a `parseBackendPct` helper that extracts a percentage from strings like "70% of GBOR", "80% of gross", etc.
+- When ticket price + capacity are available, show a breakdown line: `~322 tickets × $25 = $8,050 GBOR`
+- When a backend percentage is parsed, calculate `GBOR × backendPct` and compare to guarantee, showing: `Artist take: max($500 guarantee, 70% of $8,050) = $5,635`
+- Keep the existing interpolation as the fallback/secondary view
+- Update the description note to reflect the calculation method used
+
+### 2. Update `ShowDetailPage.tsx` (line ~321-338)
+
+- Pass additional props to `RevenueSimulator`: `ticketPrice` (parsed from `show.ticket_price`) and `backendDeal` (raw string from `show.backend_deal`)
+- Also allow the simulator to show when only ticket price + capacity exist (even without walkout_potential), since GBOR can be calculated independently
+
+### 3. Update `TourRevenueSimulator.tsx`
+
+- Pass `ticket_price` and `backend_deal` through the show interface
+- For shows with ticket price + capacity + backend deal, use the smarter calculation
+- For shows with only guarantee/walkout, continue using interpolation
+- Show a note like "3 shows with deal terms, 2 with estimates"
+
+### Display Layout (Show Detail)
+
+```text
+PROJECTED WALKOUT                           75% · ~322 tickets
+$5,635
+
+~322 tickets × $25 = $8,050 GBOR
+Artist take: max($500 guarantee, 70% × $8,050) = $5,635
+
+[====================--------] slider
+
+Calculated from backend deal: $500 guarantee vs 70% of GBOR
 ```
-teams: id, name, created_by (user id), created_at
-team_members: id, team_id, user_id, role (owner/member), created_at
-team_invites: id, team_id, email, invited_by, created_at
-```
 
-### 3. Link Data to Teams
-- Add `team_id` column to: `shows`, `tours`, `touring_party_members`, `app_settings`
-- `schedule_entries` and `show_party_members` are linked through `shows`, so they're covered transitively
-
-### 4. Update RLS Policies
-Replace the current "any authenticated user" policies with team-scoped policies:
-- A `is_team_member(user_id, team_id)` security definer function
-- Each table's policy checks that the row's `team_id` matches a team the user belongs to
-
-### 5. Team Management UI
-- After login, if user has no team → show "Create Team" or "Waiting for invite" screen
-- Settings page gets a "Team" section: view members, invite by email, remove members
-- Owner can invite new members by email address
-
-### 6. Auto-Assign Team on Data Creation
-- When creating shows, tours, etc., automatically set `team_id` to the user's current team
-- Update all insert/create operations across the app
-
-### 7. Invite Flow
-- Owner enters an email in Settings → Team section
-- An invite row is created; when that person signs up/logs in with that email, they're auto-added to the team
-
-## What You'll Experience
-- Sign in with Google (one click)
-- First time: create your "Juice" team
-- Invite your crew by email
-- Only team members see your shows, tours, and settings
-- Existing data will need a one-time migration to assign it to your team
+When no backend deal or ticket price is available, the current simpler display remains unchanged.
 
