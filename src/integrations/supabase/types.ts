@@ -109,8 +109,12 @@ export type Database = {
           age_restriction: string | null
           artist_comps: string | null
           backend_deal: string | null
+          backline_provided: string | null
+          catering_details: string | null
+          changeover_time: string | null
           city: string
           created_at: string
+          curfew: string | null
           date: string
           departure_location: string | null
           departure_time: string | null
@@ -131,6 +135,7 @@ export type Database = {
           merch_split: string | null
           net_gross: string | null
           parking_notes: string | null
+          set_length: string | null
           settlement_guarantee: string | null
           settlement_method: string | null
           support_act: string | null
@@ -151,8 +156,12 @@ export type Database = {
           age_restriction?: string | null
           artist_comps?: string | null
           backend_deal?: string | null
+          backline_provided?: string | null
+          catering_details?: string | null
+          changeover_time?: string | null
           city: string
           created_at?: string
+          curfew?: string | null
           date: string
           departure_location?: string | null
           departure_time?: string | null
@@ -173,6 +182,7 @@ export type Database = {
           merch_split?: string | null
           net_gross?: string | null
           parking_notes?: string | null
+          set_length?: string | null
           settlement_guarantee?: string | null
           settlement_method?: string | null
           support_act?: string | null
@@ -193,8 +203,12 @@ export type Database = {
           age_restriction?: string | null
           artist_comps?: string | null
           backend_deal?: string | null
+          backline_provided?: string | null
+          catering_details?: string | null
+          changeover_time?: string | null
           city?: string
           created_at?: string
+          curfew?: string | null
           date?: string
           departure_location?: string | null
           departure_time?: string | null
@@ -215,6 +229,7 @@ export type Database = {
           merch_split?: string | null
           net_gross?: string | null
           parking_notes?: string | null
+          set_length?: string | null
           settlement_guarantee?: string | null
           settlement_method?: string | null
           support_act?: string | null

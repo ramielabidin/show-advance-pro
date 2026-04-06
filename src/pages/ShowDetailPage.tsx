@@ -290,6 +290,16 @@ export default function ShowDetailPage() {
 
         <Separator />
 
+        <FieldGroup title="Band / Performance">
+          {editField("set_length", "Set Length")}
+          {editField("curfew", "Curfew")}
+          {editField("changeover_time", "Changeover Time")}
+          {editField("backline_provided", "Backline Provided", { multiline: true })}
+          {editField("catering_details", "Catering / Meals", { multiline: true })}
+        </FieldGroup>
+
+        <Separator />
+
         <FieldGroup title="Venue Info">
           {editField("venue_capacity", "Capacity")}
           {editField("ticket_price", "Ticket Price", { mono: true })}
