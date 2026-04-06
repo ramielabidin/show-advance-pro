@@ -1,32 +1,50 @@
 
 
-## Better Tour ↔ Show Management
+## Add Deal & Venue Fields to Shows + Update CSV Importer
 
-### What already works
-- Creating a show with a tour assignment (CreateShowDialog has tour dropdown)
-- Adding/removing standalone shows on TourDetailPage
-- CSV bulk upload with `tour_name` column
+### What changes
 
-### What to add
+Add 11 new columns to the `shows` table and wire them through the entire stack: database → types → detail page → CSV importer.
 
-**1. Tour selector on ShowDetailPage (edit mode)**
-- Add a tour dropdown in the show edit form so you can reassign or remove a show from a tour without leaving the page
-- Query existing tours, show current assignment, allow changing to another tour or "Standalone"
+### New database columns (all nullable text)
 
-**2. "Add Show" button on TourDetailPage that pre-fills tour**
-- Render the existing `CreateShowDialog` component with `defaultTourId={tour.id}` on the tour detail page
-- This already works — just needs to be wired up in the UI alongside the existing "link standalone show" dropdown
+| Column | Maps to CSV | Group |
+|--------|------------|-------|
+| `venue_capacity` | Cap | Venue details |
+| `ticket_price` | Ticket Price | Venue details |
+| `age_restriction` | Age | Venue details |
+| `guarantee` | Guarantee | Financial |
+| `backend_deal` | Backend Deal | Financial |
+| `hospitality` | Hospitality | Production |
+| `support_act` | Support Act | Production |
+| `support_pay` | Support Pay | Production |
+| `merch_split` | Merch Split | Production |
+| `walkout_potential` | Walkout Potential | Projections |
+| `net_gross` | Net Gross | Projections |
+| `artist_comps` | Artist Comps | Projections |
 
-**3. Tour pre-select option in BulkUploadDialog**
-- Add an optional tour dropdown at the top of the dialog (before/after file upload)
-- If a tour is selected there, all imported rows get that `tour_id` unless the CSV row has its own `tour_name` (CSV column takes priority)
-- Reuse the existing tours query already in the component
+All text type since values are often mixed formats (e.g. "$20/$25", "vs 60% of GBOR", "TBD").
 
 ### Files to change
 
 | File | Change |
-|---|---|
-| `src/pages/ShowDetailPage.tsx` | Add tour `<Select>` in edit mode, query tours list, include `tour_id` in save payload |
-| `src/pages/TourDetailPage.tsx` | Add `<CreateShowDialog defaultTourId={tour.id} />` button next to the "Add existing show" UI |
-| `src/components/BulkUploadDialog.tsx` | Add optional tour dropdown above the file drop zone; apply selected tour_id to rows missing a tour_name |
+|------|--------|
+| **DB migration** | `ALTER TABLE shows ADD COLUMN` for all 12 new fields |
+| `src/lib/types.ts` | Add the 12 new optional fields to the `Show` interface |
+| `src/pages/ShowDetailPage.tsx` | Add new FieldGroups: "Venue Details", "Deal Terms", "Production", "Projections" in both view and edit modes |
+| `src/components/BulkUploadDialog.tsx` | Add the new column names to `TEMPLATE_COLUMNS`, map CSV headers to DB columns (handle the header row format from the real CSV — e.g. "Ticket Price" → `ticket_price`) |
+| `src/components/ShowCard.tsx` | Optionally show capacity or guarantee as a subtitle line |
+
+### CSV importer updates
+
+The uploaded CSV has a different header format than the template (e.g. "Ticket Price" not "ticket_price", plus extra header rows). The importer already normalizes headers via `transformHeader` (lowercasing + replacing spaces with underscores), so most columns will auto-map. We'll add the new column names to `TEMPLATE_COLUMNS` and handle the mapping in the import mutation (e.g. `cap` → `venue_capacity`, `age` → `age_restriction`).
+
+### Detail page layout
+
+New sections added after existing fields:
+
+- **Venue Details**: Capacity, Ticket Price, Age Restriction
+- **Deal Terms**: Guarantee, Backend Deal
+- **Production & Logistics**: Hospitality, Support Act, Support Pay, Merch Split
+- **Projections**: Walkout Potential, Net Gross, Artist Comps
 
