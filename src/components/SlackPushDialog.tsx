@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, Users, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -38,12 +39,18 @@ const SECTIONS = [
 
 type SectionKey = (typeof SECTIONS)[number]["key"];
 
+const BAND_VIEW_KEYS: SectionKey[] = [
+  "contact", "departure", "schedule", "venue", "loadIn",
+  "parking", "greenRoom", "wifi", "hotel", "travel", "guestList",
+];
+
+const allKeys = (): Set<SectionKey> => new Set(SECTIONS.map((s) => s.key));
+
 export default function SlackPushDialog({ showId }: { showId: string }) {
   const [open, setOpen] = useState(false);
   const [pushing, setPushing] = useState(false);
-  const [selected, setSelected] = useState<Set<SectionKey>>(
-    () => new Set(SECTIONS.map((s) => s.key))
-  );
+  const [selected, setSelected] = useState<Set<SectionKey>>(allKeys);
+  const [note, setNote] = useState("");
 
   const toggle = (key: SectionKey) => {
     setSelected((prev) => {
@@ -55,18 +62,17 @@ export default function SlackPushDialog({ showId }: { showId: string }) {
   };
 
   const toggleAll = () => {
-    if (selected.size === SECTIONS.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(SECTIONS.map((s) => s.key)));
-    }
+    setSelected(selected.size === SECTIONS.length ? new Set() : allKeys());
   };
+
+  const applyBandView = () => setSelected(new Set(BAND_VIEW_KEYS));
+  const applyInternalView = () => setSelected(allKeys());
 
   const handlePush = async () => {
     setPushing(true);
     try {
       const { data, error } = await supabase.functions.invoke("push-slack-daysheet", {
-        body: { showId, sections: Array.from(selected) },
+        body: { showId, sections: Array.from(selected), note: note.trim() || undefined },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
@@ -79,8 +85,16 @@ export default function SlackPushDialog({ showId }: { showId: string }) {
     }
   };
 
+  const handleOpen = (v: boolean) => {
+    setOpen(v);
+    if (v) {
+      setSelected(allKeys());
+      setNote("");
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setSelected(new Set(SECTIONS.map((s) => s.key))); }}>
+    <Dialog open={open} onOpenChange={handleOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5">
           <Send className="h-4 w-4" /> Slack
@@ -92,6 +106,16 @@ export default function SlackPushDialog({ showId }: { showId: string }) {
           <DialogDescription>Choose which sections to include in the Slack message.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-4">
+          {/* Preset buttons */}
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={applyBandView}>
+              <Users className="h-3.5 w-3.5" /> Band View
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={applyInternalView}>
+              <Building2 className="h-3.5 w-3.5" /> Internal View
+            </Button>
+          </div>
+
           <div className="flex items-center gap-2 pb-2 border-b border-border">
             <Checkbox
               id="select-all"
@@ -115,6 +139,20 @@ export default function SlackPushDialog({ showId }: { showId: string }) {
                 </Label>
               </div>
             ))}
+          </div>
+
+          {/* Personal note */}
+          <div className="space-y-1.5 pt-2 border-t border-border">
+            <Label htmlFor="slack-note" className="text-sm text-muted-foreground">
+              Personal note (optional)
+            </Label>
+            <Textarea
+              id="slack-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Add a note to the top of the message..."
+              className="text-sm min-h-[60px]"
+            />
           </div>
         </div>
         <DialogFooter>
