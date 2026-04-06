@@ -180,6 +180,7 @@ export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: st
   const reset = () => {
     setRows([]);
     setFileName("");
+    setSelectedTourId(defaultTourId ?? "none");
   };
 
   return (
@@ -199,6 +200,20 @@ export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: st
 
         {rows.length === 0 ? (
           <div className="space-y-4">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Assign to Tour (optional)</Label>
+              <Select value={selectedTourId} onValueChange={setSelectedTourId}>
+                <SelectTrigger className="text-sm">
+                  <SelectValue placeholder="Standalone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Standalone</SelectItem>
+                  {tours.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div
               onDragOver={(e) => e.preventDefault()}
               onDrop={onDrop}
