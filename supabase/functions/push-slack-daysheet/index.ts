@@ -159,7 +159,7 @@ serve(async (req) => {
   }
 
   try {
-    const { showId } = await req.json();
+    const { showId, sections: sectionsArr } = await req.json();
     if (!showId) {
       return new Response(JSON.stringify({ error: "showId is required" }), {
         status: 400,
