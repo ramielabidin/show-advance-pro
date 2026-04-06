@@ -20,6 +20,7 @@ import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
 import SlackPushDialog from "@/components/SlackPushDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
+import ExportPdfDialog from "@/components/ExportPdfDialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Show } from "@/lib/types";
@@ -159,6 +160,7 @@ export default function ShowDetailPage() {
           ) : (
             <>
               <SlackPushDialog showId={id!} />
+              <ExportPdfDialog show={show as Show} />
               <ParseAdvanceForShowDialog
                 showId={id!}
                 currentShow={show as Show}
