@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Edit, Trash2, Save, X } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Save, X, Send, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -138,6 +138,7 @@ export default function ShowDetailPage() {
             </>
           ) : (
             <>
+              <SlackPushButton showId={id!} />
               <Button variant="outline" size="sm" onClick={startEdit}>
                 <Edit className="h-4 w-4 mr-1" /> Edit
               </Button>
