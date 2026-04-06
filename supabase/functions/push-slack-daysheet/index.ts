@@ -29,13 +29,11 @@ function formatDaySheet(show: any, sections: Set<string>, note?: string): string
   const blocks: string[] = [];
   const has = (key: string) => sections.has(key);
 
-  // Personal note at the top
   if (note) {
     blocks.push(`💬 ${note}`);
     blocks.push("");
   }
 
-  // Header (always included)
   blocks.push(`📋 *DAY SHEET*`);
   blocks.push(`*${show.venue_name}* — ${show.city}`);
   blocks.push(`📅 ${formatDate(show.date)}`);
@@ -215,15 +213,36 @@ serve(async (req) => {
   }
 
   try {
+    // Validate JWT
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { showId, sections: sectionsArr, note } = await req.json();
-    if (!showId) {
+    if (!showId || typeof showId !== "string") {
       return new Response(JSON.stringify({ error: "showId is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -268,7 +287,7 @@ serve(async (req) => {
       const errText = await slackRes.text();
       console.error("Slack webhook error:", slackRes.status, errText);
       return new Response(
-        JSON.stringify({ error: `Slack responded with ${slackRes.status}: ${errText}` }),
+        JSON.stringify({ error: `Slack responded with ${slackRes.status}` }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -281,7 +300,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("push-slack error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "An internal error occurred" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
