@@ -33,6 +33,7 @@ export default function ShowDetailPage() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<Show>>({});
+  const [lookingUpAddress, setLookingUpAddress] = useState(false);
 
   const { data: show, isLoading } = useQuery({
     queryKey: ["show", id],
