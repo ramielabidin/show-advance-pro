@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Edit, Trash2, Save, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Save, X, Loader2, MapPin } from "lucide-react";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
