@@ -7,40 +7,37 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function formatDaySheet(show: any): string {
+function formatDaySheet(show: any, sections: Set<string>): string {
   const blocks: string[] = [];
+  const has = (key: string) => sections.has(key);
 
-  // Header
+  // Header (always included)
   blocks.push(`📋 *DAY SHEET*`);
   blocks.push(`*${show.venue_name}* — ${show.city}`);
   blocks.push(`📅 ${show.date}`);
   blocks.push("");
 
-  // Day of Show Contact
-  if (show.dos_contact_name || show.dos_contact_phone) {
+  if (has("contact") && (show.dos_contact_name || show.dos_contact_phone)) {
     blocks.push(`📞 *Day of Show Contact*`);
     if (show.dos_contact_name) blocks.push(`    ${show.dos_contact_name}`);
     if (show.dos_contact_phone) blocks.push(`    ${show.dos_contact_phone}`);
     blocks.push("");
   }
 
-  // Venue
-  if (show.venue_address) {
+  if (has("venue") && show.venue_address) {
     blocks.push(`📍 *Venue*`);
     blocks.push(`    ${show.venue_address}`);
     blocks.push("");
   }
 
-  // Departure
-  if (show.departure_time || show.departure_location) {
+  if (has("departure") && (show.departure_time || show.departure_location)) {
     blocks.push(`🚐 *Departure*`);
     if (show.departure_time) blocks.push(`    ⏰ ${show.departure_time}`);
     if (show.departure_location) blocks.push(`    📍 ${show.departure_location}`);
     blocks.push("");
   }
 
-  // Schedule
-  if (show.schedule_entries && show.schedule_entries.length > 0) {
+  if (has("schedule") && show.schedule_entries?.length > 0) {
     const sorted = [...show.schedule_entries].sort((a: any, b: any) => a.sort_order - b.sort_order);
     blocks.push(`🕐 *Schedule*`);
     for (const entry of sorted) {
@@ -51,63 +48,7 @@ function formatDaySheet(show: any): string {
     blocks.push("");
   }
 
-  // Parking
-  if (show.parking_notes) {
-    blocks.push(`🅿️ *Parking*`);
-    blocks.push(`    ${show.parking_notes}`);
-    blocks.push("");
-  }
-
-  // Load In
-  if (show.load_in_details) {
-    blocks.push(`📦 *Load In*`);
-    blocks.push(`    ${show.load_in_details}`);
-    blocks.push("");
-  }
-
-  // Green Room
-  if (show.green_room_info) {
-    blocks.push(`🛋️ *Green Room*`);
-    blocks.push(`    ${show.green_room_info}`);
-    blocks.push("");
-  }
-
-  // Guest List
-  if (show.guest_list_details) {
-    blocks.push(`📋 *Guest List*`);
-    blocks.push(`    ${show.guest_list_details}`);
-    blocks.push("");
-  }
-
-  // WiFi
-  if (show.wifi_network || show.wifi_password) {
-    blocks.push(`📶 *WiFi*`);
-    if (show.wifi_network) blocks.push(`    Network: \`${show.wifi_network}\``);
-    if (show.wifi_password) blocks.push(`    Password: \`${show.wifi_password}\``);
-    blocks.push("");
-  }
-
-  // Settlement
-  if (show.settlement_method || show.settlement_guarantee) {
-    blocks.push(`💰 *Settlement*`);
-    if (show.settlement_method) blocks.push(`    ${show.settlement_method}`);
-    if (show.settlement_guarantee) blocks.push(`    ${show.settlement_guarantee}`);
-    blocks.push("");
-  }
-
-  // Hotel
-  if (show.hotel_name) {
-    blocks.push(`🏨 *Hotel*`);
-    blocks.push(`    ${show.hotel_name}`);
-    if (show.hotel_address) blocks.push(`    ${show.hotel_address}`);
-    if (show.hotel_confirmation) blocks.push(`    Confirmation: \`${show.hotel_confirmation}\``);
-    if (show.hotel_checkin) blocks.push(`    Check-in: ${show.hotel_checkin}`);
-    if (show.hotel_checkout) blocks.push(`    Check-out: ${show.hotel_checkout}`);
-    blocks.push("");
-  }
-
-  // Band / Performance
-  if (show.set_length || show.curfew || show.changeover_time || show.backline_provided || show.catering_details) {
+  if (has("band") && (show.set_length || show.curfew || show.changeover_time || show.backline_provided || show.catering_details)) {
     blocks.push(`🎸 *Band / Performance*`);
     if (show.set_length) blocks.push(`    Set Length: ${show.set_length}`);
     if (show.curfew) blocks.push(`    Curfew: ${show.curfew}`);
@@ -117,8 +58,7 @@ function formatDaySheet(show: any): string {
     blocks.push("");
   }
 
-  // Venue Details
-  if (show.venue_capacity || show.ticket_price || show.age_restriction) {
+  if (has("venueDetails") && (show.venue_capacity || show.ticket_price || show.age_restriction)) {
     blocks.push(`🏟️ *Venue Details*`);
     if (show.venue_capacity) blocks.push(`    Capacity: ${show.venue_capacity}`);
     if (show.ticket_price) blocks.push(`    Ticket Price: ${show.ticket_price}`);
@@ -126,16 +66,14 @@ function formatDaySheet(show: any): string {
     blocks.push("");
   }
 
-  // Deal Terms
-  if (show.guarantee || show.backend_deal) {
+  if (has("dealTerms") && (show.guarantee || show.backend_deal)) {
     blocks.push(`💵 *Deal Terms*`);
     if (show.guarantee) blocks.push(`    Guarantee: ${show.guarantee}`);
     if (show.backend_deal) blocks.push(`    Backend: ${show.backend_deal}`);
     blocks.push("");
   }
 
-  // Production
-  if (show.hospitality || show.support_act || show.support_pay || show.merch_split) {
+  if (has("production") && (show.hospitality || show.support_act || show.support_pay || show.merch_split)) {
     blocks.push(`🎤 *Production*`);
     if (show.hospitality) blocks.push(`    Hospitality: ${show.hospitality}`);
     if (show.support_act) blocks.push(`    Support Act: ${show.support_act}`);
@@ -144,8 +82,7 @@ function formatDaySheet(show: any): string {
     blocks.push("");
   }
 
-  // Projections
-  if (show.walkout_potential || show.net_gross || show.artist_comps) {
+  if (has("projections") && (show.walkout_potential || show.net_gross || show.artist_comps)) {
     blocks.push(`📊 *Projections*`);
     if (show.walkout_potential) blocks.push(`    Walkout Potential: ${show.walkout_potential}`);
     if (show.net_gross) blocks.push(`    Net/Gross: ${show.net_gross}`);
@@ -153,15 +90,61 @@ function formatDaySheet(show: any): string {
     blocks.push("");
   }
 
-  // Travel
-  if (show.travel_notes) {
+  if (has("parking") && show.parking_notes) {
+    blocks.push(`🅿️ *Parking*`);
+    blocks.push(`    ${show.parking_notes}`);
+    blocks.push("");
+  }
+
+  if (has("loadIn") && show.load_in_details) {
+    blocks.push(`📦 *Load In*`);
+    blocks.push(`    ${show.load_in_details}`);
+    blocks.push("");
+  }
+
+  if (has("greenRoom") && show.green_room_info) {
+    blocks.push(`🛋️ *Green Room*`);
+    blocks.push(`    ${show.green_room_info}`);
+    blocks.push("");
+  }
+
+  if (has("guestList") && show.guest_list_details) {
+    blocks.push(`📋 *Guest List*`);
+    blocks.push(`    ${show.guest_list_details}`);
+    blocks.push("");
+  }
+
+  if (has("wifi") && (show.wifi_network || show.wifi_password)) {
+    blocks.push(`📶 *WiFi*`);
+    if (show.wifi_network) blocks.push(`    Network: \`${show.wifi_network}\``);
+    if (show.wifi_password) blocks.push(`    Password: \`${show.wifi_password}\``);
+    blocks.push("");
+  }
+
+  if (has("settlement") && (show.settlement_method || show.settlement_guarantee)) {
+    blocks.push(`💰 *Settlement*`);
+    if (show.settlement_method) blocks.push(`    ${show.settlement_method}`);
+    if (show.settlement_guarantee) blocks.push(`    ${show.settlement_guarantee}`);
+    blocks.push("");
+  }
+
+  if (has("hotel") && show.hotel_name) {
+    blocks.push(`🏨 *Hotel*`);
+    blocks.push(`    ${show.hotel_name}`);
+    if (show.hotel_address) blocks.push(`    ${show.hotel_address}`);
+    if (show.hotel_confirmation) blocks.push(`    Confirmation: \`${show.hotel_confirmation}\``);
+    if (show.hotel_checkin) blocks.push(`    Check-in: ${show.hotel_checkin}`);
+    if (show.hotel_checkout) blocks.push(`    Check-out: ${show.hotel_checkout}`);
+    blocks.push("");
+  }
+
+  if (has("travel") && show.travel_notes) {
     blocks.push(`🗺️ *Travel*`);
     blocks.push(`    ${show.travel_notes}`);
     blocks.push("");
   }
 
-  // Additional Info
-  if (show.additional_info) {
+  if (has("additional") && show.additional_info) {
     blocks.push(`ℹ️ *Additional Info*`);
     blocks.push(`    ${show.additional_info}`);
     blocks.push("");
@@ -176,7 +159,7 @@ serve(async (req) => {
   }
 
   try {
-    const { showId } = await req.json();
+    const { showId, sections: sectionsArr } = await req.json();
     if (!showId) {
       return new Response(JSON.stringify({ error: "showId is required" }), {
         status: 400,
@@ -217,7 +200,9 @@ serve(async (req) => {
       );
     }
 
-    const message = formatDaySheet(show);
+    const allSections = ["contact","venue","departure","schedule","band","venueDetails","dealTerms","production","projections","parking","loadIn","greenRoom","guestList","wifi","settlement","hotel","travel","additional"];
+    const sections = new Set<string>(Array.isArray(sectionsArr) ? sectionsArr : allSections);
+    const message = formatDaySheet(show, sections);
 
     const slackRes = await fetch(webhookUrl, {
       method: "POST",
