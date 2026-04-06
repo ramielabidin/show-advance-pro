@@ -330,7 +330,7 @@ export default function ShowDetailPage() {
         {(editing || show.parking_notes || show.load_in_details || show.green_room_info || show.guest_list_details) && (
           <>
             <Separator />
-            <FieldGroup title="Venue Details">
+            <FieldGroup title="Venue Details" className="[&>div]:space-y-5">
               {editField("parking_notes", "Parking", { multiline: true })}
               {editField("load_in_details", "Load In", { multiline: true })}
               {editField("green_room_info", "Green Room", { multiline: true })}
