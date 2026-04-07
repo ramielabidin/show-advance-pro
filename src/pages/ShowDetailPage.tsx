@@ -320,22 +320,6 @@ export default function ShowDetailPage() {
       )}
 
       <div className="space-y-6 sm:space-y-8">
-        {/* Day of Show Contact */}
-        <FieldGroup title="Day of Show Contact">
-          {editField("dos_contact_name", "Name", { alwaysShow: true })}
-          {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true })}
-        </FieldGroup>
-
-        <Separator />
-
-        {/* Departure */}
-        <FieldGroup title="Departure">
-          {editField("departure_time", "Time", { mono: true, alwaysShow: true })}
-          {editField("departure_location", "Location", { alwaysShow: true })}
-        </FieldGroup>
-
-        <Separator />
-
         {/* Schedule */}
         <FieldGroup title="Schedule">
           {scheduleEntries.length > 0 ? (
@@ -361,6 +345,22 @@ export default function ShowDetailPage() {
           {editField("set_length", "Set Length", { alwaysShow: true })}
           {editField("curfew", "Curfew", { alwaysShow: true })}
           {editField("changeover_time", "Changeover Time", { alwaysShow: true })}
+        </FieldGroup>
+
+        <Separator />
+
+        {/* Day of Show Contact */}
+        <FieldGroup title="Day of Show Contact">
+          {editField("dos_contact_name", "Name", { alwaysShow: true })}
+          {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true })}
+        </FieldGroup>
+
+        <Separator />
+
+        {/* Departure */}
+        <FieldGroup title="Departure">
+          {editField("departure_time", "Time", { mono: true, alwaysShow: true })}
+          {editField("departure_location", "Location", { alwaysShow: true })}
         </FieldGroup>
 
         <Separator />
