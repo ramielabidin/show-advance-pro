@@ -205,7 +205,8 @@ export default function ShowDetailPage() {
                 </Button>
               )}
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                {show.city} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
+                {!show.venue_address && <>{show.city} · </>}
+                {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
                 {(show as any).tours && (
                   <>
                     {" · "}
