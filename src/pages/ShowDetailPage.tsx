@@ -138,25 +138,31 @@ export default function ShowDetailPage() {
   return (
     <div className="animate-fade-in max-w-3xl">
       {/* Header — venue card */}
-      <div className="flex items-start gap-2 sm:gap-3 mb-6">
-        <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9 sm:h-10 sm:w-10 mt-0.5" onClick={() => navigate("/")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1 min-w-0">
+      <div className="mb-8 space-y-3">
+        {/* Row 1: Back arrow + venue name */}
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" onClick={() => navigate("/")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          {editing ? (
+            <Input value={f("venue_name")} onChange={(e) => setF("venue_name", e.target.value)} className="text-lg sm:text-2xl font-bold h-auto py-1" />
+          ) : (
+            <h1 className="text-lg sm:text-2xl font-bold tracking-tight">{show.venue_name}</h1>
+          )}
+        </div>
+
+        {/* Row 2: Address or city fallback + lookup */}
+        <div className="pl-10">
           {editing ? (
             <div className="space-y-2">
-              <Input value={f("venue_name")} onChange={(e) => setF("venue_name", e.target.value)} className="text-base sm:text-lg font-display h-11 sm:h-9" />
-              <div className="flex items-center gap-2">
-                <Input value={f("venue_address") ?? ""} onChange={(e) => setF("venue_address", e.target.value)} placeholder="Venue address" className="text-sm h-9 flex-1" />
-              </div>
+              <Input value={f("venue_address") ?? ""} onChange={(e) => setF("venue_address", e.target.value)} placeholder="Venue address" className="text-sm h-9" />
               <div className="flex items-center gap-2">
                 <Input value={f("city")} onChange={(e) => setF("city", e.target.value)} placeholder="City" className="text-sm h-9 w-40" />
-                <span className="text-xs text-muted-foreground">· {format(parseISO(show.date), "MMM d, yyyy")} ·</span>
                 <Select
                   value={f("tour_id") ?? "none"}
                   onValueChange={(v) => setF("tour_id" as keyof Show, v === "none" ? "" : v)}
                 >
-                  <SelectTrigger className="text-sm h-8 w-full sm:w-auto">
+                  <SelectTrigger className="text-sm h-9 w-full sm:w-auto">
                     <SelectValue placeholder="Standalone" />
                   </SelectTrigger>
                   <SelectContent>
@@ -170,52 +176,56 @@ export default function ShowDetailPage() {
             </div>
           ) : (
             <>
-              <h1 className="text-xl sm:text-2xl tracking-tight">{show.venue_name}</h1>
               {show.venue_address ? (
                 <a
                   href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline mt-0.5 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:underline transition-colors"
                 >
-                  <MapPin className="h-3 w-3 shrink-0" />
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
                   {show.venue_address}
                 </a>
               ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1 text-xs text-muted-foreground hover:text-foreground h-6 px-1 -ml-1 mt-0.5"
-                  disabled={lookingUpAddress}
-                  onClick={async () => {
-                    setLookingUpAddress(true);
-                    try {
-                      const { data, error } = await supabase.functions.invoke("lookup-venue-address", {
-                        body: { venue_name: show.venue_name, city: show.city },
-                      });
-                      if (error || data?.error) throw new Error(data?.error || error.message);
-                      const cleanAddress = (data.address as string).replace(/,?\s*United States$/, "");
-                      const { error: updateError } = await supabase
-                        .from("shows")
-                        .update({ venue_address: cleanAddress })
-                        .eq("id", show.id);
-                      if (updateError) throw updateError;
-                      queryClient.invalidateQueries({ queryKey: ["show", id] });
-                      toast.success("Address found and saved");
-                    } catch (err: any) {
-                      toast.error(err.message || "Could not find address");
-                    } finally {
-                      setLookingUpAddress(false);
-                    }
-                  }}
-                >
-                  {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : <MapPin className="h-3 w-3" />}
-                  Lookup Address
-                </Button>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  <span>{show.city}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1 text-xs text-muted-foreground hover:text-foreground h-6 px-2"
+                    disabled={lookingUpAddress}
+                    onClick={async () => {
+                      setLookingUpAddress(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("lookup-venue-address", {
+                          body: { venue_name: show.venue_name, city: show.city },
+                        });
+                        if (error || data?.error) throw new Error(data?.error || error.message);
+                        const cleanAddress = (data.address as string).replace(/,?\s*United States$/, "");
+                        const { error: updateError } = await supabase
+                          .from("shows")
+                          .update({ venue_address: cleanAddress })
+                          .eq("id", show.id);
+                        if (updateError) throw updateError;
+                        queryClient.invalidateQueries({ queryKey: ["show", id] });
+                        toast.success("Address found and saved");
+                      } catch (err: any) {
+                        toast.error(err.message || "Could not find address");
+                      } finally {
+                        setLookingUpAddress(false);
+                      }
+                    }}
+                  >
+                    {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                    Lookup Address
+                  </Button>
+                </div>
               )}
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                {!show.venue_address && <>{show.city} · </>}
-                {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
+
+              {/* Row 3: City · Date · Tour */}
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                {show.city} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
                 {(show as any).tours && (
                   <>
                     {" · "}
@@ -229,23 +239,23 @@ export default function ShowDetailPage() {
           )}
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        {/* Row 4: Action buttons */}
+        <div className="pl-10">
           {editing ? (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-9">
-                <X className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Cancel</span>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-8 text-xs">
+                <X className="h-3.5 w-3.5 mr-1" />
+                Cancel
               </Button>
-              <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending} className="h-9">
-                <Save className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Save</span>
+              <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending} className="h-8 text-xs">
+                <Save className="h-3.5 w-3.5 mr-1" />
+                Save
               </Button>
-            </>
+            </div>
           ) : (
             <>
               {/* Desktop */}
-              <div className="hidden md:flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-1.5">
                 <SlackPushDialog showId={id!} />
                 <EmailBandDialog show={show as Show} />
                 <ExportPdfDialog show={show as Show} />
@@ -257,34 +267,34 @@ export default function ShowDetailPage() {
                     queryClient.invalidateQueries({ queryKey: ["shows"] });
                   }}
                 />
-                <Button variant="outline" size="sm" onClick={startEdit}>
-                  <Edit className="h-4 w-4 mr-1" /> Edit
+                <Button variant="outline" size="sm" onClick={startEdit} className="h-8 text-xs">
+                  <Edit className="h-3.5 w-3.5 mr-1" /> Edit
                 </Button>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:text-destructive"
                   onClick={() => {
                     if (confirm("Delete this show?")) deleteMutation.mutate();
                   }}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
 
               {/* Mobile */}
-              <div className="flex md:hidden items-center gap-1">
-                <Button variant="outline" size="sm" onClick={startEdit} className="h-9">
-                  <Edit className="h-4 w-4" />
+              <div className="flex md:hidden items-center gap-1.5">
+                <SlackPushDialog showId={id!} />
+                <Button variant="outline" size="sm" onClick={startEdit} className="h-8 text-xs">
+                  <Edit className="h-3.5 w-3.5 mr-1" /> Edit
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <SlackPushDialog showId={id!} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Push to Slack</DropdownMenuItem>} />
+                  <DropdownMenuContent align="start">
                     <EmailBandDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email Band</DropdownMenuItem>} />
                     <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export PDF</DropdownMenuItem>} />
                     <ParseAdvanceForShowDialog
