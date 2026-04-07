@@ -212,36 +212,6 @@ export default function ShowDetailPage() {
       )}
 
       <div className="space-y-8">
-        {/* Tour */}
-        <FieldGroup title="Tour">
-          {editing ? (
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Tour</Label>
-              <Select
-                value={f("tour_id") ?? "none"}
-                onValueChange={(v) => setF("tour_id" as keyof Show, v === "none" ? "" : v)}
-              >
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Standalone" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Standalone</SelectItem>
-                  {toursList.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <FieldRow
-              label="Tour"
-              value={(show as any).tours?.name ?? "Standalone"}
-            />
-          )}
-        </FieldGroup>
-
-        <Separator />
-
         {/* Venue */}
         <FieldGroup title="Venue">
           {editField("venue_address", "Address")}
