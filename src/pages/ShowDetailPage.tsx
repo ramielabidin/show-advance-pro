@@ -408,7 +408,7 @@ export default function ShowDetailPage() {
         <div className="pl-10">
           {editing ? (
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-8 text-xs">
+              <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setEditingSchedule(false); }} className="h-8 text-xs">
                 <X className="h-3.5 w-3.5 mr-1" />
                 Cancel
               </Button>
