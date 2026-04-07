@@ -109,7 +109,7 @@ export default function ShowDetailPage() {
 
   const scheduleEntries = show.schedule_entries?.sort((a, b) => a.sort_order - b.sort_order) ?? [];
 
-  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean }) => {
+  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean }) => {
     if (editing) {
       return (
         <div className="space-y-1">
@@ -122,7 +122,11 @@ export default function ShowDetailPage() {
         </div>
       );
     }
-    return <FieldRow label={label} value={(show as any)[key]} mono={opts?.mono} />;
+    const value = (show as any)[key];
+    if (!value && opts?.alwaysShow) {
+      return <EmptyFieldPrompt label={label} onClick={startEdit} />;
+    }
+    return <FieldRow label={label} value={value} mono={opts?.mono} />;
   };
 
   return (
@@ -273,49 +277,41 @@ export default function ShowDetailPage() {
           {editField("city", "City")}
         </FieldGroup>
 
-        {(editing || show.dos_contact_name || show.dos_contact_phone) && (
-          <>
-            <Separator />
-            <FieldGroup title="Day of Show Contact">
-              {editField("dos_contact_name", "Name")}
-              {editField("dos_contact_phone", "Phone", { mono: true })}
-            </FieldGroup>
-          </>
-        )}
+        <Separator />
+        <FieldGroup title="Day of Show Contact">
+          {editField("dos_contact_name", "Name", { alwaysShow: true })}
+          {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true })}
+        </FieldGroup>
 
-        {(editing || show.departure_time || show.departure_location) && (
-          <>
-            <Separator />
-            <FieldGroup title="Departure">
-              {editField("departure_time", "Time", { mono: true })}
-              {editField("departure_location", "Location")}
-            </FieldGroup>
-          </>
-        )}
+        <Separator />
+        <FieldGroup title="Departure">
+          {editField("departure_time", "Time", { mono: true, alwaysShow: true })}
+          {editField("departure_location", "Location", { alwaysShow: true })}
+        </FieldGroup>
 
-        {scheduleEntries.length > 0 && (
-          <>
-            <Separator />
-            <FieldGroup title="Schedule">
-              <div className="space-y-1">
-                {scheduleEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className={cn(
-                      "flex items-center gap-4 rounded px-3 py-1.5",
-                      entry.is_band && "bg-primary/5 font-medium"
-                    )}
-                  >
-                    <span className="font-mono text-sm w-16 shrink-0 text-muted-foreground">
-                      {entry.time}
-                    </span>
-                    <span className="text-sm text-foreground">{entry.label}</span>
-                  </div>
-                ))}
-              </div>
-            </FieldGroup>
-          </>
-        )}
+        <Separator />
+        <FieldGroup title="Schedule">
+          {scheduleEntries.length > 0 ? (
+            <div className="space-y-1">
+              {scheduleEntries.map((entry) => (
+                <div
+                  key={entry.id}
+                  className={cn(
+                    "flex items-center gap-4 rounded px-3 py-1.5",
+                    entry.is_band && "bg-primary/5 font-medium"
+                  )}
+                >
+                  <span className="font-mono text-sm w-16 shrink-0 text-muted-foreground">
+                    {entry.time}
+                  </span>
+                  <span className="text-sm text-foreground">{entry.label}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyFieldPrompt label="schedule" onClick={startEdit} />
+          )}
+        </FieldGroup>
 
         {(editing || show.set_length || show.curfew || show.changeover_time || show.backline_provided || show.catering_details) && (
           <>
@@ -398,27 +394,19 @@ export default function ShowDetailPage() {
           </>
         )}
 
-        {(editing || show.parking_notes || show.load_in_details || show.green_room_info || show.guest_list_details) && (
-          <>
-            <Separator />
-            <FieldGroup title="Venue Details" className="[&>div]:space-y-5">
-              {editField("parking_notes", "Parking", { multiline: true })}
-              {editField("load_in_details", "Load In", { multiline: true })}
-              {editField("green_room_info", "Green Room", { multiline: true })}
-              {editField("guest_list_details", "Guest List", { multiline: true })}
-            </FieldGroup>
-          </>
-        )}
+        <Separator />
+        <FieldGroup title="Venue Details" className="[&>div]:space-y-5">
+          {editField("parking_notes", "Parking", { multiline: true, alwaysShow: true })}
+          {editField("load_in_details", "Load In", { multiline: true, alwaysShow: true })}
+          {(editing || show.green_room_info) && editField("green_room_info", "Green Room", { multiline: true })}
+          {(editing || show.guest_list_details) && editField("guest_list_details", "Guest List", { multiline: true })}
+        </FieldGroup>
 
-        {(editing || show.wifi_network || show.wifi_password) && (
-          <>
-            <Separator />
-            <FieldGroup title="WiFi">
-              {editField("wifi_network", "Network", { mono: true })}
-              {editField("wifi_password", "Password", { mono: true })}
-            </FieldGroup>
-          </>
-        )}
+        <Separator />
+        <FieldGroup title="WiFi">
+          {editField("wifi_network", "Network", { mono: true, alwaysShow: true })}
+          {editField("wifi_password", "Password", { mono: true, alwaysShow: true })}
+        </FieldGroup>
 
         {(editing || show.settlement_method || show.settlement_guarantee) && (
           <>
@@ -430,18 +418,14 @@ export default function ShowDetailPage() {
           </>
         )}
 
-        {(editing || show.hotel_name || show.hotel_address || show.hotel_confirmation || show.hotel_checkin || show.hotel_checkout) && (
-          <>
-            <Separator />
-            <FieldGroup title="Hotel">
-              {editField("hotel_name", "Name")}
-              {editField("hotel_address", "Address")}
-              {editField("hotel_confirmation", "Confirmation #", { mono: true })}
-              {editField("hotel_checkin", "Check In", { mono: true })}
-              {editField("hotel_checkout", "Check Out", { mono: true })}
-            </FieldGroup>
-          </>
-        )}
+        <Separator />
+        <FieldGroup title="Hotel">
+          {editField("hotel_name", "Name", { alwaysShow: true })}
+          {editField("hotel_address", "Address", { alwaysShow: true })}
+          {editField("hotel_confirmation", "Confirmation #", { mono: true, alwaysShow: true })}
+          {editField("hotel_checkin", "Check In", { mono: true, alwaysShow: true })}
+          {editField("hotel_checkout", "Check Out", { mono: true, alwaysShow: true })}
+        </FieldGroup>
 
         {(editing || show.travel_notes) && (
           <>
