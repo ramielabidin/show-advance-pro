@@ -319,8 +319,7 @@ export default function ShowDetailPage() {
       )}
 
       <div className="space-y-6 sm:space-y-8">
-
-
+        {/* Day of Show Contact */}
         <FieldGroup title="Day of Show Contact">
           {editField("dos_contact_name", "Name", { alwaysShow: true })}
           {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true })}
