@@ -140,26 +140,21 @@ export default function DashboardPage() {
     });
 
     let totalGuarantee = 0;
-    thisYear.forEach((s) => {
+    upcoming.forEach((s) => {
       const val = parseFloat(s.guarantee?.replace(/[^0-9.-]/g, "") || "");
       if (!isNaN(val)) totalGuarantee += val;
     });
 
-    let walkout30 = 0;
-    shows
-      .filter((s) => {
-        const d = parseISO(s.date);
-        return d >= today && d <= next30;
-      })
-      .forEach((s) => {
-        const val = parseFloat(s.walkout_potential?.replace(/[^0-9.-]/g, "") || "");
-        if (!isNaN(val)) walkout30 += val;
-      });
+    let walkoutUpcoming = 0;
+    upcoming.forEach((s) => {
+      const val = parseFloat(s.walkout_potential?.replace(/[^0-9.-]/g, "") || "");
+      if (!isNaN(val)) walkoutUpcoming += val;
+    });
 
     return {
       totalThisYear: thisYear.length,
       totalGuarantee,
-      walkout30,
+      walkoutUpcoming,
       showsThisMonth: thisMonth.length,
     };
   }, [shows]);
@@ -185,13 +180,13 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Shows This Year" value={stats.totalThisYear} icon={Calendar} />
         <StatCard
-          label="Total Guaranteed"
+          label="Guaranteed Upcoming"
           value={stats.totalGuarantee ? `$${stats.totalGuarantee.toLocaleString()}` : "—"}
           icon={DollarSign}
         />
         <StatCard
-          label="Walkout (30 days)"
-          value={stats.walkout30 ? `$${stats.walkout30.toLocaleString()}` : "—"}
+          label="Walkout Potential (Upcoming)"
+          value={stats.walkoutUpcoming ? `$${stats.walkoutUpcoming.toLocaleString()}` : "—"}
           icon={TrendingUp}
         />
         <StatCard label="Shows This Month" value={stats.showsThisMonth} icon={BarChart3} />
