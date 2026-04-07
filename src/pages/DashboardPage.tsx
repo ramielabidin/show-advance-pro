@@ -170,14 +170,14 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="animate-fade-in space-y-6 sm:space-y-8">
+    <div className="animate-fade-in space-y-6 sm:space-y-8 overflow-x-hidden">
       <div>
         <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground text-sm mt-1">Your morning briefing</p>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         <StatCard label="Shows This Year" value={stats.totalThisYear} icon={Calendar} />
         <StatCard
           label="Guaranteed Upcoming"
@@ -373,7 +373,7 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
     <Link to={`/shows/${show.id}`} className="block group">
       <Card className="overflow-hidden hover:border-foreground/20 transition-colors">
         <CardContent className="p-5 sm:p-6">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start justify-between gap-2 sm:gap-4">
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">
                 Next Show
