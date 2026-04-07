@@ -6,7 +6,7 @@ import {
   parseISO,
   isPast,
   isToday,
-  differenceInDays,
+  differenceInCalendarDays,
   addDays,
   startOfYear,
   endOfYear,
@@ -257,7 +257,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-1">
               {needsAttention.map((show) => {
-                const daysAway = differenceInDays(parseISO(show.date), today);
+                const daysAway = differenceInCalendarDays(parseISO(show.date), today);
                 return (
                   <Link
                     key={show.id}
@@ -352,7 +352,7 @@ function StatCard({
 
 function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean }) {
   const date = parseISO(show.date);
-  const daysAway = differenceInDays(date, new Date());
+  const daysAway = differenceInCalendarDays(date, new Date());
   const advanced = countAdvanced(show, hasSchedule);
   const pct = (advanced / TOTAL_ADVANCE) * 100;
 
