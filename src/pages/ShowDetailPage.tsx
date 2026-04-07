@@ -29,6 +29,7 @@ import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
 import ExportPdfDialog from "@/components/ExportPdfDialog";
 import GuestListEditor, { GuestListView, parseGuestList, guestTotal } from "@/components/GuestListEditor";
+import ScheduleEditor, { type ScheduleRow } from "@/components/ScheduleEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -502,28 +503,61 @@ export default function ShowDetailPage() {
 
       <div className="space-y-6 sm:space-y-8">
         <div ref={scheduleRef}>
-        <FieldGroup title="Schedule" incomplete={!editing && scheduleEntries.length === 0 && !show.set_length && !show.curfew && !show.changeover_time}>
-          {scheduleEntries.length > 0 ? (
-            <div className="space-y-1">
-              {scheduleEntries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className={cn(
-                    "flex items-center gap-3 sm:gap-4 rounded px-2 sm:px-3 py-1.5",
-                    entry.is_band && "bg-primary/5 font-medium"
-                  )}
-                >
-                  <span className="font-mono text-sm w-14 sm:w-16 shrink-0 text-muted-foreground">
-                    {entry.time}
-                  </span>
-                  <span className="text-sm text-foreground">{entry.label}</span>
-                </div>
-              ))}
-            </div>
+        <FieldGroup title="Schedule" incomplete={!editing && !editingSchedule && scheduleEntries.length === 0 && !show.set_length && !show.curfew && !show.changeover_time}>
+          {editingSchedule ? (
+            <ScheduleEditor
+              initial={scheduleEntries.map((e) => ({ time: e.time, label: e.label, is_band: e.is_band }))}
+              onSave={async (rows) => {
+                try {
+                  // Delete existing entries
+                  await supabase.from("schedule_entries").delete().eq("show_id", id!);
+                  // Insert new entries
+                  if (rows.length > 0) {
+                    const inserts = rows.map((r, i) => ({
+                      show_id: id!,
+                      time: r.time,
+                      label: r.label,
+                      is_band: r.is_band,
+                      sort_order: i,
+                    }));
+                    const { error } = await supabase.from("schedule_entries").insert(inserts);
+                    if (error) throw error;
+                  }
+                  queryClient.invalidateQueries({ queryKey: ["show", id] });
+                  queryClient.invalidateQueries({ queryKey: ["shows"] });
+                  queryClient.invalidateQueries({ queryKey: ["schedule-counts"] });
+                  setEditingSchedule(false);
+                  toast.success("Schedule updated");
+                } catch {
+                  toast.error("Failed to save schedule");
+                }
+              }}
+              onCancel={() => setEditingSchedule(false)}
+              saving={false}
+            />
+          ) : scheduleEntries.length > 0 ? (
+            <button onClick={() => setEditingSchedule(true)} className="w-full text-left">
+              <div className="space-y-1">
+                {scheduleEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className={cn(
+                      "flex items-center gap-3 sm:gap-4 rounded px-2 sm:px-3 py-1.5",
+                      entry.is_band && "bg-primary/5 font-medium"
+                    )}
+                  >
+                    <span className="font-mono text-sm w-14 sm:w-16 shrink-0 text-muted-foreground">
+                      {entry.time}
+                    </span>
+                    <span className="text-sm text-foreground">{entry.label}</span>
+                  </div>
+                ))}
+              </div>
+            </button>
           ) : (
             <EmptyFieldPrompt label="schedule" onClick={() => {
               scheduleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-              startEdit();
+              setEditingSchedule(true);
             }} />
           )}
           {editField("set_length", "Set Length", { alwaysShow: true })}
