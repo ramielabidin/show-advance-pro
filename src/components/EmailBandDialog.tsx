@@ -251,9 +251,12 @@ export default function EmailBandDialog({ show }: { show: Show & { schedule_entr
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <Mail className="h-4 w-4" /> Email Band
-        </Button>
+        {trigger || (
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <Mail className="h-4 w-4" /> Email Band
+          </Button>
+        )}
+      </DialogTrigger>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

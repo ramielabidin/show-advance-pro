@@ -46,7 +46,7 @@ const BAND_VIEW_KEYS: SectionKey[] = [
 
 const allKeys = (): Set<SectionKey> => new Set(SECTIONS.map((s) => s.key));
 
-export default function SlackPushDialog({ showId }: { showId: string }) {
+export default function SlackPushDialog({ showId, trigger }: { showId: string; trigger?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [selected, setSelected] = useState<Set<SectionKey>>(allKeys);
@@ -96,9 +96,11 @@ export default function SlackPushDialog({ showId }: { showId: string }) {
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <Send className="h-4 w-4" /> Slack
-        </Button>
+        {trigger || (
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <Send className="h-4 w-4" /> Slack
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

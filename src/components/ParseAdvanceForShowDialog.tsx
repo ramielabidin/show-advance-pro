@@ -69,9 +69,10 @@ interface Props {
   showId: string;
   currentShow: Show;
   onUpdated: () => void;
+  trigger?: React.ReactNode;
 }
 
-export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdated }: Props) {
+export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdated, trigger }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -217,9 +218,12 @@ export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdat
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <FileText className="h-4 w-4" /> Parse Advance
-        </Button>
+        {trigger || (
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <FileText className="h-4 w-4" /> Parse Advance
+          </Button>
+        )}
+      </DialogTrigger>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
