@@ -33,6 +33,7 @@ import ScheduleEditor, { type ScheduleRow } from "@/components/ScheduleEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { normalizeTime } from "@/lib/timeFormat";
 import type { Show } from "@/lib/types";
 import RevenueSimulator, { parseDollar } from "@/components/RevenueSimulator";
 
@@ -192,16 +193,24 @@ export default function ShowDetailPage() {
   );
 
   // Renders a field that supports both global edit and inline edit
-  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean }) => {
+  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; placeholder?: string }) => {
     // Global edit mode — same as before
     if (editing) {
       return (
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">{label}</Label>
           {opts?.multiline ? (
-            <Textarea value={f(key) ?? ""} onChange={(e) => setF(key, e.target.value)} className="text-sm min-h-[44px]" />
+            <Textarea value={f(key) ?? ""} onChange={(e) => setF(key, e.target.value)} className="text-sm min-h-[44px]" placeholder={opts?.placeholder} />
           ) : (
-            <Input value={f(key) ?? ""} onChange={(e) => setF(key, e.target.value)} className={cn("text-sm h-11 sm:h-9", opts?.mono && "font-mono")} />
+            <Input
+              value={f(key) ?? ""}
+              onChange={(e) => setF(key, e.target.value)}
+              className={cn("text-sm h-11 sm:h-9", opts?.mono && "font-mono")}
+              onBlur={opts?.timeFormat ? () => {
+                const v = f(key);
+                if (v) { const n = normalizeTime(v); if (n !== v) setF(key, n); }
+              } : undefined}
+            />
           )}
         </div>
       );
@@ -218,6 +227,7 @@ export default function ShowDetailPage() {
               onChange={(e) => setInlineValue(e.target.value)}
               className="text-sm min-h-[44px]"
               autoFocus
+              placeholder={opts?.placeholder}
             />
           ) : (
             <Input
@@ -229,6 +239,10 @@ export default function ShowDetailPage() {
                 if (e.key === "Enter") saveInline();
                 if (e.key === "Escape") cancelInline();
               }}
+              onBlur={opts?.timeFormat ? () => {
+                const n = normalizeTime(inlineValue);
+                if (n !== inlineValue) setInlineValue(n);
+              } : undefined}
             />
           )}
           <InlineActions onSave={saveInline} onCancel={cancelInline} />
@@ -569,8 +583,8 @@ export default function ShowDetailPage() {
 
         {/* Departure */}
         <FieldGroup title="Departure" incomplete={!editing && !show.departure_time && !show.departure_location}>
-          {editField("departure_time", "Departure Time", { mono: true, alwaysShow: true })}
-          {editField("departure_location", "Meetup Location", { alwaysShow: true })}
+          {editField("departure_time", "Departure Time", { mono: true, alwaysShow: true, timeFormat: true })}
+          {editField("departure_location", "Departure Notes", { multiline: true, alwaysShow: true, placeholder: "e.g. Car 1 leaving from Rami's at 9am, Car 2 from JT's at 9:30am" })}
         </FieldGroup>
 
         <Separator />
