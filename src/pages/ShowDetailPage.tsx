@@ -137,49 +137,85 @@ export default function ShowDetailPage() {
 
   return (
     <div className="animate-fade-in max-w-3xl">
-      {/* Header */}
-      <div className="flex items-start sm:items-center gap-2 sm:gap-3 mb-6">
-        <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9 sm:h-10 sm:w-10" onClick={() => navigate("/")}>
+      {/* Header — venue card */}
+      <div className="flex items-start gap-2 sm:gap-3 mb-6">
+        <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9 sm:h-10 sm:w-10 mt-0.5" onClick={() => navigate("/")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1 min-w-0">
           {editing ? (
-            <div className="flex gap-2">
+            <div className="space-y-2">
               <Input value={f("venue_name")} onChange={(e) => setF("venue_name", e.target.value)} className="text-base sm:text-lg font-display h-11 sm:h-9" />
+              <div className="flex items-center gap-2">
+                <Input value={f("venue_address") ?? ""} onChange={(e) => setF("venue_address", e.target.value)} placeholder="Venue address" className="text-sm h-9 flex-1" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Input value={f("city")} onChange={(e) => setF("city", e.target.value)} placeholder="City" className="text-sm h-9 w-40" />
+                <span className="text-xs text-muted-foreground">· {format(parseISO(show.date), "MMM d, yyyy")} ·</span>
+                <Select
+                  value={f("tour_id") ?? "none"}
+                  onValueChange={(v) => setF("tour_id" as keyof Show, v === "none" ? "" : v)}
+                >
+                  <SelectTrigger className="text-sm h-8 w-full sm:w-auto">
+                    <SelectValue placeholder="Standalone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Standalone</SelectItem>
+                    {toursList.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           ) : (
-            <h1 className="text-xl sm:text-2xl tracking-tight truncate">{show.venue_name}</h1>
-          )}
-          {editing ? (
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
-              <span className="text-xs sm:text-sm text-muted-foreground">{show.city} · {format(parseISO(show.date), "MMM d, yyyy")} ·</span>
-              <Select
-                value={f("tour_id") ?? "none"}
-                onValueChange={(v) => setF("tour_id" as keyof Show, v === "none" ? "" : v)}
-              >
-                <SelectTrigger className="text-sm h-8 w-full sm:w-auto">
-                  <SelectValue placeholder="Standalone" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Standalone</SelectItem>
-                  {toursList.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-              {show.city} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
-              {(show as any).tours && (
-                <>
-                  {" · "}
-                  <Link to={`/tours/${(show as any).tours.id}`} className="text-foreground hover:underline">
-                    {(show as any).tours.name}
-                  </Link>
-                </>
+            <>
+              <h1 className="text-xl sm:text-2xl tracking-tight">{show.venue_name}</h1>
+              {show.venue_address ? (
+                <p className="text-sm text-muted-foreground mt-0.5">{show.venue_address}</p>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-xs text-muted-foreground hover:text-foreground h-6 px-1 -ml-1 mt-0.5"
+                  disabled={lookingUpAddress}
+                  onClick={async () => {
+                    setLookingUpAddress(true);
+                    try {
+                      const { data, error } = await supabase.functions.invoke("lookup-venue-address", {
+                        body: { venue_name: show.venue_name, city: show.city },
+                      });
+                      if (error || data?.error) throw new Error(data?.error || error.message);
+                      const { error: updateError } = await supabase
+                        .from("shows")
+                        .update({ venue_address: data.address })
+                        .eq("id", show.id);
+                      if (updateError) throw updateError;
+                      queryClient.invalidateQueries({ queryKey: ["show", id] });
+                      toast.success("Address found and saved");
+                    } catch (err: any) {
+                      toast.error(err.message || "Could not find address");
+                    } finally {
+                      setLookingUpAddress(false);
+                    }
+                  }}
+                >
+                  {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : <MapPin className="h-3 w-3" />}
+                  Lookup Address
+                </Button>
               )}
-            </p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                {show.city} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
+                {(show as any).tours && (
+                  <>
+                    {" · "}
+                    <Link to={`/tours/${(show as any).tours.id}`} className="text-foreground hover:underline">
+                      {(show as any).tours.name}
+                    </Link>
+                  </>
+                )}
+              </p>
+            </>
           )}
         </div>
 
@@ -198,7 +234,7 @@ export default function ShowDetailPage() {
             </>
           ) : (
             <>
-              {/* Desktop: show all buttons */}
+              {/* Desktop */}
               <div className="hidden md:flex items-center gap-2">
                 <SlackPushDialog showId={id!} />
                 <EmailBandDialog show={show as Show} />
@@ -226,7 +262,7 @@ export default function ShowDetailPage() {
                 </Button>
               </div>
 
-              {/* Mobile: Edit button + overflow menu */}
+              {/* Mobile */}
               <div className="flex md:hidden items-center gap-1">
                 <Button variant="outline" size="sm" onClick={startEdit} className="h-9">
                   <Edit className="h-4 w-4" />
@@ -283,45 +319,6 @@ export default function ShowDetailPage() {
       )}
 
       <div className="space-y-6 sm:space-y-8">
-        {/* Venue */}
-        <FieldGroup title="Venue">
-          {editField("venue_address", "Address")}
-          {!editing && !show.venue_address && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs h-9"
-              disabled={lookingUpAddress}
-              onClick={async () => {
-                setLookingUpAddress(true);
-                try {
-                  const { data, error } = await supabase.functions.invoke("lookup-venue-address", {
-                    body: { venue_name: show.venue_name, city: show.city },
-                  });
-                  if (error || data?.error) throw new Error(data?.error || error.message);
-                  const { error: updateError } = await supabase
-                    .from("shows")
-                    .update({ venue_address: data.address })
-                    .eq("id", show.id);
-                  if (updateError) throw updateError;
-                  queryClient.invalidateQueries({ queryKey: ["show", id] });
-                  toast.success("Address found and saved");
-                } catch (err: any) {
-                  toast.error(err.message || "Could not find address");
-                } finally {
-                  setLookingUpAddress(false);
-                }
-              }}
-            >
-              {lookingUpAddress ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
-              Lookup Address
-            </Button>
-          )}
-          {editField("city", "City")}
-        </FieldGroup>
-
-        <Separator />
-
         {/* Day of Show Contact */}
         <FieldGroup title="Day of Show Contact">
           {editField("dos_contact_name", "Name", { alwaysShow: true })}
