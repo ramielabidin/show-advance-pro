@@ -560,7 +560,7 @@ export default function ShowDetailPage() {
         <Separator />
 
         {/* At The Venue */}
-        <FieldGroup title="At The Venue" incomplete={!editing && !show.green_room_info && !show.wifi_network && !show.wifi_password && !show.guest_list_details}>
+        <FieldGroup title="At The Venue">
           {editField("green_room_info", "Green Room", { multiline: true, alwaysShow: true })}
           {editField("wifi_network", "WiFi Network", { mono: true, alwaysShow: true })}
           {editField("wifi_password", "WiFi Password", { mono: true, alwaysShow: true })}
