@@ -17,7 +17,6 @@ export default function SettingsPage() {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
 
-  // Slack settings
   const { isLoading: settingsLoading } = useQuery({
     queryKey: ["app-settings", teamId],
     queryFn: async () => {
@@ -62,7 +61,6 @@ export default function SettingsPage() {
     onError: () => toast.error("Failed to save settings"),
   });
 
-  // Team members
   const { data: members = [] } = useQuery({
     queryKey: ["team-members", teamId],
     queryFn: async () => {
@@ -77,7 +75,6 @@ export default function SettingsPage() {
     enabled: !!teamId,
   });
 
-  // Fetch emails for team members
   const { data: emailMap = {} } = useQuery({
     queryKey: ["team-member-emails", teamId],
     queryFn: async () => {
@@ -94,7 +91,6 @@ export default function SettingsPage() {
     enabled: !!teamId,
   });
 
-  // Pending invites
   const { data: invites = [] } = useQuery({
     queryKey: ["team-invites", teamId],
     queryFn: async () => {
@@ -152,14 +148,14 @@ export default function SettingsPage() {
   });
 
   return (
-    <div className="animate-fade-in max-w-xl space-y-8">
+    <div className="animate-fade-in max-w-xl space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-3xl tracking-tight">Settings</h1>
+        <h1 className="text-2xl sm:text-3xl tracking-tight">Settings</h1>
         <p className="text-muted-foreground text-sm mt-1">Manage your team and integrations</p>
       </div>
 
       {/* Team Section */}
-      <div className="rounded-lg border bg-card p-6 space-y-6">
+      <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-6">
         <div>
           <h2 className="font-medium text-foreground mb-1">Team</h2>
           <p className="text-sm text-muted-foreground mb-4">
@@ -169,20 +165,20 @@ export default function SettingsPage() {
 
         <div className="space-y-2">
           {members.map((m) => (
-            <div key={m.id} className="flex items-center justify-between rounded-md border px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-foreground">
+            <div key={m.id} className="flex items-center justify-between rounded-md border px-3 py-2.5 sm:py-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm text-foreground truncate">
                   {m.user_id === session?.user.id ? "You" : (emailMap[m.user_id] || m.user_id.slice(0, 8) + "…")}
                 </span>
                 {m.role === "owner" && (
-                  <Crown className="h-3.5 w-3.5 text-amber-500" />
+                  <Crown className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                 )}
               </div>
               {isOwner && m.user_id !== session?.user.id && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-destructive hover:text-destructive"
+                  className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
                   onClick={() => {
                     if (confirm("Remove this member?")) removeMemberMutation.mutate(m.id);
                   }}
@@ -198,13 +194,13 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Pending Invites</p>
             {invites.map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between rounded-md border border-dashed px-3 py-2">
-                <span className="text-sm text-muted-foreground">{inv.email}</span>
+              <div key={inv.id} className="flex items-center justify-between rounded-md border border-dashed px-3 py-2.5 sm:py-2">
+                <span className="text-sm text-muted-foreground truncate">{inv.email}</span>
                 {isOwner && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-destructive hover:text-destructive"
+                    className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
                     onClick={() => removeInviteMutation.mutate(inv.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -216,13 +212,13 @@ export default function SettingsPage() {
         )}
 
         {isOwner && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <Input
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder="teammate@email.com"
               type="email"
-              className="text-sm"
+              className="text-sm h-11 sm:h-9"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && inviteEmail.trim()) {
                   inviteMutation.mutate(inviteEmail);
@@ -231,7 +227,7 @@ export default function SettingsPage() {
             />
             <Button
               size="sm"
-              className="gap-1.5 shrink-0"
+              className="gap-1.5 shrink-0 h-11 sm:h-9"
               onClick={() => inviteMutation.mutate(inviteEmail)}
               disabled={!inviteEmail.trim() || inviteMutation.isPending}
             >
@@ -245,7 +241,7 @@ export default function SettingsPage() {
       <Separator />
 
       {/* Slack Integration */}
-      <div className="rounded-lg border bg-card p-6 space-y-6">
+      <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-6">
         <div>
           <h2 className="font-medium text-foreground mb-1">Slack Integration</h2>
           <p className="text-sm text-muted-foreground mb-4">
@@ -266,7 +262,7 @@ export default function SettingsPage() {
               value={webhookUrl}
               onChange={(e) => setWebhookUrl(e.target.value)}
               placeholder="https://hooks.slack.com/services/T00/B00/xxx"
-              className="font-mono text-sm"
+              className="font-mono text-sm h-11 sm:h-9"
               disabled={settingsLoading}
             />
           </div>
@@ -275,7 +271,7 @@ export default function SettingsPage() {
         <Button
           onClick={() => saveMutation.mutate()}
           disabled={saveMutation.isPending || settingsLoading}
-          className="gap-1.5"
+          className="gap-1.5 w-full sm:w-auto h-11 sm:h-9"
         >
           <Save className="h-4 w-4" />
           {saveMutation.isPending ? "Saving…" : "Save Settings"}

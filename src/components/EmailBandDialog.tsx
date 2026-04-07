@@ -189,7 +189,7 @@ function buildBody(show: Show & { schedule_entries?: any[] }, selected: Set<Sect
   return parts.filter(Boolean).join("\n\n");
 }
 
-export default function EmailBandDialog({ show }: { show: Show & { schedule_entries?: any[] } }) {
+export default function EmailBandDialog({ show, trigger }: { show: Show & { schedule_entries?: any[] }; trigger?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<SectionKey>>(allKeys);
   const [note, setNote] = useState("");
@@ -251,9 +251,11 @@ export default function EmailBandDialog({ show }: { show: Show & { schedule_entr
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <Mail className="h-4 w-4" /> Email Band
-        </Button>
+        {trigger || (
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <Mail className="h-4 w-4" /> Email Band
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

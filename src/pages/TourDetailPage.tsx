@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Edit, Trash2, Save, X, Plus, Calendar, MapPin } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Save, X, Plus, Calendar } from "lucide-react";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
@@ -45,7 +45,6 @@ export default function TourDetailPage() {
     },
   });
 
-  // Standalone shows (not in any tour) for the "add show" dropdown
   const { data: standaloneShows = [] } = useQuery({
     queryKey: ["standalone-shows"],
     queryFn: async () => {
@@ -77,7 +76,6 @@ export default function TourDetailPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      // Unlink shows first
       await supabase.from("shows").update({ tour_id: null }).eq("tour_id", id!);
       const { error } = await supabase.from("tours").delete().eq("id", id!);
       if (error) throw error;
@@ -135,41 +133,44 @@ export default function TourDetailPage() {
 
   return (
     <div className="animate-fade-in max-w-3xl">
-      <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/tours")}>
+      <div className="flex items-start sm:items-center gap-2 sm:gap-3 mb-6">
+        <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9" onClick={() => navigate("/tours")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {editing ? (
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="text-lg font-display" />
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="text-base sm:text-lg font-display h-11 sm:h-9" />
           ) : (
-            <h1 className="text-2xl tracking-tight">{tour.name}</h1>
+            <h1 className="text-xl sm:text-2xl tracking-tight truncate">{tour.name}</h1>
           )}
           {tour.start_date && tour.end_date && (
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
               {format(parseISO(tour.start_date), "MMM d")} – {format(parseISO(tour.end_date), "MMM d, yyyy")} · {shows.length} show{shows.length !== 1 ? "s" : ""}
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {editing ? (
             <>
-              <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
-                <X className="h-4 w-4 mr-1" /> Cancel
+              <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-9">
+                <X className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Cancel</span>
               </Button>
-              <Button size="sm" onClick={() => updateMutation.mutate(form)} disabled={updateMutation.isPending}>
-                <Save className="h-4 w-4 mr-1" /> Save
+              <Button size="sm" onClick={() => updateMutation.mutate(form)} disabled={updateMutation.isPending} className="h-9">
+                <Save className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Save</span>
               </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" size="sm" onClick={startEdit}>
-                <Edit className="h-4 w-4 mr-1" /> Edit
+              <Button variant="outline" size="sm" onClick={startEdit} className="h-9">
+                <Edit className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Edit</span>
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-destructive hover:text-destructive"
+                className="text-destructive hover:text-destructive h-9"
                 onClick={() => {
                   if (confirm("Delete this tour? Shows will become standalone.")) deleteMutation.mutate();
                 }}
@@ -183,14 +184,14 @@ export default function TourDetailPage() {
 
       {editing && (
         <div className="space-y-4 mb-8 rounded-lg border bg-card p-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Start Date</Label>
-              <Input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
+              <Input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} className="h-11 sm:h-9" />
             </div>
             <div className="space-y-2">
               <Label>End Date</Label>
-              <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+              <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} className="h-11 sm:h-9" />
             </div>
           </div>
           <div className="space-y-2">
@@ -212,12 +213,12 @@ export default function TourDetailPage() {
 
       <Separator className="mb-6" />
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Shows</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <CreateShowDialog defaultTourId={id} />
           <BulkUploadDialog defaultTourId={id} />
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAddingShow(!addingShow)}>
+          <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={() => setAddingShow(!addingShow)}>
             <Plus className="h-4 w-4" />
             Link Existing
           </Button>
@@ -225,9 +226,9 @@ export default function TourDetailPage() {
       </div>
 
       {addingShow && (
-        <div className="flex items-center gap-2 mb-4 p-3 rounded-lg border bg-card">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4 p-3 rounded-lg border bg-card">
           <Select value={selectedShowId} onValueChange={setSelectedShowId}>
-            <SelectTrigger className="flex-1">
+            <SelectTrigger className="flex-1 h-11 sm:h-9">
               <SelectValue placeholder="Select a standalone show…" />
             </SelectTrigger>
             <SelectContent>
@@ -241,12 +242,14 @@ export default function TourDetailPage() {
               )}
             </SelectContent>
           </Select>
-          <Button size="sm" disabled={!selectedShowId || addShowMutation.isPending} onClick={() => addShowMutation.mutate(selectedShowId)}>
-            Add
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setAddingShow(false)}>
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" className="h-9 flex-1 sm:flex-none" disabled={!selectedShowId || addShowMutation.isPending} onClick={() => addShowMutation.mutate(selectedShowId)}>
+              Add
+            </Button>
+            <Button size="sm" variant="ghost" className="h-9" onClick={() => setAddingShow(false)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
 
@@ -267,7 +270,7 @@ export default function TourDetailPage() {
                   e.stopPropagation();
                   removeShowMutation.mutate(show.id);
                 }}
-                className="absolute right-12 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-muted-foreground hover:text-destructive"
+                className="absolute right-2 sm:right-12 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-muted-foreground hover:text-destructive bg-card/80 px-2 py-1 rounded"
               >
                 Remove
               </button>

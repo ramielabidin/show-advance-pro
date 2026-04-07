@@ -9,7 +9,6 @@ interface FieldRowProps {
 
 /** Detect patterns like "1. foo 2. bar" or "1) foo 2) bar" and split into list items */
 function parseNumberedList(text: string): string[] | null {
-  // Match "1. " or "1) " patterns with at least 2 items
   const pattern = /(?:^|\s)(\d+)[.)]\s/g;
   const matches = [...text.matchAll(pattern)];
   if (matches.length < 2) return null;
@@ -32,8 +31,8 @@ export default function FieldRow({ label, value, mono }: FieldRowProps) {
   if (!value) return null;
 
   return (
-    <div className="flex items-start gap-4">
-      <span className="text-sm text-muted-foreground w-32 shrink-0">{label}</span>
+    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+      <span className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">{label}</span>
       {listItems ? (
         <ol className="text-sm text-foreground list-decimal list-outside pl-4 space-y-1">
           {listItems.map((item, i) => (

@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Edit, Trash2, Save, X, Loader2, MapPin } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Save, X, Loader2, MapPin, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
 import SlackPushDialog from "@/components/SlackPushDialog";
@@ -115,9 +121,9 @@ export default function ShowDetailPage() {
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">{label}</Label>
           {opts?.multiline ? (
-            <Textarea value={f(key) ?? ""} onChange={(e) => setF(key, e.target.value)} className="text-sm" />
+            <Textarea value={f(key) ?? ""} onChange={(e) => setF(key, e.target.value)} className="text-sm min-h-[44px]" />
           ) : (
-            <Input value={f(key) ?? ""} onChange={(e) => setF(key, e.target.value)} className={cn("text-sm", opts?.mono && "font-mono")} />
+            <Input value={f(key) ?? ""} onChange={(e) => setF(key, e.target.value)} className={cn("text-sm h-11 sm:h-9", opts?.mono && "font-mono")} />
           )}
         </div>
       );
@@ -131,26 +137,27 @@ export default function ShowDetailPage() {
 
   return (
     <div className="animate-fade-in max-w-3xl">
-      <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+      {/* Header */}
+      <div className="flex items-start sm:items-center gap-2 sm:gap-3 mb-6">
+        <Button variant="ghost" size="icon" className="shrink-0 h-9 w-9 sm:h-10 sm:w-10" onClick={() => navigate("/")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {editing ? (
             <div className="flex gap-2">
-              <Input value={f("venue_name")} onChange={(e) => setF("venue_name", e.target.value)} className="text-lg font-display" />
+              <Input value={f("venue_name")} onChange={(e) => setF("venue_name", e.target.value)} className="text-base sm:text-lg font-display h-11 sm:h-9" />
             </div>
           ) : (
-            <h1 className="text-2xl tracking-tight">{show.venue_name}</h1>
+            <h1 className="text-xl sm:text-2xl tracking-tight truncate">{show.venue_name}</h1>
           )}
           {editing ? (
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm text-muted-foreground">{show.city} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")} ·</span>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
+              <span className="text-xs sm:text-sm text-muted-foreground">{show.city} · {format(parseISO(show.date), "MMM d, yyyy")} ·</span>
               <Select
                 value={f("tour_id") ?? "none"}
                 onValueChange={(v) => setF("tour_id" as keyof Show, v === "none" ? "" : v)}
               >
-                <SelectTrigger className="text-sm h-7 w-auto">
+                <SelectTrigger className="text-sm h-8 w-full sm:w-auto">
                   <SelectValue placeholder="Standalone" />
                 </SelectTrigger>
                 <SelectContent>
@@ -162,7 +169,7 @@ export default function ShowDetailPage() {
               </Select>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
               {show.city} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
               {(show as any).tours && (
                 <>
@@ -175,55 +182,99 @@ export default function ShowDetailPage() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {editing ? (
             <>
-              <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
-                <X className="h-4 w-4 mr-1" /> Cancel
+              <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-9">
+                <X className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Cancel</span>
               </Button>
-              <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
-                <Save className="h-4 w-4 mr-1" /> Save
+              <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending} className="h-9">
+                <Save className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Save</span>
               </Button>
             </>
           ) : (
             <>
-              <SlackPushDialog showId={id!} />
-              <EmailBandDialog show={show as Show} />
-              <ExportPdfDialog show={show as Show} />
-              <ParseAdvanceForShowDialog
-                showId={id!}
-                currentShow={show as Show}
-                onUpdated={() => {
-                  queryClient.invalidateQueries({ queryKey: ["show", id] });
-                  queryClient.invalidateQueries({ queryKey: ["shows"] });
-                }}
-              />
-              <Button variant="outline" size="sm" onClick={startEdit}>
-                <Edit className="h-4 w-4 mr-1" /> Edit
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                onClick={() => {
-                  if (confirm("Delete this show?")) deleteMutation.mutate();
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {/* Desktop: show all buttons */}
+              <div className="hidden md:flex items-center gap-2">
+                <SlackPushDialog showId={id!} />
+                <EmailBandDialog show={show as Show} />
+                <ExportPdfDialog show={show as Show} />
+                <ParseAdvanceForShowDialog
+                  showId={id!}
+                  currentShow={show as Show}
+                  onUpdated={() => {
+                    queryClient.invalidateQueries({ queryKey: ["show", id] });
+                    queryClient.invalidateQueries({ queryKey: ["shows"] });
+                  }}
+                />
+                <Button variant="outline" size="sm" onClick={startEdit}>
+                  <Edit className="h-4 w-4 mr-1" /> Edit
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => {
+                    if (confirm("Delete this show?")) deleteMutation.mutate();
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Mobile: Edit button + overflow menu */}
+              <div className="flex md:hidden items-center gap-1">
+                <Button variant="outline" size="sm" onClick={startEdit} className="h-9">
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <SlackPushDialog showId={id!} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Push to Slack</DropdownMenuItem>} />
+                    <EmailBandDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email Band</DropdownMenuItem>} />
+                    <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export PDF</DropdownMenuItem>} />
+                    <ParseAdvanceForShowDialog
+                      showId={id!}
+                      currentShow={show as Show}
+                      onUpdated={() => {
+                        queryClient.invalidateQueries({ queryKey: ["show", id] });
+                        queryClient.invalidateQueries({ queryKey: ["shows"] });
+                      }}
+                      trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Parse Advance</DropdownMenuItem>}
+                    />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => {
+                        if (confirm("Delete this show?")) deleteMutation.mutate();
+                      }}
+                    >
+                      Delete Show
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </>
           )}
         </div>
       </div>
 
       {!show.is_reviewed && (
-        <div className="rounded-lg border border-badge-new/30 bg-badge-new/5 p-3 mb-6 flex items-center justify-between">
+        <div className="rounded-lg border border-badge-new/30 bg-badge-new/5 p-3 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <p className="text-sm text-badge-new font-medium">
             New show created from advance email — review the details below.
           </p>
           <Button
             size="sm"
             variant="outline"
+            className="shrink-0"
             onClick={() => updateMutation.mutate({ is_reviewed: true } as any)}
           >
             Mark Reviewed
@@ -231,7 +282,7 @@ export default function ShowDetailPage() {
         </div>
       )}
 
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {/* Venue */}
         <FieldGroup title="Venue">
           {editField("venue_address", "Address")}
@@ -239,7 +290,7 @@ export default function ShowDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5 text-xs"
+              className="gap-1.5 text-xs h-9"
               disabled={lookingUpAddress}
               onClick={async () => {
                 setLookingUpAddress(true);
@@ -287,7 +338,7 @@ export default function ShowDetailPage() {
 
         <Separator />
 
-        {/* Schedule (always visible, includes set_length/curfew/changeover) */}
+        {/* Schedule */}
         <FieldGroup title="Schedule">
           {scheduleEntries.length > 0 ? (
             <div className="space-y-1">
@@ -295,11 +346,11 @@ export default function ShowDetailPage() {
                 <div
                   key={entry.id}
                   className={cn(
-                    "flex items-center gap-4 rounded px-3 py-1.5",
+                    "flex items-center gap-3 sm:gap-4 rounded px-2 sm:px-3 py-1.5",
                     entry.is_band && "bg-primary/5 font-medium"
                   )}
                 >
-                  <span className="font-mono text-sm w-16 shrink-0 text-muted-foreground">
+                  <span className="font-mono text-sm w-14 sm:w-16 shrink-0 text-muted-foreground">
                     {entry.time}
                   </span>
                   <span className="text-sm text-foreground">{entry.label}</span>
@@ -363,7 +414,7 @@ export default function ShowDetailPage() {
           </>
         )}
 
-        {/* Projections + Revenue Simulator */}
+        {/* Projections */}
         {(editing || show.walkout_potential || show.net_gross || show.artist_comps) && (
           <>
             <Separator />

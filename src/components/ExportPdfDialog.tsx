@@ -56,9 +56,10 @@ function val(v: unknown): string | null {
 
 interface Props {
   show: Show & { schedule_entries?: ScheduleEntry[] };
+  trigger?: React.ReactNode;
 }
 
-export default function ExportPdfDialog({ show }: Props) {
+export default function ExportPdfDialog({ show, trigger }: Props) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<SectionKey>>(allKeys);
   const [generating, setGenerating] = useState(false);
@@ -324,9 +325,11 @@ export default function ExportPdfDialog({ show }: Props) {
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <Download className="h-4 w-4" /> PDF
-        </Button>
+        {trigger || (
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <Download className="h-4 w-4" /> PDF
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
