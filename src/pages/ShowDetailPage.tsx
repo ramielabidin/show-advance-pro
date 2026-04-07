@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Edit, Trash2, Save, X, Loader2, MapPin, MoreHorizontal } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -28,18 +28,27 @@ import SlackPushDialog from "@/components/SlackPushDialog";
 import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
 import ExportPdfDialog from "@/components/ExportPdfDialog";
+import GuestListEditor, { GuestListView, parseGuestList, guestTotal } from "@/components/GuestListEditor";
+import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Show } from "@/lib/types";
 import RevenueSimulator, { parseDollar } from "@/components/RevenueSimulator";
-import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
 
 export default function ShowDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Global edit mode (power-user mode)
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<Show>>({});
+
+  // Inline edit: which field key is currently being edited (null = none)
+  const [inlineField, setInlineField] = useState<string | null>(null);
+  const [inlineValue, setInlineValue] = useState<string>("");
+  const inlineRef = useRef<HTMLDivElement>(null);
+
   const [lookingUpAddress, setLookingUpAddress] = useState(false);
 
   const { data: show, isLoading } = useQuery({
@@ -65,6 +74,13 @@ export default function ShowDetailPage() {
     enabled: editing,
   });
 
+  // Scroll inline editor into view
+  useEffect(() => {
+    if (inlineField && inlineRef.current) {
+      inlineRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [inlineField]);
+
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<Show>) => {
       const { schedule_entries, show_party_members, tours, ...showUpdates } = updates as any;
@@ -76,6 +92,7 @@ export default function ShowDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["show", id] });
       queryClient.invalidateQueries({ queryKey: ["shows"] });
       setEditing(false);
+      setInlineField(null);
       toast.success("Show updated");
     },
     onError: () => toast.error("Failed to update show"),
@@ -101,7 +118,9 @@ export default function ShowDetailPage() {
     return <div className="text-center py-20 text-muted-foreground">Show not found</div>;
   }
 
+  // --- Global edit helpers ---
   const startEdit = () => {
+    setInlineField(null);
     setForm({ ...show });
     setEditing(true);
   };
@@ -113,9 +132,64 @@ export default function ShowDetailPage() {
   const f = (key: keyof Show) => editing ? (form as any)[key] ?? "" : (show as any)[key];
   const setF = (key: keyof Show, value: string) => setForm((p) => ({ ...p, [key]: value }));
 
+  // --- Inline edit helpers ---
+  const startInlineEdit = (key: string) => {
+    if (editing) return; // Don't start inline when global edit is active
+    setInlineField(key);
+    setInlineValue((show as any)[key] ?? "");
+  };
+
+  const cancelInline = () => {
+    setInlineField(null);
+    setInlineValue("");
+  };
+
+  const saveInline = () => {
+    if (!inlineField) return;
+    updateMutation.mutate({ [inlineField]: inlineValue || null } as any);
+  };
+
+  // --- Hotel group inline edit ---
+  const startHotelEdit = () => {
+    if (editing) return;
+    setInlineField("hotel_group");
+    // We'll use form state for hotel group
+    setForm({
+      hotel_name: show.hotel_name ?? "",
+      hotel_address: show.hotel_address ?? "",
+      hotel_confirmation: show.hotel_confirmation ?? "",
+      hotel_checkin: show.hotel_checkin ?? "",
+      hotel_checkout: show.hotel_checkout ?? "",
+    });
+  };
+
+  const saveHotelGroup = () => {
+    updateMutation.mutate({
+      hotel_name: (form.hotel_name as string) || null,
+      hotel_address: (form.hotel_address as string) || null,
+      hotel_confirmation: (form.hotel_confirmation as string) || null,
+      hotel_checkin: (form.hotel_checkin as string) || null,
+      hotel_checkout: (form.hotel_checkout as string) || null,
+    } as any);
+  };
+
   const scheduleEntries = show.schedule_entries?.sort((a, b) => a.sort_order - b.sort_order) ?? [];
 
+  // Inline save/cancel buttons component
+  const InlineActions = ({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) => (
+    <div className="flex items-center gap-1.5 pt-1">
+      <Button variant="ghost" size="sm" onClick={onCancel} className="h-7 text-xs">
+        <X className="h-3 w-3 mr-1" /> Cancel
+      </Button>
+      <Button size="sm" onClick={onSave} disabled={updateMutation.isPending} className="h-7 text-xs">
+        <Save className="h-3 w-3 mr-1" /> Save
+      </Button>
+    </div>
+  );
+
+  // Renders a field that supports both global edit and inline edit
   const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean }) => {
+    // Global edit mode — same as before
     if (editing) {
       return (
         <div className="space-y-1">
@@ -128,11 +202,97 @@ export default function ShowDetailPage() {
         </div>
       );
     }
+
+    // Inline editing for this specific field
+    if (inlineField === key) {
+      return (
+        <div ref={inlineRef} className="space-y-1">
+          <Label className="text-xs text-muted-foreground">{label}</Label>
+          {opts?.multiline ? (
+            <Textarea
+              value={inlineValue}
+              onChange={(e) => setInlineValue(e.target.value)}
+              className="text-sm min-h-[44px]"
+              autoFocus
+            />
+          ) : (
+            <Input
+              value={inlineValue}
+              onChange={(e) => setInlineValue(e.target.value)}
+              className={cn("text-sm h-11 sm:h-9", opts?.mono && "font-mono")}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveInline();
+                if (e.key === "Escape") cancelInline();
+              }}
+            />
+          )}
+          <InlineActions onSave={saveInline} onCancel={cancelInline} />
+        </div>
+      );
+    }
+
+    // View mode
     const value = (show as any)[key];
     if (!value && opts?.alwaysShow) {
-      return <EmptyFieldPrompt label={label} onClick={startEdit} />;
+      return <EmptyFieldPrompt label={label} onClick={() => startInlineEdit(key)} />;
     }
-    return <FieldRow label={label} value={value} mono={opts?.mono} />;
+    if (!value) return null;
+
+    // Clickable value to enter inline edit
+    return (
+      <button
+        onClick={() => startInlineEdit(key)}
+        className="w-full text-left group"
+      >
+        <FieldRow label={label} value={value} mono={opts?.mono} />
+      </button>
+    );
+  };
+
+  // Guest list rendering
+  const renderGuestList = () => {
+    const isInlineGuest = inlineField === "guest_list_details";
+
+    if (editing) {
+      return (
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Guest List</Label>
+          <GuestListEditor
+            value={f("guest_list_details")}
+            capacity={show.venue_capacity}
+            onChange={(val) => setF("guest_list_details" as keyof Show, val)}
+          />
+        </div>
+      );
+    }
+
+    if (isInlineGuest) {
+      return (
+        <div ref={inlineRef} className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Guest List</Label>
+          <GuestListEditor
+            value={inlineValue}
+            capacity={show.venue_capacity}
+            onChange={(val) => setInlineValue(val)}
+          />
+          <InlineActions onSave={saveInline} onCancel={cancelInline} />
+        </div>
+      );
+    }
+
+    const entries = parseGuestList(show.guest_list_details);
+    if (entries.length > 0) {
+      return (
+        <GuestListView
+          value={show.guest_list_details}
+          capacity={show.venue_capacity}
+          onEdit={() => startInlineEdit("guest_list_details")}
+        />
+      );
+    }
+
+    return <EmptyFieldPrompt label="guest list" onClick={() => startInlineEdit("guest_list_details")} />;
   };
 
   return (
@@ -268,7 +428,7 @@ export default function ShowDetailPage() {
                   }}
                 />
                 <Button variant="outline" size="sm" onClick={startEdit} className="h-8 text-xs">
-                  <Edit className="h-3.5 w-3.5 mr-1" /> Edit
+                  <Edit className="h-3.5 w-3.5 mr-1" /> Edit All
                 </Button>
                 <Button
                   variant="ghost"
@@ -286,7 +446,7 @@ export default function ShowDetailPage() {
               <div className="flex md:hidden items-center gap-1.5">
                 <SlackPushDialog showId={id!} />
                 <Button variant="outline" size="sm" onClick={startEdit} className="h-8 text-xs">
-                  <Edit className="h-3.5 w-3.5 mr-1" /> Edit
+                  <Edit className="h-3.5 w-3.5 mr-1" /> Edit All
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -398,28 +558,75 @@ export default function ShowDetailPage() {
           {editField("green_room_info", "Green Room", { multiline: true, alwaysShow: true })}
           {editField("wifi_network", "WiFi Network", { mono: true, alwaysShow: true })}
           {editField("wifi_password", "WiFi Password", { mono: true, alwaysShow: true })}
-          {editField("guest_list_details", "Guest List", { multiline: true, alwaysShow: true })}
+          {renderGuestList()}
         </FieldGroup>
 
         <Separator />
 
         {/* Hotel */}
         <FieldGroup title="Hotel">
-          {!editing && !show.hotel_name && !show.hotel_address && !show.hotel_confirmation && !show.hotel_checkin && !show.hotel_checkout ? (
-            <EmptyFieldPrompt label="hotel" onClick={startEdit} />
-          ) : (
-            <>
-              {editField("hotel_name", "Name", { alwaysShow: true })}
-              {editField("hotel_address", "Address", { alwaysShow: true })}
-              {editField("hotel_confirmation", "Confirmation #", { mono: true, alwaysShow: true })}
-              {editField("hotel_checkin", "Check In", { mono: true, alwaysShow: true })}
-              {editField("hotel_checkout", "Check Out", { mono: true, alwaysShow: true })}
-            </>
-          )}
+          {(() => {
+            const hotelEmpty = !show.hotel_name && !show.hotel_address && !show.hotel_confirmation && !show.hotel_checkin && !show.hotel_checkout;
+            const isHotelInline = inlineField === "hotel_group";
+
+            if (editing) {
+              return (
+                <>
+                  {editField("hotel_name", "Name", { alwaysShow: true })}
+                  {editField("hotel_address", "Address", { alwaysShow: true })}
+                  {editField("hotel_confirmation", "Confirmation #", { mono: true, alwaysShow: true })}
+                  {editField("hotel_checkin", "Check In", { mono: true, alwaysShow: true })}
+                  {editField("hotel_checkout", "Check Out", { mono: true, alwaysShow: true })}
+                </>
+              );
+            }
+
+            if (isHotelInline) {
+              return (
+                <div ref={inlineRef} className="space-y-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Name</Label>
+                    <Input value={form.hotel_name ?? ""} onChange={(e) => setForm(p => ({ ...p, hotel_name: e.target.value }))} className="text-sm h-9" autoFocus />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Address</Label>
+                    <Input value={form.hotel_address ?? ""} onChange={(e) => setForm(p => ({ ...p, hotel_address: e.target.value }))} className="text-sm h-9" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Confirmation #</Label>
+                    <Input value={form.hotel_confirmation ?? ""} onChange={(e) => setForm(p => ({ ...p, hotel_confirmation: e.target.value }))} className="text-sm h-9 font-mono" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Check In</Label>
+                    <Input value={form.hotel_checkin ?? ""} onChange={(e) => setForm(p => ({ ...p, hotel_checkin: e.target.value }))} className="text-sm h-9 font-mono" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Check Out</Label>
+                    <Input value={form.hotel_checkout ?? ""} onChange={(e) => setForm(p => ({ ...p, hotel_checkout: e.target.value }))} className="text-sm h-9 font-mono" />
+                  </div>
+                  <InlineActions onSave={saveHotelGroup} onCancel={cancelInline} />
+                </div>
+              );
+            }
+
+            if (hotelEmpty) {
+              return <EmptyFieldPrompt label="hotel" onClick={startHotelEdit} />;
+            }
+
+            return (
+              <button onClick={startHotelEdit} className="w-full text-left space-y-3">
+                <FieldRow label="Name" value={show.hotel_name} />
+                <FieldRow label="Address" value={show.hotel_address} />
+                <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
+                <FieldRow label="Check In" value={show.hotel_checkin} mono />
+                <FieldRow label="Check Out" value={show.hotel_checkout} mono />
+              </button>
+            );
+          })()}
         </FieldGroup>
 
         {/* Travel */}
-        {(editing || show.travel_notes) && (
+        {(editing || inlineField === "travel_notes" || show.travel_notes) && (
           <>
             <Separator />
             <FieldGroup title="Travel">
@@ -494,7 +701,7 @@ export default function ShowDetailPage() {
         })()}
 
         {/* Additional Info */}
-        {(editing || show.additional_info) && (
+        {(editing || inlineField === "additional_info" || show.additional_info) && (
           <>
             <Separator />
             <FieldGroup title="Additional Info">
