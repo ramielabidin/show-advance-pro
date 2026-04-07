@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface GuestEntry {
   name: string;
@@ -15,7 +16,6 @@ export function parseGuestList(raw: string | null | undefined): GuestEntry[] {
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) return parsed;
   } catch {
-    // Legacy free-text: convert lines to entries
     return raw
       .split("\n")
       .map((l) => l.trim())
@@ -38,19 +38,44 @@ export function guestTotal(entries: GuestEntry[]): number {
   return entries.reduce((sum, e) => sum + 1 + e.plusOnes, 0);
 }
 
+function parseComps(comps: string | null | undefined): number | null {
+  if (!comps) return null;
+  const n = parseInt(comps.replace(/[^0-9]/g, ""), 10);
+  return isNaN(n) ? null : n;
+}
+
+function GuestCount({ total, compsAllotment }: { total: number; compsAllotment?: string | null }) {
+  const cap = parseComps(compsAllotment);
+
+  let colorClass = "text-muted-foreground";
+  if (cap !== null) {
+    if (total >= cap) colorClass = "text-destructive";
+    else if (total >= cap - 3) colorClass = "text-amber-500";
+  }
+
+  return (
+    <div className={cn("flex items-center gap-1.5 text-xs", colorClass)}>
+      <Users className="h-3 w-3" />
+      <span>
+        {total} guest{total !== 1 ? "s" : ""}
+        {cap !== null ? ` / ${cap} spots` : ""}
+      </span>
+    </div>
+  );
+}
+
 interface GuestListViewProps {
   value: string | null | undefined;
   capacity?: string | null;
+  compsAllotment?: string | null;
   onEdit: () => void;
 }
 
-export function GuestListView({ value, capacity, onEdit }: GuestListViewProps) {
+export function GuestListView({ value, compsAllotment, onEdit }: GuestListViewProps) {
   const entries = parseGuestList(value);
   if (entries.length === 0) return null;
 
   const total = guestTotal(entries);
-  const cap = capacity ? parseInt(capacity.replace(/[^0-9]/g, ""), 10) : null;
-  const validCap = cap && !isNaN(cap) ? cap : null;
 
   return (
     <div className="space-y-2">
@@ -73,12 +98,8 @@ export function GuestListView({ value, capacity, onEdit }: GuestListViewProps) {
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
-        <Users className="h-3 w-3" />
-        <span>
-          {total} guest{total !== 1 ? "s" : ""}
-          {validCap ? ` / ${validCap} capacity` : ""}
-        </span>
+      <div className="pt-1">
+        <GuestCount total={total} compsAllotment={compsAllotment} />
       </div>
     </div>
   );
@@ -87,11 +108,12 @@ export function GuestListView({ value, capacity, onEdit }: GuestListViewProps) {
 interface GuestListEditorProps {
   value: string | null | undefined;
   capacity?: string | null;
+  compsAllotment?: string | null;
   onChange: (serialized: string) => void;
   isInline?: boolean;
 }
 
-export default function GuestListEditor({ value, capacity, onChange, isInline = false }: GuestListEditorProps) {
+export default function GuestListEditor({ value, compsAllotment, onChange, isInline = false }: GuestListEditorProps) {
   const [entries, setEntries] = useState<GuestEntry[]>(() => {
     const parsed = parseGuestList(value);
     return parsed.length > 0 ? parsed : [{ name: "", plusOnes: 0 }];
@@ -114,8 +136,6 @@ export default function GuestListEditor({ value, capacity, onChange, isInline = 
   };
 
   const total = guestTotal(entries.filter((e) => e.name.trim()));
-  const cap = capacity ? parseInt(capacity.replace(/[^0-9]/g, ""), 10) : null;
-  const validCap = cap && !isNaN(cap) ? cap : null;
 
   return (
     <div className="space-y-2">
@@ -150,13 +170,7 @@ export default function GuestListEditor({ value, capacity, onChange, isInline = 
         <Button variant="ghost" size="sm" onClick={addRow} className="h-7 text-xs gap-1">
           <Plus className="h-3 w-3" /> Add Guest
         </Button>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Users className="h-3 w-3" />
-          <span>
-            {total} guest{total !== 1 ? "s" : ""}
-            {validCap ? ` / ${validCap} capacity` : ""}
-          </span>
-        </div>
+        <GuestCount total={total} compsAllotment={compsAllotment} />
       </div>
     </div>
   );
