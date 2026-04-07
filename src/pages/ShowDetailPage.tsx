@@ -279,6 +279,7 @@ export default function ShowDetailPage() {
           <GuestListEditor
             value={f("guest_list_details")}
             capacity={show.venue_capacity}
+            compsAllotment={show.artist_comps}
             onChange={(val) => setF("guest_list_details" as keyof Show, val)}
           />
         </div>
@@ -292,6 +293,7 @@ export default function ShowDetailPage() {
           <GuestListEditor
             value={inlineValue}
             capacity={show.venue_capacity}
+            compsAllotment={show.artist_comps}
             onChange={(val) => setInlineValue(val)}
             isInline
           />
@@ -306,6 +308,7 @@ export default function ShowDetailPage() {
         <GuestListView
           value={show.guest_list_details}
           capacity={show.venue_capacity}
+          compsAllotment={show.artist_comps}
           onEdit={() => startInlineEdit("guest_list_details")}
         />
       );
@@ -689,7 +692,7 @@ export default function ShowDetailPage() {
         )}
 
         {/* Deal */}
-        {(editing || show.guarantee || show.backend_deal || show.ticket_price || show.age_restriction || show.venue_capacity || show.merch_split || show.support_pay || show.settlement_method || show.settlement_guarantee) && (
+        {(editing || show.guarantee || show.backend_deal || show.ticket_price || show.age_restriction || show.venue_capacity || show.merch_split || show.support_pay || show.settlement_method || show.settlement_guarantee || show.artist_comps) && (
           <>
             <Separator />
             <FieldGroup title="Deal">
@@ -702,6 +705,7 @@ export default function ShowDetailPage() {
               {editField("support_pay", "Support Pay", { mono: true })}
               {editField("settlement_method", "Settlement Method")}
               {editField("settlement_guarantee", "Settlement Guarantee", { mono: true })}
+              {editField("artist_comps", "Artist Comps")}
             </FieldGroup>
           </>
         )}
@@ -719,13 +723,12 @@ export default function ShowDetailPage() {
         )}
 
         {/* Projections */}
-        {(editing || show.walkout_potential || show.net_gross || show.artist_comps) && (
+        {(editing || show.walkout_potential || show.net_gross) && (
           <>
             <Separator />
             <FieldGroup title="Projections">
               {editField("walkout_potential", "Walkout Potential", { mono: true })}
               {editField("net_gross", "Net Gross", { mono: true })}
-              {editField("artist_comps", "Artist Comps")}
             </FieldGroup>
           </>
         )}
