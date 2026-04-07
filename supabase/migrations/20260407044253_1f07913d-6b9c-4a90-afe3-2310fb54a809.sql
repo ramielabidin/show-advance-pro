@@ -1,0 +1,1 @@
+ALTER TABLE public.touring_party_members ADD COLUMN role text DEFAULT null;
