@@ -404,11 +404,17 @@ export default function ShowDetailPage() {
 
         {/* Hotel */}
         <FieldGroup title="Hotel">
-          {editField("hotel_name", "Name", { alwaysShow: true })}
-          {editField("hotel_address", "Address", { alwaysShow: true })}
-          {editField("hotel_confirmation", "Confirmation #", { mono: true, alwaysShow: true })}
-          {editField("hotel_checkin", "Check In", { mono: true, alwaysShow: true })}
-          {editField("hotel_checkout", "Check Out", { mono: true, alwaysShow: true })}
+          {!editing && !show.hotel_name && !show.hotel_address && !show.hotel_confirmation && !show.hotel_checkin && !show.hotel_checkout ? (
+            <EmptyFieldPrompt label="hotel" onClick={startEdit} />
+          ) : (
+            <>
+              {editField("hotel_name", "Name", { alwaysShow: true })}
+              {editField("hotel_address", "Address", { alwaysShow: true })}
+              {editField("hotel_confirmation", "Confirmation #", { mono: true, alwaysShow: true })}
+              {editField("hotel_checkin", "Check In", { mono: true, alwaysShow: true })}
+              {editField("hotel_checkout", "Check Out", { mono: true, alwaysShow: true })}
+            </>
+          )}
         </FieldGroup>
 
         {/* Travel */}
