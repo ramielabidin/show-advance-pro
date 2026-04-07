@@ -143,17 +143,37 @@ export default function ShowDetailPage() {
           ) : (
             <h1 className="text-2xl tracking-tight">{show.venue_name}</h1>
           )}
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {show.city} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
-            {!editing && (show as any).tours && (
-              <>
-                {" · "}
-                <Link to={`/tours/${(show as any).tours.id}`} className="text-foreground hover:underline">
-                  {(show as any).tours.name}
-                </Link>
-              </>
-            )}
-          </p>
+          {editing ? (
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-sm text-muted-foreground">{show.city} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")} ·</span>
+              <Select
+                value={f("tour_id") ?? "none"}
+                onValueChange={(v) => setF("tour_id" as keyof Show, v === "none" ? "" : v)}
+              >
+                <SelectTrigger className="text-sm h-7 w-auto">
+                  <SelectValue placeholder="Standalone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Standalone</SelectItem>
+                  {toursList.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {show.city} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
+              {(show as any).tours && (
+                <>
+                  {" · "}
+                  <Link to={`/tours/${(show as any).tours.id}`} className="text-foreground hover:underline">
+                    {(show as any).tours.name}
+                  </Link>
+                </>
+              )}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {editing ? (
