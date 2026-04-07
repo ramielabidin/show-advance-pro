@@ -368,6 +368,14 @@ export default function ShowDetailPage() {
 
         <Separator />
 
+        {/* Departure */}
+        <FieldGroup title="Departure">
+          {editField("departure_time", "Departure Time", { mono: true, alwaysShow: true })}
+          {editField("departure_location", "Meetup Location", { alwaysShow: true })}
+        </FieldGroup>
+
+        <Separator />
+
         {/* Day of Show Contact */}
         <FieldGroup title="Day of Show Contact">
           {editField("dos_contact_name", "Name", { alwaysShow: true })}
@@ -376,29 +384,42 @@ export default function ShowDetailPage() {
 
         <Separator />
 
-        {/* Departure */}
-        <FieldGroup title="Departure">
-          {editField("departure_time", "Time", { mono: true, alwaysShow: true })}
-          {editField("departure_location", "Location", { alwaysShow: true })}
-        </FieldGroup>
-
-        <Separator />
-
         {/* Venue Details */}
         <FieldGroup title="Venue Details" className="[&>div]:space-y-5">
-          {editField("parking_notes", "Parking", { multiline: true, alwaysShow: true })}
           {editField("load_in_details", "Load In", { multiline: true, alwaysShow: true })}
-          {(editing || show.green_room_info) && editField("green_room_info", "Green Room", { multiline: true })}
-          {(editing || show.guest_list_details) && editField("guest_list_details", "Guest List", { multiline: true })}
+          {editField("parking_notes", "Parking", { multiline: true, alwaysShow: true })}
         </FieldGroup>
 
         <Separator />
 
-        {/* WiFi */}
-        <FieldGroup title="WiFi">
-          {editField("wifi_network", "Network", { mono: true, alwaysShow: true })}
-          {editField("wifi_password", "Password", { mono: true, alwaysShow: true })}
+        {/* At The Venue */}
+        <FieldGroup title="At The Venue">
+          {editField("green_room_info", "Green Room", { multiline: true, alwaysShow: true })}
+          {editField("wifi_network", "WiFi Network", { mono: true, alwaysShow: true })}
+          {editField("wifi_password", "WiFi Password", { mono: true, alwaysShow: true })}
+          {editField("guest_list_details", "Guest List", { multiline: true, alwaysShow: true })}
         </FieldGroup>
+
+        <Separator />
+
+        {/* Hotel */}
+        <FieldGroup title="Hotel">
+          {editField("hotel_name", "Name", { alwaysShow: true })}
+          {editField("hotel_address", "Address", { alwaysShow: true })}
+          {editField("hotel_confirmation", "Confirmation #", { mono: true, alwaysShow: true })}
+          {editField("hotel_checkin", "Check In", { mono: true, alwaysShow: true })}
+          {editField("hotel_checkout", "Check Out", { mono: true, alwaysShow: true })}
+        </FieldGroup>
+
+        {/* Travel */}
+        {(editing || show.travel_notes) && (
+          <>
+            <Separator />
+            <FieldGroup title="Travel">
+              {editField("travel_notes", "Notes", { multiline: true })}
+            </FieldGroup>
+          </>
+        )}
 
         {/* Deal */}
         {(editing || show.guarantee || show.backend_deal || show.ticket_price || show.age_restriction || show.venue_capacity || show.merch_split || show.support_pay || show.settlement_method || show.settlement_guarantee) && (
@@ -465,27 +486,6 @@ export default function ShowDetailPage() {
             </>
           );
         })()}
-
-        <Separator />
-
-        {/* Hotel */}
-        <FieldGroup title="Hotel">
-          {editField("hotel_name", "Name", { alwaysShow: true })}
-          {editField("hotel_address", "Address", { alwaysShow: true })}
-          {editField("hotel_confirmation", "Confirmation #", { mono: true, alwaysShow: true })}
-          {editField("hotel_checkin", "Check In", { mono: true, alwaysShow: true })}
-          {editField("hotel_checkout", "Check Out", { mono: true, alwaysShow: true })}
-        </FieldGroup>
-
-        {/* Travel */}
-        {(editing || show.travel_notes) && (
-          <>
-            <Separator />
-            <FieldGroup title="Travel">
-              {editField("travel_notes", "Notes", { multiline: true })}
-            </FieldGroup>
-          </>
-        )}
 
         {/* Additional Info */}
         {(editing || show.additional_info) && (
