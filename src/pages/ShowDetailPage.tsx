@@ -94,6 +94,7 @@ export default function ShowDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["show", id] });
       queryClient.invalidateQueries({ queryKey: ["shows"] });
       setEditing(false);
+      setEditingSchedule(false);
       setInlineField(null);
       toast.success("Show updated");
     },
