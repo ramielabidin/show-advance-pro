@@ -55,7 +55,7 @@ function formatDaySheet(show: any, sections: Set<string>, note?: string): string
   if (has("departure") && (val(show.departure_time) || val(show.departure_location))) {
     blocks.push(`🚐 *Departure*`);
     if (val(show.departure_time)) blocks.push(`    ⏰ ${val(show.departure_time)}`);
-    if (val(show.departure_location)) blocks.push(`    📍 ${val(show.departure_location)}`);
+    if (val(show.departure_location)) blocks.push(`    Notes: ${val(show.departure_location)}`);
     blocks.push("");
   }
 
