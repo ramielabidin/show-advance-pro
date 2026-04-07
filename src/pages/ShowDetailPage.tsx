@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Show } from "@/lib/types";
 import RevenueSimulator, { parseDollar } from "@/components/RevenueSimulator";
+import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
 
 export default function ShowDetailPage() {
   const { id } = useParams<{ id: string }>();
