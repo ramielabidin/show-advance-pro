@@ -43,7 +43,7 @@ function ProtectedRoutes() {
           <Route path="/shows/:id" element={<ShowDetailPage />} />
           <Route path="/tours" element={<ToursPage />} />
           <Route path="/tours/:id" element={<TourDetailPage />} />
-          <Route path="/party" element={<TouringPartyPage />} />
+          
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />

@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { Calendar, Users, FolderOpen, Settings, LogOut, Moon, Sun, FileText } from "lucide-react";
+import { Calendar, FolderOpen, Settings, LogOut, Moon, Sun, FileText } from "lucide-react";
 import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
