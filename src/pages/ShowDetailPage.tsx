@@ -52,7 +52,7 @@ export default function ShowDetailPage() {
   const scheduleRef = useRef<HTMLDivElement>(null);
 
   const [lookingUpAddress, setLookingUpAddress] = useState(false);
-
+  const [editingSchedule, setEditingSchedule] = useState(false);
   const { data: show, isLoading } = useQuery({
     queryKey: ["show", id],
     queryFn: async () => {
