@@ -224,7 +224,6 @@ export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdat
           </Button>
         )}
       </DialogTrigger>
-      </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>

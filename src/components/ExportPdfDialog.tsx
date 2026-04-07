@@ -331,7 +331,6 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
           </Button>
         )}
       </DialogTrigger>
-      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Export Day Sheet PDF</DialogTitle>
