@@ -385,9 +385,10 @@ export default function ShowDetailPage() {
         <Separator />
 
         {/* Venue Details */}
-        <FieldGroup title="Venue Details" className="[&>div]:space-y-5">
+        <FieldGroup title="Venue Details" className="[&>div]:space-y-5" incomplete={!editing && !show.load_in_details && !show.parking_notes && !show.backline_provided}>
           {editField("load_in_details", "Load In", { multiline: true, alwaysShow: true })}
           {editField("parking_notes", "Parking", { multiline: true, alwaysShow: true })}
+          {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true })}
         </FieldGroup>
 
         <Separator />
@@ -446,13 +447,12 @@ export default function ShowDetailPage() {
         )}
 
         {/* Production */}
-        {(editing || show.hospitality || show.support_act || show.backline_provided || show.catering_details) && (
+        {(editing || show.hospitality || show.support_act || show.catering_details) && (
           <>
             <Separator />
             <FieldGroup title="Production">
               {editField("hospitality", "Hospitality", { multiline: true })}
               {editField("support_act", "Support Act")}
-              {editField("backline_provided", "Backline Provided", { multiline: true })}
               {editField("catering_details", "Catering / Meals", { multiline: true })}
             </FieldGroup>
           </>
