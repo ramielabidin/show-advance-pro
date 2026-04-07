@@ -125,6 +125,7 @@ export default function ShowDetailPage() {
     setInlineField(null);
     setForm({ ...show });
     setEditing(true);
+    setEditingSchedule(true);
   };
 
   const handleSave = () => {
