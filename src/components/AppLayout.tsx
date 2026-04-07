@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { Calendar, Users, FolderOpen, Settings, LogOut, Moon, Sun, FileText } from "lucide-react";
+import { Calendar, FolderOpen, Settings, LogOut, Moon, Sun, FileText } from "lucide-react";
 import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ const navItems = [
   { to: "/", icon: Calendar, label: "Home" },
   { to: "/shows", icon: FileText, label: "All Shows" },
   { to: "/tours", icon: FolderOpen, label: "Tours" },
-  { to: "/party", icon: Users, label: "Party" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
