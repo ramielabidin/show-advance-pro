@@ -186,9 +186,10 @@ export default function ShowDetailPage() {
                         body: { venue_name: show.venue_name, city: show.city },
                       });
                       if (error || data?.error) throw new Error(data?.error || error.message);
+                      const cleanAddress = (data.address as string).replace(/,?\s*United States$/, "");
                       const { error: updateError } = await supabase
                         .from("shows")
-                        .update({ venue_address: data.address })
+                        .update({ venue_address: cleanAddress })
                         .eq("id", show.id);
                       if (updateError) throw updateError;
                       queryClient.invalidateQueries({ queryKey: ["show", id] });
