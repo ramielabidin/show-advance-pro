@@ -319,46 +319,8 @@ export default function ShowDetailPage() {
       )}
 
       <div className="space-y-6 sm:space-y-8">
-        {/* Venue */}
-        <FieldGroup title="Venue">
-          {editField("venue_address", "Address")}
-          {!editing && !show.venue_address && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs h-9"
-              disabled={lookingUpAddress}
-              onClick={async () => {
-                setLookingUpAddress(true);
-                try {
-                  const { data, error } = await supabase.functions.invoke("lookup-venue-address", {
-                    body: { venue_name: show.venue_name, city: show.city },
-                  });
-                  if (error || data?.error) throw new Error(data?.error || error.message);
-                  const { error: updateError } = await supabase
-                    .from("shows")
-                    .update({ venue_address: data.address })
-                    .eq("id", show.id);
-                  if (updateError) throw updateError;
-                  queryClient.invalidateQueries({ queryKey: ["show", id] });
-                  toast.success("Address found and saved");
-                } catch (err: any) {
-                  toast.error(err.message || "Could not find address");
-                } finally {
-                  setLookingUpAddress(false);
-                }
-              }}
-            >
-              {lookingUpAddress ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
-              Lookup Address
-            </Button>
-          )}
-          {editField("city", "City")}
-        </FieldGroup>
 
-        <Separator />
 
-        {/* Day of Show Contact */}
         <FieldGroup title="Day of Show Contact">
           {editField("dos_contact_name", "Name", { alwaysShow: true })}
           {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true })}
