@@ -340,7 +340,7 @@ export default function ShowDetailPage() {
 
       <div className="space-y-6 sm:space-y-8">
         {/* Schedule */}
-        <FieldGroup title="Schedule">
+        <FieldGroup title="Schedule" incomplete={!editing && scheduleEntries.length === 0 && !show.set_length && !show.curfew && !show.changeover_time}>
           {scheduleEntries.length > 0 ? (
             <div className="space-y-1">
               {scheduleEntries.map((entry) => (
@@ -369,7 +369,7 @@ export default function ShowDetailPage() {
         <Separator />
 
         {/* Departure */}
-        <FieldGroup title="Departure">
+        <FieldGroup title="Departure" incomplete={!editing && !show.departure_time && !show.departure_location}>
           {editField("departure_time", "Departure Time", { mono: true, alwaysShow: true })}
           {editField("departure_location", "Meetup Location", { alwaysShow: true })}
         </FieldGroup>
@@ -377,7 +377,7 @@ export default function ShowDetailPage() {
         <Separator />
 
         {/* Day of Show Contact */}
-        <FieldGroup title="Day of Show Contact">
+        <FieldGroup title="Day of Show Contact" incomplete={!editing && !show.dos_contact_name && !show.dos_contact_phone}>
           {editField("dos_contact_name", "Name", { alwaysShow: true })}
           {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true })}
         </FieldGroup>
@@ -394,7 +394,7 @@ export default function ShowDetailPage() {
         <Separator />
 
         {/* At The Venue */}
-        <FieldGroup title="At The Venue">
+        <FieldGroup title="At The Venue" incomplete={!editing && !show.green_room_info && !show.wifi_network && !show.wifi_password && !show.guest_list_details}>
           {editField("green_room_info", "Green Room", { multiline: true, alwaysShow: true })}
           {editField("wifi_network", "WiFi Network", { mono: true, alwaysShow: true })}
           {editField("wifi_password", "WiFi Password", { mono: true, alwaysShow: true })}
