@@ -13,7 +13,7 @@ import ShowsPage from "@/pages/ShowsPage";
 import ShowDetailPage from "@/pages/ShowDetailPage";
 import ToursPage from "@/pages/ToursPage";
 import TourDetailPage from "@/pages/TourDetailPage";
-import TouringPartyPage from "@/pages/TouringPartyPage";
+
 import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
 

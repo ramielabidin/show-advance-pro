@@ -9,7 +9,6 @@ const navItems = [
   { to: "/", icon: Calendar, label: "Home" },
   { to: "/shows", icon: FileText, label: "All Shows" },
   { to: "/tours", icon: FolderOpen, label: "Tours" },
-  { to: "/party", icon: Users, label: "Party" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
