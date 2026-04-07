@@ -186,9 +186,10 @@ export default function ShowDetailPage() {
                         body: { venue_name: show.venue_name, city: show.city },
                       });
                       if (error || data?.error) throw new Error(data?.error || error.message);
+                      const cleanAddress = (data.address as string).replace(/,?\s*United States$/, "");
                       const { error: updateError } = await supabase
                         .from("shows")
-                        .update({ venue_address: data.address })
+                        .update({ venue_address: cleanAddress })
                         .eq("id", show.id);
                       if (updateError) throw updateError;
                       queryClient.invalidateQueries({ queryKey: ["show", id] });
@@ -205,7 +206,8 @@ export default function ShowDetailPage() {
                 </Button>
               )}
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                {show.city} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
+                {!show.venue_address && <>{show.city} · </>}
+                {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
                 {(show as any).tours && (
                   <>
                     {" · "}
@@ -319,22 +321,6 @@ export default function ShowDetailPage() {
       )}
 
       <div className="space-y-6 sm:space-y-8">
-        {/* Day of Show Contact */}
-        <FieldGroup title="Day of Show Contact">
-          {editField("dos_contact_name", "Name", { alwaysShow: true })}
-          {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true })}
-        </FieldGroup>
-
-        <Separator />
-
-        {/* Departure */}
-        <FieldGroup title="Departure">
-          {editField("departure_time", "Time", { mono: true, alwaysShow: true })}
-          {editField("departure_location", "Location", { alwaysShow: true })}
-        </FieldGroup>
-
-        <Separator />
-
         {/* Schedule */}
         <FieldGroup title="Schedule">
           {scheduleEntries.length > 0 ? (
@@ -360,6 +346,22 @@ export default function ShowDetailPage() {
           {editField("set_length", "Set Length", { alwaysShow: true })}
           {editField("curfew", "Curfew", { alwaysShow: true })}
           {editField("changeover_time", "Changeover Time", { alwaysShow: true })}
+        </FieldGroup>
+
+        <Separator />
+
+        {/* Day of Show Contact */}
+        <FieldGroup title="Day of Show Contact">
+          {editField("dos_contact_name", "Name", { alwaysShow: true })}
+          {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true })}
+        </FieldGroup>
+
+        <Separator />
+
+        {/* Departure */}
+        <FieldGroup title="Departure">
+          {editField("departure_time", "Time", { mono: true, alwaysShow: true })}
+          {editField("departure_location", "Location", { alwaysShow: true })}
         </FieldGroup>
 
         <Separator />
