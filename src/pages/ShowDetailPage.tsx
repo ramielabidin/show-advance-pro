@@ -530,6 +530,7 @@ export default function ShowDetailPage() {
           {editField("curfew", "Curfew", { alwaysShow: true })}
           {editField("changeover_time", "Changeover Time", { alwaysShow: true })}
         </FieldGroup>
+        </div>
 
         <Separator />
 
