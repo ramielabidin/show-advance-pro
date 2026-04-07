@@ -6,7 +6,7 @@ import {
   parseISO,
   isPast,
   isToday,
-  differenceInDays,
+  differenceInCalendarDays,
   addDays,
   startOfYear,
   endOfYear,
