@@ -48,6 +48,7 @@ export default function ShowDetailPage() {
   const [inlineField, setInlineField] = useState<string | null>(null);
   const [inlineValue, setInlineValue] = useState<string>("");
   const inlineRef = useRef<HTMLDivElement>(null);
+  const scheduleRef = useRef<HTMLDivElement>(null);
 
   const [lookingUpAddress, setLookingUpAddress] = useState(false);
 
@@ -275,6 +276,7 @@ export default function ShowDetailPage() {
             value={inlineValue}
             capacity={show.venue_capacity}
             onChange={(val) => setInlineValue(val)}
+            isInline
           />
           <InlineActions onSave={saveInline} onCancel={cancelInline} />
         </div>
@@ -499,7 +501,7 @@ export default function ShowDetailPage() {
       )}
 
       <div className="space-y-6 sm:space-y-8">
-        {/* Schedule */}
+        <div ref={scheduleRef}>
         <FieldGroup title="Schedule" incomplete={!editing && scheduleEntries.length === 0 && !show.set_length && !show.curfew && !show.changeover_time}>
           {scheduleEntries.length > 0 ? (
             <div className="space-y-1">
@@ -519,12 +521,16 @@ export default function ShowDetailPage() {
               ))}
             </div>
           ) : (
-            <EmptyFieldPrompt label="schedule" onClick={startEdit} />
+            <EmptyFieldPrompt label="schedule" onClick={() => {
+              scheduleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              startEdit();
+            }} />
           )}
           {editField("set_length", "Set Length", { alwaysShow: true })}
           {editField("curfew", "Curfew", { alwaysShow: true })}
           {editField("changeover_time", "Changeover Time", { alwaysShow: true })}
         </FieldGroup>
+        </div>
 
         <Separator />
 

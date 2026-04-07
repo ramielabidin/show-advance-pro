@@ -88,9 +88,10 @@ interface GuestListEditorProps {
   value: string | null | undefined;
   capacity?: string | null;
   onChange: (serialized: string) => void;
+  isInline?: boolean;
 }
 
-export default function GuestListEditor({ value, capacity, onChange }: GuestListEditorProps) {
+export default function GuestListEditor({ value, capacity, onChange, isInline = false }: GuestListEditorProps) {
   const [entries, setEntries] = useState<GuestEntry[]>(() => {
     const parsed = parseGuestList(value);
     return parsed.length > 0 ? parsed : [{ name: "", plusOnes: 0 }];
@@ -125,7 +126,7 @@ export default function GuestListEditor({ value, capacity, onChange }: GuestList
             onChange={(e) => update(i, { name: e.target.value })}
             placeholder="Guest name"
             className="text-sm h-9 flex-1"
-            autoFocus={i === entries.length - 1}
+            autoFocus={i === entries.length - 1 && isInline}
           />
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-xs text-muted-foreground">+1</span>
