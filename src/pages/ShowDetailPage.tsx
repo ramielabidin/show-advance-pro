@@ -172,7 +172,15 @@ export default function ShowDetailPage() {
             <>
               <h1 className="text-xl sm:text-2xl tracking-tight">{show.venue_name}</h1>
               {show.venue_address ? (
-                <p className="text-sm text-muted-foreground mt-0.5">{show.venue_address}</p>
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline mt-0.5 transition-colors"
+                >
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  {show.venue_address}
+                </a>
               ) : (
                 <Button
                   variant="ghost"
