@@ -72,7 +72,7 @@ export default function TourRevenueSimulator({ shows }: TourRevenueSimulatorProp
         Tour Financials
       </h3>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <p className="text-xs text-muted-foreground">Total Guarantee</p>
           <p className="text-lg font-semibold font-mono">{formatDollar(totalGuarantee)}</p>
@@ -90,7 +90,7 @@ export default function TourRevenueSimulator({ shows }: TourRevenueSimulatorProp
           </p>
         </div>
 
-        <p className="text-3xl font-semibold tracking-tight">{formatDollar(totalProjected)}</p>
+        <p className="text-2xl sm:text-3xl font-semibold tracking-tight">{formatDollar(totalProjected)}</p>
 
         <Slider
           value={[pct]}

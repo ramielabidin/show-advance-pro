@@ -16,37 +16,37 @@ export default function ShowCard({ show }: ShowCardProps) {
     <Link
       to={`/shows/${show.id}`}
       className={cn(
-        "group flex items-center justify-between rounded-lg border bg-card p-4 transition-all hover:border-foreground/20 hover:shadow-sm animate-fade-in",
+        "group flex items-center justify-between rounded-lg border bg-card p-3 sm:p-4 transition-all hover:border-foreground/20 hover:shadow-sm animate-fade-in active:bg-accent/50",
         past && "opacity-60"
       )}
     >
-      <div className="flex items-center gap-5">
-        <div className="text-center w-14">
-          <div className="text-xs font-medium uppercase text-muted-foreground">
+      <div className="flex items-center gap-3 sm:gap-5 min-w-0">
+        <div className="text-center w-12 sm:w-14 shrink-0">
+          <div className="text-[10px] sm:text-xs font-medium uppercase text-muted-foreground">
             {format(date, "MMM")}
           </div>
-          <div className="text-2xl font-display text-foreground leading-tight">
+          <div className="text-xl sm:text-2xl font-display text-foreground leading-tight">
             {format(date, "d")}
           </div>
-          <div className="text-xs text-muted-foreground">{format(date, "EEE")}</div>
+          <div className="text-[10px] sm:text-xs text-muted-foreground">{format(date, "EEE")}</div>
         </div>
-        <div className="border-l pl-5">
+        <div className="border-l pl-3 sm:pl-5 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-medium text-foreground">{show.venue_name}</h3>
+            <h3 className="font-medium text-foreground text-sm sm:text-base truncate">{show.venue_name}</h3>
             {!show.is_reviewed && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-badge-new/10 px-2 py-0.5 text-[11px] font-medium text-badge-new">
+              <span className="inline-flex items-center gap-1 rounded-full bg-badge-new/10 px-2 py-0.5 text-[11px] font-medium text-badge-new shrink-0">
                 <Sparkles className="h-3 w-3" />
                 New
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5">
-            <MapPin className="h-3 w-3" />
-            {show.city}
+          <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground mt-0.5">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{show.city}</span>
           </div>
         </div>
       </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 md:transition-opacity shrink-0 ml-2 hidden sm:block" />
     </Link>
   );
 }

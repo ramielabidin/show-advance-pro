@@ -62,9 +62,9 @@ export default function ToursPage() {
 
   return (
     <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl tracking-tight">Tours</h1>
+          <h1 className="text-2xl sm:text-3xl tracking-tight">Tours</h1>
           <p className="text-muted-foreground text-sm mt-1">
             {tours.length} tour{tours.length !== 1 ? "s" : ""}
           </p>
@@ -73,7 +73,8 @@ export default function ToursPage() {
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5">
               <Plus className="h-4 w-4" />
-              New Tour
+              <span className="hidden sm:inline">New Tour</span>
+              <span className="sm:hidden">New</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
@@ -83,19 +84,19 @@ export default function ToursPage() {
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
                 <Label>Name</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fall 2026 East Coast Run" />
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fall 2026 East Coast Run" className="h-11 sm:h-9" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Start Date</Label>
-                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-11 sm:h-9" />
                 </div>
                 <div className="space-y-2">
                   <Label>End Date</Label>
-                  <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                  <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-11 sm:h-9" />
                 </div>
               </div>
-              <Button onClick={() => createMutation.mutate()} disabled={!name || createMutation.isPending} className="w-full">
+              <Button onClick={() => createMutation.mutate()} disabled={!name || createMutation.isPending} className="w-full h-11 sm:h-9">
                 {createMutation.isPending ? "Creating…" : "Create Tour"}
               </Button>
             </div>
@@ -131,14 +132,14 @@ export default function ToursPage() {
               <Link
                 key={tour.id}
                 to={`/tours/${tour.id}`}
-                className="group flex items-center justify-between rounded-lg border bg-card p-5 transition-all hover:border-foreground/20 hover:shadow-sm animate-fade-in"
+                className="group flex items-center justify-between rounded-lg border bg-card p-4 sm:p-5 transition-all hover:border-foreground/20 hover:shadow-sm animate-fade-in active:bg-accent/50"
               >
-                <div>
-                  <h3 className="font-medium text-foreground">{tour.name}</h3>
-                  <div className="flex items-center gap-4 mt-1.5 text-sm text-muted-foreground">
+                <div className="min-w-0">
+                  <h3 className="font-medium text-foreground text-sm sm:text-base">{tour.name}</h3>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1 text-xs sm:text-sm text-muted-foreground">
                     {dateRange && (
                       <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
+                        <Calendar className="h-3 w-3 shrink-0" />
                         {dateRange}
                       </span>
                     )}
@@ -161,7 +162,7 @@ export default function ToursPage() {
                     </div>
                   )}
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2 hidden sm:block" />
               </Link>
             );
           })}

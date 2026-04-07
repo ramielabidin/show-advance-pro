@@ -35,16 +35,18 @@ export default function ShowsPage() {
 
   return (
     <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
         <div>
-          <h1 className="text-3xl tracking-tight">Shows</h1>
+          <h1 className="text-2xl sm:text-3xl tracking-tight">Shows</h1>
           <p className="text-muted-foreground text-sm mt-1">
             {upcoming.length} upcoming · {past.length} past
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <BulkUploadDialog />
-          <PasteAdvanceDialog />
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="hidden sm:flex items-center gap-2">
+            <BulkUploadDialog />
+            <PasteAdvanceDialog />
+          </div>
           <CreateShowDialog />
         </div>
       </div>
@@ -54,7 +56,7 @@ export default function ShowsPage() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors capitalize ${
               tab === t
                 ? "border-foreground text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
