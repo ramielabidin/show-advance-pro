@@ -505,7 +505,7 @@ export default function ShowDetailPage() {
 
       <div className="space-y-6 sm:space-y-8">
         <div ref={scheduleRef}>
-        <FieldGroup title="Schedule" incomplete={!editing && !editingSchedule && scheduleEntries.length === 0 && !show.set_length && !show.curfew && !show.changeover_time}>
+        <FieldGroup title="Schedule" incomplete={!editing && !editingSchedule && scheduleEntries.length === 0}>
           {editingSchedule ? (
             <ScheduleEditor
               initial={scheduleEntries.map((e) => ({ time: e.time, label: e.label, is_band: e.is_band }))}
@@ -543,10 +543,7 @@ export default function ShowDetailPage() {
                 {scheduleEntries.map((entry) => (
                   <div
                     key={entry.id}
-                    className={cn(
-                      "flex items-center gap-3 sm:gap-4 rounded px-2 sm:px-3 py-1.5",
-                      entry.is_band && "bg-primary/5 font-medium"
-                    )}
+                    className="flex items-center gap-3 sm:gap-4 rounded px-2 sm:px-3 py-1.5"
                   >
                     <span className="font-mono text-sm w-14 sm:w-16 shrink-0 text-muted-foreground">
                       {entry.time}
@@ -563,8 +560,8 @@ export default function ShowDetailPage() {
             }} />
           )}
           {editField("set_length", "Set Length", { alwaysShow: true })}
-          {editField("curfew", "Curfew", { alwaysShow: true })}
-          {editField("changeover_time", "Changeover Time", { alwaysShow: true })}
+          {(editing || inlineField === "curfew" || show.curfew) ? editField("curfew", "Curfew") : null}
+          {(editing || inlineField === "changeover_time" || show.changeover_time) ? editField("changeover_time", "Changeover Time") : null}
         </FieldGroup>
         </div>
 

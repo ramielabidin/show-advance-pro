@@ -63,11 +63,7 @@ function formatDaySheet(show: any, sections: Set<string>, note?: string): string
     const sorted = [...show.schedule_entries].sort((a: any, b: any) => a.sort_order - b.sort_order);
     blocks.push(`🕐 *Schedule*`);
     for (const entry of sorted) {
-      const labelUpper = (entry.label || "").toUpperCase();
-      const isJuice = labelUpper.includes("JUICE");
-      const prefix = isJuice ? "🎸" : entry.is_band ? "⭐" : "   ";
-      const bold = (isJuice || entry.is_band) ? `*${entry.label}*` : entry.label;
-      blocks.push(`    ${prefix} \`${entry.time}\`  ${bold}`);
+      blocks.push(`    \`${entry.time}\`  ${entry.label}`);
     }
     blocks.push("");
   }

@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, Save, X } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export interface ScheduleRow {
   time: string;
@@ -16,6 +14,71 @@ interface ScheduleEditorProps {
   onSave: (rows: ScheduleRow[]) => void;
   onCancel: () => void;
   saving?: boolean;
+}
+
+/** Normalize free-text time to "H:MM AM/PM" format. Returns original if unparseable. */
+function normalizeTime(raw: string): string {
+  const s = raw.trim();
+  if (!s) return s;
+
+  let ampm: "AM" | "PM" | null = null;
+  let cleaned = s;
+
+  // Extract AM/PM suffix
+  const ampmMatch = cleaned.match(/\s*(a|am|p|pm)\s*$/i);
+  if (ampmMatch) {
+    ampm = ampmMatch[1].toLowerCase().startsWith("a") ? "AM" : "PM";
+    cleaned = cleaned.slice(0, ampmMatch.index).trim();
+  }
+
+  let hours: number | null = null;
+  let minutes = 0;
+
+  // "3:30" or "15:30"
+  const colonMatch = cleaned.match(/^(\d{1,2}):(\d{2})$/);
+  if (colonMatch) {
+    hours = parseInt(colonMatch[1], 10);
+    minutes = parseInt(colonMatch[2], 10);
+  }
+  // "1530" (4 digits, no colon)
+  else if (/^\d{3,4}$/.test(cleaned)) {
+    const n = parseInt(cleaned, 10);
+    if (cleaned.length === 4) {
+      hours = Math.floor(n / 100);
+      minutes = n % 100;
+    } else {
+      // 3 digits like "930" → 9:30
+      hours = Math.floor(n / 100);
+      minutes = n % 100;
+    }
+  }
+  // Single or double digit like "3" or "12"
+  else if (/^\d{1,2}$/.test(cleaned)) {
+    hours = parseInt(cleaned, 10);
+    minutes = 0;
+  }
+
+  if (hours === null || minutes < 0 || minutes > 59) return raw;
+  if (hours < 0 || hours > 23) return raw;
+
+  // Convert 24h to 12h if needed
+  if (hours >= 13 && !ampm) {
+    ampm = "PM";
+    hours -= 12;
+  } else if (hours === 0 && !ampm) {
+    ampm = "AM";
+    hours = 12;
+  } else if (hours === 12 && !ampm) {
+    ampm = "PM";
+  }
+
+  // Default to PM for ambiguous times
+  if (!ampm) ampm = "PM";
+
+  // If hours > 12 after extraction (shouldn't happen but safety)
+  if (hours > 12) return raw;
+
+  return `${hours}:${minutes.toString().padStart(2, "0")} ${ampm}`;
 }
 
 export default function ScheduleEditor({ initial, onSave, onCancel, saving }: ScheduleEditorProps) {
@@ -42,8 +105,12 @@ export default function ScheduleEditor({ initial, onSave, onCancel, saving }: Sc
           <Input
             value={row.time}
             onChange={(e) => update(i, { time: e.target.value })}
+            onBlur={() => {
+              const normalized = normalizeTime(row.time);
+              if (normalized !== row.time) update(i, { time: normalized });
+            }}
             placeholder="5:30 PM"
-            className="text-sm h-9 w-20 font-mono shrink-0"
+            className="text-sm h-9 w-24 font-mono shrink-0"
             autoFocus={i === 0 && rows.length === 1 && !row.time}
           />
           <Input
@@ -52,21 +119,6 @@ export default function ScheduleEditor({ initial, onSave, onCancel, saving }: Sc
             placeholder="Activity"
             className="text-sm h-9 flex-1"
           />
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span
-              className={cn(
-                "text-[10px] font-bold tracking-wide",
-                row.is_band ? "text-primary" : "text-muted-foreground/50"
-              )}
-            >
-              JUICE
-            </span>
-            <Switch
-              checked={row.is_band}
-              onCheckedChange={(checked) => update(i, { is_band: checked })}
-              className="scale-75"
-            />
-          </div>
           <Button
             variant="ghost"
             size="icon"
