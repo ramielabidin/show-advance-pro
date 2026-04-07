@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { TeamProvider } from "@/components/TeamProvider";
 import AppLayout from "@/components/AppLayout";
 import AuthPage from "@/pages/AuthPage";
+import DashboardPage from "@/pages/DashboardPage";
 import ShowsPage from "@/pages/ShowsPage";
 import ShowDetailPage from "@/pages/ShowDetailPage";
 import ToursPage from "@/pages/ToursPage";
@@ -37,7 +38,8 @@ function ProtectedRoutes() {
     <TeamProvider>
       <Routes>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<ShowsPage />} />
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/shows" element={<ShowsPage />} />
           <Route path="/shows/:id" element={<ShowDetailPage />} />
           <Route path="/tours" element={<ToursPage />} />
           <Route path="/tours/:id" element={<TourDetailPage />} />
