@@ -188,8 +188,12 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
     const dateStr = format(parseISO(show.date), "yyyy-MM-dd");
     const subject = `${dateStr} - ${show.venue_name} (${formatCityState(show.city)}) - Day Sheet`;
     const body = buildBody(show, selected, note);
-    const mailto = `mailto:${emails.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(mailto, "_blank");
+    const gmailUrl =
+      "https://mail.google.com/mail/?view=cm" +
+      `&to=${encodeURIComponent(emails.join(","))}` +
+      `&su=${encodeURIComponent(subject)}` +
+      `&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, "_blank");
     setOpen(false);
   };
 
