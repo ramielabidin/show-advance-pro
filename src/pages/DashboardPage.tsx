@@ -118,7 +118,7 @@ export default function DashboardPage() {
     const yearEnd = endOfYear(today);
     const monthStart = startOfMonth(today);
     const monthEnd = endOfMonth(today);
-    const next30 = addDays(today, 30);
+    
 
     const thisYear = shows.filter((s) => {
       const d = parseISO(s.date);
