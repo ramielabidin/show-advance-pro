@@ -100,17 +100,16 @@ export default function DashboardPage() {
 
 
 
-  const activeTours = useMemo(
-    () =>
-      tours.filter((t) => {
-        if (!t.shows || t.shows.length === 0) return false;
-        const hasUpcoming = t.shows.some(
-          (s) => !isPast(parseISO(s.date)) || isToday(parseISO(s.date))
-        );
-        return hasUpcoming;
-      }),
-    [tours]
-  );
+  const activeTours = useMemo(() => {
+    const cutoff = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 60);
+    return tours.filter((t) => {
+      if (!t.shows || t.shows.length === 0) return false;
+      return t.shows.some((s) => {
+        const d = parseISO(s.date);
+        return (isToday(d) || !isPast(d)) && d <= cutoff;
+      });
+    });
+  }, [tours]);
 
   // Quick stats
   const stats = useMemo(() => {
@@ -249,7 +248,7 @@ export default function DashboardPage() {
       {activeTours.length > 0 && (
         <div>
           <h2 className="text-base font-medium mb-3">Tour Progress</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 w-full gap-3">
             {activeTours.map((tour) => {
               const total = tour.shows?.length ?? 0;
               const advanced = (tour.shows ?? []).filter(
