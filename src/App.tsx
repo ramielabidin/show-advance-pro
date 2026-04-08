@@ -16,6 +16,7 @@ import TourDetailPage from "@/pages/TourDetailPage";
 
 import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
+import PWAUpdatePrompt from "@/components/PWAUpdatePrompt";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <PWAUpdatePrompt />
         <AuthProvider>
           <BrowserRouter>
             <Routes>
