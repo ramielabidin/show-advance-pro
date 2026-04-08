@@ -47,28 +47,14 @@ function CreateTeamScreen({ userId }: { userId: string }) {
 
       const teamId = crypto.randomUUID();
 
-      const { error } = await supabase
-        .from("teams")
-        .insert({ id: teamId, name: name.trim(), created_by: userId });
+      const { error } = await supabase.rpc("create_team_with_owner", {
+        _team_id: teamId,
+        _name: name.trim(),
+        _user_id: userId,
+      });
       if (error) {
-        console.error("Team insert failed:", error);
+        console.error("Team creation failed:", error);
         throw error;
-      }
-
-      // Add self as owner
-      const { error: memberError } = await supabase
-        .from("team_members")
-        .insert({ team_id: teamId, user_id: userId, role: "owner" });
-      if (memberError) {
-        console.error("Team member insert failed:", memberError);
-        throw memberError;
-      }
-
-      // Create app_settings row for this team
-      const { error: settingsError } = await supabase.from("app_settings").insert({ team_id: teamId });
-      if (settingsError) {
-        console.error("App settings insert failed:", settingsError);
-        throw settingsError;
       }
 
       queryClient.invalidateQueries({ queryKey: ["user-teams"] });
