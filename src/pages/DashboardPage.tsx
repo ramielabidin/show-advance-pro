@@ -329,7 +329,7 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
                 )}
                 title="Tracked fields: Schedule, Contact, Departure, Load In, Parking, WiFi, Hotel"
               >
-                {advanced === 0 ? "⚪ Not Started" : advanced >= 6 ? "🟢 Complete" : "🟡 In Progress"}
+                {advanced === 0 ? "⚪  Not Started" : advanced >= 6 ? "🟢  Complete" : "🟡  In Progress"}
               </div>
               <Progress value={pct} className="h-1.5 w-24 mt-1.5" />
             </div>
