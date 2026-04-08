@@ -7,21 +7,12 @@ import {
   isPast,
   isToday,
   differenceInCalendarDays,
-
   startOfYear,
   endOfYear,
   startOfMonth,
   endOfMonth,
 } from "date-fns";
-import {
-  Calendar,
-  MapPin,
-  ChevronRight,
-  TrendingUp,
-  DollarSign,
-  AlertTriangle,
-  BarChart3,
-} from "lucide-react";
+import { Calendar, MapPin, ChevronRight, TrendingUp, DollarSign, AlertTriangle, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,10 +44,7 @@ export default function DashboardPage() {
   const { data: shows = [], isLoading: showsLoading } = useQuery({
     queryKey: ["shows"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("shows")
-        .select("*")
-        .order("date", { ascending: true });
+      const { data, error } = await supabase.from("shows").select("*").order("date", { ascending: true });
       if (error) throw error;
       return data as Show[];
     },
@@ -65,9 +53,7 @@ export default function DashboardPage() {
   const { data: scheduleMap = {} } = useQuery({
     queryKey: ["schedule-counts"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("schedule_entries")
-        .select("show_id");
+      const { data, error } = await supabase.from("schedule_entries").select("show_id");
       if (error) throw error;
       const map: Record<string, boolean> = {};
       data.forEach((e) => (map[e.show_id] = true));
@@ -89,16 +75,10 @@ export default function DashboardPage() {
 
   const today = new Date();
 
-  const upcoming = useMemo(
-    () => shows.filter((s) => !isPast(parseISO(s.date)) || isToday(parseISO(s.date))),
-    [shows]
-  );
+  const upcoming = useMemo(() => shows.filter((s) => !isPast(parseISO(s.date)) || isToday(parseISO(s.date))), [shows]);
 
   const nextShow = upcoming[0] ?? null;
   const upcomingAfter = upcoming.slice(1, 8);
-
-
-
 
   const activeTours = useMemo(() => {
     const cutoff = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 60);
@@ -117,7 +97,6 @@ export default function DashboardPage() {
     const yearEnd = endOfYear(today);
     const monthStart = startOfMonth(today);
     const monthEnd = endOfMonth(today);
-    
 
     const thisYear = shows.filter((s) => {
       const d = parseISO(s.date);
@@ -186,9 +165,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Next Show */}
-      {nextShow && (
-        <NextShowCard show={nextShow} hasSchedule={!!scheduleMap[nextShow.id]} />
-      )}
+      {nextShow && <NextShowCard show={nextShow} hasSchedule={!!scheduleMap[nextShow.id]} />}
 
       {!nextShow && (
         <Card>
@@ -215,21 +192,17 @@ export default function DashboardPage() {
                   to={`/shows/${show.id}`}
                   className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-accent group"
                 >
-                  <span className={cn(
-                    "text-xs w-16 shrink-0 font-medium",
-                    isUrgentRow ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
-                  )}>
+                  <span
+                    className={cn(
+                      "text-xs w-16 shrink-0 font-medium",
+                      isUrgentRow ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground",
+                    )}
+                  >
                     {format(parseISO(show.date), "MMM d")}
                   </span>
-                  <span className="text-sm font-medium text-foreground truncate flex-1">
-                    {show.venue_name}
-                  </span>
-                  <span className="text-xs text-muted-foreground truncate max-w-[80px]">
-                    {show.city}
-                  </span>
-                  {!scheduleMap[show.id] && (
-                    <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />
-                  )}
+                  <span className="text-sm font-medium text-foreground truncate flex-1">{show.venue_name}</span>
+                  <span className="text-xs text-muted-foreground truncate max-w-[80px]">{show.city}</span>
+                  {!scheduleMap[show.id] && <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />}
                   <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                 </Link>
               );
@@ -251,17 +224,13 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 w-full gap-3">
             {activeTours.map((tour) => {
               const total = tour.shows?.length ?? 0;
-              const advanced = (tour.shows ?? []).filter(
-                (s) => countAdvanced(s, !!scheduleMap[s.id]) >= 4
-              ).length;
+              const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]) >= 4).length;
               const pct = total > 0 ? (advanced / total) * 100 : 0;
               return (
-                <Link key={tour.id} to={`/tours/${tour.id}`}>
+                <Link key={tour.id} to={`/tours/${tour.id}`} className="w-full">
                   <Card className="hover:border-foreground/20 transition-colors">
                     <CardContent className="pt-5 pb-4">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {tour.name}
-                      </p>
+                      <p className="text-sm font-medium text-foreground truncate">{tour.name}</p>
                       {tour.start_date && tour.end_date && (
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {format(parseISO(tour.start_date), "MMM d")} –{" "}
@@ -288,23 +257,13 @@ export default function DashboardPage() {
 
 /* --- Sub-components --- */
 
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ElementType;
-}) {
+function StatCard({ label, value, icon: Icon }: { label: string; value: string | number; icon: React.ElementType }) {
   return (
     <Card>
       <CardContent className="pt-4 pb-3 px-4">
         <div className="flex items-center gap-2 mb-1">
           <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
-            {label}
-          </span>
+          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">{label}</span>
         </div>
         <p className="text-xl font-display text-foreground">{value}</p>
       </CardContent>
@@ -322,12 +281,12 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
     daysAway <= 0
       ? "Today"
       : daysAway === 1
-      ? "Tomorrow"
-      : daysAway < 7
-      ? `${daysAway} days away`
-      : daysAway < 14
-      ? "Next week"
-      : `${Math.ceil(daysAway / 7)} weeks away`;
+        ? "Tomorrow"
+        : daysAway < 7
+          ? `${daysAway} days away`
+          : daysAway < 14
+            ? "Next week"
+            : `${Math.ceil(daysAway / 7)} weeks away`;
 
   const isUrgent = daysAway >= 0 && daysAway < 7;
 
@@ -337,25 +296,19 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
         <CardContent className="p-5 sm:p-6">
           <div className="flex items-start justify-between gap-2 sm:gap-4">
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">
-                Next Show
-              </p>
-              <h2 className="text-xl sm:text-2xl font-display text-foreground truncate">
-                {show.venue_name}
-              </h2>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Next Show</p>
+              <h2 className="text-xl sm:text-2xl font-display text-foreground truncate">{show.venue_name}</h2>
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{show.city}</span>
               </div>
-              <p className="text-sm text-foreground mt-1">
-                {format(date, "EEEE, MMMM d, yyyy")}
-              </p>
+              <p className="text-sm text-foreground mt-1">{format(date, "EEEE, MMMM d, yyyy")}</p>
               <span
                 className={cn(
                   "inline-block mt-2 text-xs font-medium px-2 py-0.5 rounded-full",
                   isUrgent
                     ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                    : "bg-secondary text-muted-foreground"
+                    : "bg-secondary text-muted-foreground",
                 )}
               >
                 {daysLabel}
