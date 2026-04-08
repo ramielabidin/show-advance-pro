@@ -165,7 +165,12 @@ export default function DashboardPage() {
       </div>
 
       {/* Next Show */}
-      {nextShow && <NextShowCard show={nextShow} hasSchedule={!!scheduleMap[nextShow.id]} />}
+      {nextShow && (
+        <div>
+          <h2 className="text-base font-medium mb-3">Next Show</h2>
+          <NextShowCard show={nextShow} hasSchedule={!!scheduleMap[nextShow.id]} />
+        </div>
+      )}
 
       {!nextShow && (
         <Card>
@@ -298,7 +303,6 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
         <CardContent className="p-5 sm:p-6">
           <div className="flex items-start justify-between gap-2 sm:gap-4">
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Next Show</p>
               <h2 className="text-xl sm:text-2xl font-display text-foreground truncate">{show.venue_name}</h2>
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
@@ -318,19 +322,9 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
             </div>
 
             <div className="text-right shrink-0">
-              <div
-                className={cn(
-                  "text-sm font-medium",
-                  advanced === 0
-                    ? "text-muted-foreground"
-                    : advanced >= 6
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-amber-600 dark:text-amber-400",
-                )}
-                title="Tracked fields: Schedule, Contact, Departure, Load In, Parking, WiFi, Hotel"
-              >
-                {advanced === 0 ? "⚪  Not Started" : advanced >= 6 ? "🟢  Complete" : "🟡  In Progress"}
-              </div>
+              <p className="text-sm font-medium text-foreground" title="Tracked fields: Schedule, Contact, Departure, Load In, Parking, WiFi, Hotel">
+                {advanced}/{TOTAL_ADVANCE} advanced
+              </p>
               <Progress value={pct} className="h-1.5 w-24 mt-1.5" />
             </div>
           </div>
