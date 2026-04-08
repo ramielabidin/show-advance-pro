@@ -322,19 +322,29 @@ export default function ShowDetailPage() {
     <div className="animate-fade-in max-w-3xl">
       {/* Header */}
       <div className="mb-6 space-y-1.5 sm:space-y-2">
-        {/* Row 1: Back arrow + venue name (H1) */}
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 sm:h-8 sm:w-8" onClick={() => navigate("/")}>
+        {/* Row 1: Back arrow + Tour badge + venue name */}
+        <div className="flex items-start gap-2">
+          <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 sm:h-8 sm:w-8 mt-0.5" onClick={() => navigate("/")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          {editing ? (
-            <Input value={f("venue_name")} onChange={(e) => setF("venue_name", e.target.value)} className="text-lg sm:text-2xl font-bold h-auto py-1" />
-          ) : (
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight leading-tight">{show.venue_name}</h1>
-          )}
+          <div className="min-w-0 space-y-0.5">
+            {/* Tour category badge */}
+            {!editing && (show as any).tours?.name && (
+              <Link to={`/tours/${(show as any).tours.id}`}>
+                <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 hover:bg-secondary/80 transition-colors">
+                  {(show as any).tours.name}
+                </Badge>
+              </Link>
+            )}
+            {editing ? (
+              <Input value={f("venue_name")} onChange={(e) => setF("venue_name", e.target.value)} className="text-lg sm:text-2xl font-bold h-auto py-1" />
+            ) : (
+              <h1 className="text-xl sm:text-2xl font-display font-bold tracking-tight leading-tight">{show.venue_name}</h1>
+            )}
+          </div>
         </div>
 
-        {/* Row 2: Address subtitle + Row 3: Meta line */}
+        {/* Row 2: Metadata — date · city · address */}
         <div className="pl-9 sm:pl-10 space-y-0.5">
           {editing ? (
             <div className="space-y-2">
@@ -358,26 +368,27 @@ export default function ShowDetailPage() {
               </div>
             </div>
           ) : (
-            <>
-              {/* Address subtitle */}
+            <p className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5">
+              <span>{format(parseISO(show.date), "EEEE, MMMM d, yyyy")}</span>
+              <span className="text-border">·</span>
               {show.venue_address ? (
                 <a
                   href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                  className="inline-flex items-center gap-1 hover:underline hover:text-foreground transition-colors"
                 >
-                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  <MapPin className="h-3 w-3 shrink-0" />
                   {show.venue_address}
                 </a>
               ) : (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3 w-3 shrink-0" />
                   <span>{formatCityState(show.city)}</span>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="gap-1 text-xs text-muted-foreground hover:text-foreground h-6 px-2"
+                    className="gap-1 text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
                     disabled={lookingUpAddress}
                     onClick={async () => {
                       setLookingUpAddress(true);
@@ -402,24 +413,11 @@ export default function ShowDetailPage() {
                     }}
                   >
                     {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                    Lookup Address
+                    Lookup
                   </Button>
-                </div>
+                </span>
               )}
-
-              {/* Meta line: Date · Tour */}
-              <p className="text-xs text-muted-foreground">
-                {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
-                {(show as any).tours && (
-                  <>
-                    {" · "}
-                    <Link to={`/tours/${(show as any).tours.id}`} className="hover:underline">
-                      {(show as any).tours.name}
-                    </Link>
-                  </>
-                )}
-              </p>
-            </>
+            </p>
           )}
         </div>
 
