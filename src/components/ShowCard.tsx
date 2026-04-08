@@ -32,7 +32,7 @@ export default function ShowCard({ show }: ShowCardProps) {
         </div>
         <div className="border-l pl-3 sm:pl-5 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-medium text-foreground text-sm sm:text-base truncate">{show.venue_name}</h3>
+            <h3 className="font-medium text-foreground text-sm sm:text-base truncate min-w-0">{show.venue_name}</h3>
             {!show.is_reviewed && (
               <span className="inline-flex items-center gap-1 rounded-full bg-badge-new/10 px-2 py-0.5 text-[11px] font-medium text-badge-new shrink-0">
                 <Sparkles className="h-3 w-3" />

@@ -203,8 +203,10 @@ export default function DashboardPage() {
                     >
                       {format(parseISO(show.date), "MMM d")}
                     </span>
-                    <span className="text-sm font-medium text-foreground truncate flex-1">{show.venue_name}</span>
-                    <span className="text-xs text-muted-foreground truncate max-w-[140px]">{formatCityState(show.city)}</span>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-sm font-medium text-foreground truncate">{show.venue_name}</span>
+                      <span className="text-xs text-muted-foreground truncate">{formatCityState(show.city)}</span>
+                    </div>
                     {!scheduleMap[show.id] && <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />}
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </Link>
