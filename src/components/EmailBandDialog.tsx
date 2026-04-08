@@ -18,6 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { formatCityState } from "@/lib/utils";
 import type { Show } from "@/lib/types";
 
 const SECTIONS = [
@@ -72,7 +73,7 @@ function buildBody(show: Show & { schedule_entries?: any[] }, selected: Set<Sect
   if (selected.has("venue")) {
     parts.push(section("Venue", [
       field("Address", show.venue_address),
-      field("City", show.city),
+      field("City", formatCityState(show.city)),
     ]));
   }
 
@@ -232,7 +233,7 @@ export default function EmailBandDialog({ show, trigger }: { show: Show & { sche
     }
 
     const dateStr = format(parseISO(show.date), "yyyy-MM-dd");
-    const subject = `${dateStr} - ${show.venue_name} (${show.city}) - Day Sheet`;
+    const subject = `${dateStr} - ${show.venue_name} (${formatCityState(show.city)}) - Day Sheet`;
     const body = buildBody(show, selected, note);
 
     const mailto = `mailto:${emails.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;

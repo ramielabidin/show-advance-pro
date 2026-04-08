@@ -4,6 +4,7 @@ import { ArrowLeft, Edit, Trash2, Save, X, Plus, Calendar } from "lucide-react";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
+import { formatCityState } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -234,7 +235,7 @@ export default function TourDetailPage() {
             <SelectContent>
               {standaloneShows.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
-                  {s.venue_name} — {s.city} ({format(parseISO(s.date), "MMM d")})
+                  {s.venue_name} — {formatCityState(s.city)} ({format(parseISO(s.date), "MMM d")})
                 </SelectItem>
               ))}
               {standaloneShows.length === 0 && (

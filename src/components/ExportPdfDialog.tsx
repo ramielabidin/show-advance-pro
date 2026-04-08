@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import jsPDF from "jspdf";
 import type { Show, ScheduleEntry } from "@/lib/types";
+import { formatCityState } from "@/lib/utils";
 
 const SECTIONS = [
   { key: "contact", label: "Day of Show Contact" },
@@ -148,7 +149,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       doc.setFontSize(10);
       doc.setTextColor(80, 80, 80);
       const dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
-      doc.text(`${show.city}  ·  ${dateStr}`, margin, y);
+      doc.text(`${formatCityState(show.city)}  ·  ${dateStr}`, margin, y);
       doc.setTextColor(30, 30, 30);
       y += lineHeight + 8;
       doc.setDrawColor(60, 60, 60);

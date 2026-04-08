@@ -32,7 +32,7 @@ import GuestListEditor, { GuestListView, parseGuestList, guestTotal } from "@/co
 import ScheduleEditor, { type ScheduleRow } from "@/components/ScheduleEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatCityState } from "@/lib/utils";
 import { normalizeTime } from "@/lib/timeFormat";
 import type { Show } from "@/lib/types";
 import RevenueSimulator, { parseDollar } from "@/components/RevenueSimulator";
@@ -371,7 +371,7 @@ export default function ShowDetailPage() {
               ) : (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5 shrink-0" />
-                  <span>{show.city}</span>
+                  <span>{formatCityState(show.city)}</span>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -407,7 +407,7 @@ export default function ShowDetailPage() {
 
               {/* Row 3: City · Date · Tour */}
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                {show.city} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
+                {formatCityState(show.city)} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
                 {(show as any).tours && (
                   <>
                     {" · "}
