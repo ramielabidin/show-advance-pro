@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, Save, X, Loader2, MapPin, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -321,10 +321,10 @@ export default function ShowDetailPage() {
   return (
     <div className="animate-fade-in max-w-3xl">
       {/* Header */}
-      <div className="mb-6 space-y-1.5 sm:space-y-2">
+      <div className="mb-5 space-y-1 sm:space-y-2">
         {/* Row 1: Back arrow + Tour badge + venue name */}
         <div className="flex items-start gap-2">
-          <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 sm:h-8 sm:w-8 mt-0.5" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 mt-0.5" onClick={() => navigate("/")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="min-w-0 space-y-0.5">
@@ -339,7 +339,7 @@ export default function ShowDetailPage() {
             {editing ? (
               <Input value={f("venue_name")} onChange={(e) => setF("venue_name", e.target.value)} className="text-lg sm:text-2xl font-bold h-auto py-1" />
             ) : (
-              <h1 className="text-xl sm:text-2xl font-display font-bold tracking-tight leading-tight">{show.venue_name}</h1>
+              <h1 className="text-lg sm:text-2xl font-display font-bold tracking-tight leading-tight">{show.venue_name}</h1>
             )}
           </div>
         </div>
@@ -379,7 +379,7 @@ export default function ShowDetailPage() {
                   className="inline-flex items-center gap-1 hover:underline hover:text-foreground transition-colors"
                 >
                   <MapPin className="h-3 w-3 shrink-0" />
-                  {show.venue_address}
+                  {show.venue_address.replace(/,?\s*United States$/i, "")}
                 </a>
               ) : (
                 <span className="inline-flex items-center gap-1">
@@ -422,7 +422,7 @@ export default function ShowDetailPage() {
         </div>
 
         {/* Action buttons */}
-        <div className="pl-9 sm:pl-10 pt-0.5">
+        <div className="pl-8 pt-0.5">
           {editing ? (
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setEditingSchedule(false); }} className="h-7 sm:h-8 text-xs">
@@ -465,15 +465,22 @@ export default function ShowDetailPage() {
               </div>
 
               {/* Mobile */}
-              <div className="flex md:hidden items-center gap-1.5">
-                <SlackPushDialog showId={id!} />
-                <Button variant="outline" size="sm" onClick={startEdit} className="h-7 text-xs">
-                  <Edit className="h-3.5 w-3.5 mr-1" /> Edit All
+              <div className="flex md:hidden items-center gap-1">
+                <SlackPushDialog
+                  showId={id!}
+                  trigger={
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                      <Send className="h-3.5 w-3.5" />
+                    </Button>
+                  }
+                />
+                <Button variant="ghost" size="icon" onClick={startEdit} className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                  <Edit className="h-3.5 w-3.5" />
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
