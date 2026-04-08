@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
+import { cn, formatCityState } from "@/lib/utils";
 import CreateShowDialog from "@/components/CreateShowDialog";
 import type { Show, Tour } from "@/lib/types";
 
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                       {format(parseISO(show.date), "MMM d")}
                     </span>
                     <span className="text-sm font-medium text-foreground truncate flex-1">{show.venue_name}</span>
-                    <span className="text-xs text-muted-foreground truncate max-w-[140px]">{show.city}</span>
+                    <span className="text-xs text-muted-foreground truncate max-w-[140px]">{formatCityState(show.city)}</span>
                     {!scheduleMap[show.id] && <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />}
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </Link>
@@ -305,7 +305,7 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
               <h2 className="text-xl sm:text-2xl font-display text-foreground truncate">{show.venue_name}</h2>
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{show.city}</span>
+                <span className="truncate">{formatCityState(show.city)}</span>
               </div>
               <p className="text-sm text-foreground mt-1">{format(date, "EEEE, MMMM d, yyyy")}</p>
               <span

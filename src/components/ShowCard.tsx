@@ -1,7 +1,7 @@
 import { format, parseISO, isPast, isToday } from "date-fns";
 import { MapPin, ChevronRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { cn, formatCityState } from "@/lib/utils";
 import type { Show } from "@/lib/types";
 
 interface ShowCardProps {
@@ -42,7 +42,7 @@ export default function ShowCard({ show }: ShowCardProps) {
           </div>
           <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground mt-0.5">
             <MapPin className="h-3 w-3 shrink-0" />
-            <span className="truncate">{show.city}</span>
+            <span className="truncate">{formatCityState(show.city)}</span>
           </div>
         </div>
       </div>

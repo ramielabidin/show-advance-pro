@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { FolderOpen, Plus, ChevronRight, Calendar, MapPin } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { formatCityState } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
 import { Button } from "@/components/ui/button";
@@ -153,7 +154,7 @@ export default function ToursPage() {
                           className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground"
                         >
                           <MapPin className="h-2.5 w-2.5" />
-                          {s.city}
+                          {formatCityState(s.city)}
                         </span>
                       ))}
                       {sortedShows.length > 4 && (
