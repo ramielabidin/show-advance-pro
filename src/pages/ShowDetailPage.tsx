@@ -1,5 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, Trash2, Save, X, Loader2, MapPin, MoreHorizontal } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { format, parseISO } from "date-fns";
