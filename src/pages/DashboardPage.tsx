@@ -248,7 +248,7 @@ export default function DashboardPage() {
       {activeTours.length > 0 && (
         <div>
           <h2 className="text-base font-medium mb-3">Tour Progress</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 w-full gap-3">
             {activeTours.map((tour) => {
               const total = tour.shows?.length ?? 0;
               const advanced = (tour.shows ?? []).filter(
