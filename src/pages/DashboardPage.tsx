@@ -17,9 +17,6 @@ import {
   Calendar,
   MapPin,
   ChevronRight,
-  Send,
-  Pencil,
-  FileText,
   TrendingUp,
   DollarSign,
   AlertTriangle,
@@ -30,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import CreateShowDialog from "@/components/CreateShowDialog";
 import type { Show, Tour } from "@/lib/types";
 
 const ADVANCE_FIELDS: (keyof Show)[] = [
@@ -171,9 +169,12 @@ export default function DashboardPage() {
 
   return (
     <div className="animate-fade-in space-y-6 sm:space-y-8 overflow-x-hidden">
-      <div>
-        <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">Your morning briefing</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground text-sm mt-1">Your morning briefing</p>
+        </div>
+        <CreateShowDialog />
       </div>
 
       {/* Quick Stats */}
@@ -206,22 +207,26 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Two-column: Upcoming + Needs Attention */}
-      <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Upcoming Shows */}
-        {upcomingAfter.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Upcoming Shows</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              {upcomingAfter.map((show) => (
+      {/* Upcoming Shows */}
+      {upcomingAfter.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Upcoming Shows</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {upcomingAfter.map((show) => {
+              const daysAway = differenceInCalendarDays(parseISO(show.date), today);
+              const isUrgentRow = daysAway >= 0 && daysAway < 7 && !scheduleMap[show.id] && !show.dos_contact_name;
+              return (
                 <Link
                   key={show.id}
                   to={`/shows/${show.id}`}
                   className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-accent group"
                 >
-                  <span className="text-xs text-muted-foreground w-16 shrink-0 font-medium">
+                  <span className={cn(
+                    "text-xs w-16 shrink-0 font-medium",
+                    isUrgentRow ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
+                  )}>
                     {format(parseISO(show.date), "MMM d")}
                   </span>
                   <span className="text-sm font-medium text-foreground truncate flex-1">
@@ -235,58 +240,23 @@ export default function DashboardPage() {
                   )}
                   <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                 </Link>
-              ))}
-              <Link
-                to="/shows"
-                className="block text-xs text-muted-foreground hover:text-foreground pt-2 text-center transition-colors"
-              >
-                View all shows →
-              </Link>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Needs Attention */}
-        {needsAttention.length > 0 && (
-          <Card className="border-amber-200 dark:border-amber-900/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                Not Yet Advanced
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              {needsAttention.map((show) => {
-                const daysAway = differenceInCalendarDays(parseISO(show.date), today);
-                return (
-                  <Link
-                    key={show.id}
-                    to={`/shows/${show.id}`}
-                    className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-accent group"
-                  >
-                    <span className="text-xs text-muted-foreground w-16 shrink-0 font-medium">
-                      {format(parseISO(show.date), "MMM d")}
-                    </span>
-                    <span className="text-sm font-medium text-foreground truncate flex-1">
-                      {show.venue_name}
-                    </span>
-                    <span className="text-xs text-amber-600 dark:text-amber-400 shrink-0">
-                      {daysAway <= 0 ? "Today" : `${daysAway}d`}
-                    </span>
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                  </Link>
-                );
-              })}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+              );
+            })}
+            <Link
+              to="/shows"
+              className="block text-xs text-muted-foreground hover:text-foreground pt-2 text-center transition-colors"
+            >
+              View all shows →
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tour Progress */}
       {activeTours.length > 0 && (
         <div>
           <h2 className="text-base font-medium mb-3">Tour Progress</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full gap-3">
             {activeTours.map((tour) => {
               const total = tour.shows?.length ?? 0;
               const advanced = (tour.shows ?? []).filter(
