@@ -1,9 +1,11 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { Calendar, FolderOpen, Settings, LogOut, Moon, Sun, FileText } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import PullToRefresh from "@/components/PullToRefresh";
 
 const navItems = [
   { to: "/", icon: Calendar, label: "Home" },
@@ -14,6 +16,11 @@ const navItems = [
 
 export default function AppLayout() {
   const { theme, setTheme } = useTheme();
+  const queryClient = useQueryClient();
+
+  async function handleRefresh() {
+    await queryClient.invalidateQueries();
+  }
   return (
     <div className="min-h-screen bg-background pb-16 md:pb-0">
       {/* Desktop top nav */}
@@ -97,7 +104,9 @@ export default function AppLayout() {
       </header>
 
       <main className="container py-4 md:py-8 px-4 md:px-8">
-        <Outlet />
+        <PullToRefresh onRefresh={handleRefresh}>
+          <Outlet />
+        </PullToRefresh>
       </main>
 
       {/* Mobile bottom tab bar */}
