@@ -178,11 +178,10 @@ export default function DashboardPage() {
 
       {/* Upcoming Shows */}
       {upcomingAfter.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Upcoming Shows</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
+        <div>
+          <h2 className="text-base font-medium mb-3">Upcoming Shows</h2>
+          <Card>
+          <CardContent className="pt-4 space-y-1">
             {upcomingAfter.map((show) => {
               const daysAway = differenceInCalendarDays(parseISO(show.date), today);
               const isUrgentRow = daysAway >= 0 && daysAway < 7 && !scheduleMap[show.id] && !show.dos_contact_name;
@@ -214,7 +213,8 @@ export default function DashboardPage() {
               View all shows →
             </Link>
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       )}
 
       {/* Tour Progress */}
