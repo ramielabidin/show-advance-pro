@@ -97,15 +97,8 @@ export default function DashboardPage() {
   const nextShow = upcoming[0] ?? null;
   const upcomingAfter = upcoming.slice(1, 8);
 
-  const needsAttention = useMemo(() => {
-    const cutoff = addDays(today, 30);
-    return upcoming
-      .filter((s) => {
-        const d = parseISO(s.date);
-        return d <= cutoff && !scheduleMap[s.id] && !s.dos_contact_name;
-      })
-      .slice(0, 5);
-  }, [upcoming, scheduleMap]);
+
+
 
   const activeTours = useMemo(
     () =>
