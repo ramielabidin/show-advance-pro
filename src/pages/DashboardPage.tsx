@@ -100,17 +100,16 @@ export default function DashboardPage() {
 
 
 
-  const activeTours = useMemo(
-    () =>
-      tours.filter((t) => {
-        if (!t.shows || t.shows.length === 0) return false;
-        const hasUpcoming = t.shows.some(
-          (s) => !isPast(parseISO(s.date)) || isToday(parseISO(s.date))
-        );
-        return hasUpcoming;
-      }),
-    [tours]
-  );
+  const activeTours = useMemo(() => {
+    const cutoff = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 60);
+    return tours.filter((t) => {
+      if (!t.shows || t.shows.length === 0) return false;
+      return t.shows.some((s) => {
+        const d = parseISO(s.date);
+        return (isToday(d) || !isPast(d)) && d <= cutoff;
+      });
+    });
+  }, [tours]);
 
   // Quick stats
   const stats = useMemo(() => {
