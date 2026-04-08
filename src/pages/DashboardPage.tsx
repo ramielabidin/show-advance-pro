@@ -143,7 +143,6 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground text-sm mt-1">Your morning briefing</p>
         </div>
         <CreateShowDialog />
       </div>
@@ -186,38 +185,38 @@ export default function DashboardPage() {
         <div>
           <h2 className="text-base font-medium mb-3">Upcoming Shows</h2>
           <Card>
-          <CardContent className="pt-4 space-y-1">
-            {upcomingAfter.map((show) => {
-              const daysAway = differenceInCalendarDays(parseISO(show.date), today);
-              const isUrgentRow = daysAway >= 0 && daysAway < 7 && !scheduleMap[show.id] && !show.dos_contact_name;
-              return (
-                <Link
-                  key={show.id}
-                  to={`/shows/${show.id}`}
-                  className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-accent group"
-                >
-                  <span
-                    className={cn(
-                      "text-xs w-16 shrink-0 font-medium",
-                      isUrgentRow ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground",
-                    )}
+            <CardContent className="pt-4 space-y-1">
+              {upcomingAfter.map((show) => {
+                const daysAway = differenceInCalendarDays(parseISO(show.date), today);
+                const isUrgentRow = daysAway >= 0 && daysAway < 7 && !scheduleMap[show.id] && !show.dos_contact_name;
+                return (
+                  <Link
+                    key={show.id}
+                    to={`/shows/${show.id}`}
+                    className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-accent group"
                   >
-                    {format(parseISO(show.date), "MMM d")}
-                  </span>
-                  <span className="text-sm font-medium text-foreground truncate flex-1">{show.venue_name}</span>
-                  <span className="text-xs text-muted-foreground truncate max-w-[80px]">{show.city}</span>
-                  {!scheduleMap[show.id] && <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />}
-                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                </Link>
-              );
-            })}
-            <Link
-              to="/shows"
-              className="block text-xs text-muted-foreground hover:text-foreground pt-2 text-center transition-colors"
-            >
-              View all shows →
-            </Link>
-          </CardContent>
+                    <span
+                      className={cn(
+                        "text-xs w-16 shrink-0 font-medium",
+                        isUrgentRow ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground",
+                      )}
+                    >
+                      {format(parseISO(show.date), "MMM d")}
+                    </span>
+                    <span className="text-sm font-medium text-foreground truncate flex-1">{show.venue_name}</span>
+                    <span className="text-xs text-muted-foreground truncate max-w-[80px]">{show.city}</span>
+                    {!scheduleMap[show.id] && <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />}
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                  </Link>
+                );
+              })}
+              <Link
+                to="/shows"
+                className="block text-xs text-muted-foreground hover:text-foreground pt-2 text-center transition-colors"
+              >
+                View all shows →
+              </Link>
+            </CardContent>
           </Card>
         </div>
       )}
@@ -322,7 +321,10 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
             </div>
 
             <div className="text-right shrink-0">
-              <p className="text-sm font-medium text-foreground" title="Tracked fields: Schedule, Contact, Departure, Load In, Parking, WiFi, Hotel">
+              <p
+                className="text-sm font-medium text-foreground"
+                title="Tracked fields: Schedule, Contact, Departure, Load In, Parking, WiFi, Hotel"
+              >
                 {advanced}/{TOTAL_ADVANCE} advanced
               </p>
               <Progress value={pct} className="h-1.5 w-24 mt-1.5" />
