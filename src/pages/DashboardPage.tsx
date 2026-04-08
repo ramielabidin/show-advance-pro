@@ -228,7 +228,7 @@ export default function DashboardPage() {
               const pct = total > 0 ? (advanced / total) * 100 : 0;
               return (
                 <Link key={tour.id} to={`/tours/${tour.id}`} className="w-full">
-                  <Card className="hover:border-foreground/20 transition-colors">
+                  <Card className="hover:border-foreground/20 transition-colors w-full">
                     <CardContent className="pt-5 pb-4">
                       <p className="text-sm font-medium text-foreground truncate">{tour.name}</p>
                       {tour.start_date && tour.end_date && (
