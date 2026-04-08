@@ -227,9 +227,9 @@ export default function DashboardPage() {
               const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]) >= 4).length;
               const pct = total > 0 ? (advanced / total) * 100 : 0;
               return (
-                <Link key={tour.id} to={`/tours/${tour.id}`} className="w-full">
-                  <Card className="hover:border-foreground/20 transition-colors w-full">
-                    <CardContent className="pt-5 pb-4">
+                <Link key={tour.id} to={`/tours/${tour.id}`} className="w-full block">
+                  <div className="rounded-lg border bg-card text-card-foreground shadow-sm w-full hover:border-foreground/20 transition-colors">
+                    <div className="pt-5 pb-4 px-6">
                       <p className="text-sm font-medium text-foreground truncate">{tour.name}</p>
                       {tour.start_date && tour.end_date && (
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -243,8 +243,8 @@ export default function DashboardPage() {
                           {advanced}/{total}
                         </span>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </Link>
               );
             })}
@@ -316,9 +316,19 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
             </div>
 
             <div className="text-right shrink-0">
-              <p className="text-sm font-medium text-foreground">
-                {advanced}/{TOTAL_ADVANCE} advanced
-              </p>
+              <div
+                className={cn(
+                  "text-sm font-medium",
+                  advanced === 0
+                    ? "text-muted-foreground"
+                    : advanced >= 6
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-amber-600 dark:text-amber-400",
+                )}
+                title="Tracked fields: Schedule, Contact, Departure, Load In, Parking, WiFi, Hotel"
+              >
+                {advanced === 0 ? "⚪ Not Started" : advanced >= 6 ? "🟢 Ready" : "🟡 In Progress"}
+              </div>
               <Progress value={pct} className="h-1.5 w-24 mt-1.5" />
             </div>
           </div>
