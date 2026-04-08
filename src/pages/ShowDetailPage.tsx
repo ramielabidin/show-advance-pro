@@ -438,7 +438,7 @@ export default function ShowDetailPage() {
             <>
               {/* Desktop */}
               <div className="hidden md:flex items-center gap-1.5">
-                <SlackPushDialog showId={id!} />
+                <SlackPushDialog showId={id!} show={show as Show} />
                 <EmailBandDialog show={show as Show} />
                 <ExportPdfDialog show={show as Show} />
                 <ParseAdvanceForShowDialog
@@ -468,6 +468,7 @@ export default function ShowDetailPage() {
               <div className="flex md:hidden items-center gap-1">
                 <SlackPushDialog
                   showId={id!}
+                  show={show as Show}
                   trigger={
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
                       <Send className="h-3.5 w-3.5" />

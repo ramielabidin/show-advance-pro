@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Send, Loader2, Users, Building2 } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -15,58 +14,21 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import DaySheetSectionPicker from "@/components/DaySheetSectionPicker";
+import { ALL_SECTION_KEYS, withData, type SectionKey } from "@/lib/daysheetSections";
+import type { Show } from "@/lib/types";
 
-const SECTIONS = [
-  { key: "contact", label: "Day of Show Contact" },
-  { key: "venue", label: "Venue Address" },
-  { key: "departure", label: "Departure" },
-  { key: "schedule", label: "Schedule" },
-  { key: "band", label: "Band / Performance" },
-  { key: "venueDetails", label: "Venue Details" },
-  { key: "dealTerms", label: "Deal Terms" },
-  { key: "production", label: "Production" },
-  { key: "projections", label: "Projections" },
-  { key: "parking", label: "Parking" },
-  { key: "loadIn", label: "Load In" },
-  { key: "greenRoom", label: "Green Room" },
-  { key: "guestList", label: "Guest List" },
-  { key: "wifi", label: "WiFi" },
-  { key: "settlement", label: "Settlement" },
-  { key: "hotel", label: "Hotel" },
-  { key: "travel", label: "Travel" },
-  { key: "additional", label: "Additional Info" },
-] as const;
+interface SlackPushDialogProps {
+  showId: string;
+  show: Show & { schedule_entries?: any[] };
+  trigger?: React.ReactNode;
+}
 
-type SectionKey = (typeof SECTIONS)[number]["key"];
-
-const BAND_VIEW_KEYS: SectionKey[] = [
-  "contact", "departure", "schedule", "venue", "loadIn",
-  "parking", "greenRoom", "wifi", "hotel", "travel", "guestList",
-];
-
-const allKeys = (): Set<SectionKey> => new Set(SECTIONS.map((s) => s.key));
-
-export default function SlackPushDialog({ showId, trigger }: { showId: string; trigger?: React.ReactNode }) {
+export default function SlackPushDialog({ showId, show, trigger }: SlackPushDialogProps) {
   const [open, setOpen] = useState(false);
   const [pushing, setPushing] = useState(false);
-  const [selected, setSelected] = useState<Set<SectionKey>>(allKeys);
+  const [selected, setSelected] = useState<Set<SectionKey>>(new Set());
   const [note, setNote] = useState("");
-
-  const toggle = (key: SectionKey) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
-  const toggleAll = () => {
-    setSelected(selected.size === SECTIONS.length ? new Set() : allKeys());
-  };
-
-  const applyBandView = () => setSelected(new Set(BAND_VIEW_KEYS));
-  const applyInternalView = () => setSelected(allKeys());
 
   const handlePush = async () => {
     setPushing(true);
@@ -88,7 +50,8 @@ export default function SlackPushDialog({ showId, trigger }: { showId: string; t
   const handleOpen = (v: boolean) => {
     setOpen(v);
     if (v) {
-      setSelected(allKeys());
+      // Default to Full View filtered to sections that have data.
+      setSelected(withData(ALL_SECTION_KEYS, show));
       setNote("");
     }
   };
@@ -107,41 +70,14 @@ export default function SlackPushDialog({ showId, trigger }: { showId: string; t
           <DialogTitle>Push Day Sheet to Slack</DialogTitle>
           <DialogDescription>Choose which sections to include in the Slack message.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 py-4">
-          {/* Preset buttons */}
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={applyBandView}>
-              <Users className="h-3.5 w-3.5" /> Band View
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={applyInternalView}>
-              <Building2 className="h-3.5 w-3.5" /> Internal View
-            </Button>
-          </div>
 
-          <div className="flex items-center gap-2 pb-2 border-b border-border">
-            <Checkbox
-              id="select-all"
-              checked={selected.size === SECTIONS.length}
-              onCheckedChange={toggleAll}
-            />
-            <Label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
-              Select All
-            </Label>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {SECTIONS.map((s) => (
-              <div key={s.key} className="flex items-center gap-2">
-                <Checkbox
-                  id={`section-${s.key}`}
-                  checked={selected.has(s.key)}
-                  onCheckedChange={() => toggle(s.key)}
-                />
-                <Label htmlFor={`section-${s.key}`} className="text-sm cursor-pointer">
-                  {s.label}
-                </Label>
-              </div>
-            ))}
-          </div>
+        <div className="space-y-3 py-4">
+          <DaySheetSectionPicker
+            show={show}
+            selected={selected}
+            onChange={setSelected}
+            idPrefix="slack"
+          />
 
           {/* Personal note */}
           <div className="space-y-1.5 pt-2 border-t border-border">
@@ -157,6 +93,7 @@ export default function SlackPushDialog({ showId, trigger }: { showId: string; t
             />
           </div>
         </div>
+
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
           <Button onClick={handlePush} disabled={pushing || selected.size === 0} className="gap-1.5">
