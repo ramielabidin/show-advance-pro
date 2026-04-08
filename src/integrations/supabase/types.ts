@@ -445,6 +445,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_team_with_owner: {
+        Args: { _name: string; _team_id: string; _user_id: string }
+        Returns: undefined
+      }
       get_team_member_emails: {
         Args: { _team_id: string }
         Returns: {
