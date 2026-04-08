@@ -319,22 +319,22 @@ export default function ShowDetailPage() {
 
   return (
     <div className="animate-fade-in max-w-3xl">
-      {/* Header — venue card */}
-      <div className="mb-8 space-y-3">
-        {/* Row 1: Back arrow + venue name */}
+      {/* Header */}
+      <div className="mb-6 space-y-1.5 sm:space-y-2">
+        {/* Row 1: Back arrow + venue name (H1) */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 sm:h-8 sm:w-8" onClick={() => navigate("/")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           {editing ? (
             <Input value={f("venue_name")} onChange={(e) => setF("venue_name", e.target.value)} className="text-lg sm:text-2xl font-bold h-auto py-1" />
           ) : (
-            <h1 className="text-lg sm:text-2xl font-bold tracking-tight">{show.venue_name}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight leading-tight">{show.venue_name}</h1>
           )}
         </div>
 
-        {/* Row 2: Address or city fallback + lookup */}
-        <div className="pl-10">
+        {/* Row 2: Address subtitle + Row 3: Meta line */}
+        <div className="pl-9 sm:pl-10 space-y-0.5">
           {editing ? (
             <div className="space-y-2">
               <Input value={f("venue_address") ?? ""} onChange={(e) => setF("venue_address", e.target.value)} placeholder="Venue address" className="text-sm h-9" />
@@ -358,6 +358,7 @@ export default function ShowDetailPage() {
             </div>
           ) : (
             <>
+              {/* Address subtitle */}
               {show.venue_address ? (
                 <a
                   href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
@@ -405,13 +406,13 @@ export default function ShowDetailPage() {
                 </div>
               )}
 
-              {/* Row 3: City · Date · Tour */}
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                {formatCityState(show.city)} · {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
+              {/* Meta line: Date · Tour */}
+              <p className="text-xs text-muted-foreground">
+                {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
                 {(show as any).tours && (
                   <>
                     {" · "}
-                    <Link to={`/tours/${(show as any).tours.id}`} className="text-foreground hover:underline">
+                    <Link to={`/tours/${(show as any).tours.id}`} className="hover:underline">
                       {(show as any).tours.name}
                     </Link>
                   </>
@@ -421,15 +422,15 @@ export default function ShowDetailPage() {
           )}
         </div>
 
-        {/* Row 4: Action buttons */}
-        <div className="pl-10">
+        {/* Action buttons */}
+        <div className="pl-9 sm:pl-10 pt-0.5">
           {editing ? (
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setEditingSchedule(false); }} className="h-8 text-xs">
+              <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setEditingSchedule(false); }} className="h-7 sm:h-8 text-xs">
                 <X className="h-3.5 w-3.5 mr-1" />
                 Cancel
               </Button>
-              <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending} className="h-8 text-xs">
+              <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending} className="h-7 sm:h-8 text-xs">
                 <Save className="h-3.5 w-3.5 mr-1" />
                 Save
               </Button>
@@ -467,12 +468,12 @@ export default function ShowDetailPage() {
               {/* Mobile */}
               <div className="flex md:hidden items-center gap-1.5">
                 <SlackPushDialog showId={id!} />
-                <Button variant="outline" size="sm" onClick={startEdit} className="h-8 text-xs">
+                <Button variant="outline" size="sm" onClick={startEdit} className="h-7 text-xs">
                   <Edit className="h-3.5 w-3.5 mr-1" /> Edit All
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
