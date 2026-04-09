@@ -1,4 +1,4 @@
-/** Normalize free-text time to "H:MM AM/PM" format. Returns original if unparseable. */
+/** Normalize free-text time. AM/PM is preserved if provided, omitted if not. */
 export function normalizeTime(raw: string): string {
   const s = raw.trim();
   if (!s) return s;
@@ -37,21 +37,22 @@ export function normalizeTime(raw: string): string {
   if (hours === null || minutes < 0 || minutes > 59) return raw;
   if (hours < 0 || hours > 23) return raw;
 
-  // Convert 24h to 12h if needed
-  if (hours >= 13 && !ampm) {
+  // Convert 24h to 12h only if explicit AM/PM was given or hour > 12
+  if (ampm && hours > 12) {
+    hours -= 12;
+  } else if (!ampm && hours > 12) {
+    // 24h input without AM/PM — convert to 12h with PM
     ampm = "PM";
     hours -= 12;
-  } else if (hours === 0 && !ampm) {
+  } else if (!ampm && hours === 0) {
     ampm = "AM";
     hours = 12;
-  } else if (hours === 12 && !ampm) {
-    ampm = "PM";
+  } else if (ampm && hours === 0) {
+    hours = 12;
   }
-
-  // Default to PM for ambiguous times
-  if (!ampm) ampm = "PM";
 
   if (hours > 12) return raw;
 
-  return `${hours}:${minutes.toString().padStart(2, "0")} ${ampm}`;
+  const base = `${hours}:${minutes.toString().padStart(2, "0")}`;
+  return ampm ? `${base} ${ampm}` : base;
 }
