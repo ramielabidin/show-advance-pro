@@ -46,6 +46,7 @@ export default function ShowDetailPage() {
   const [inlineField, setInlineField] = useState<string | null>(null);
   const [inlineValue, setInlineValue] = useState<string>("");
   const inlineRef = useRef<HTMLDivElement>(null);
+  const inlineTimeFormat = useRef(false);
   const scheduleRef = useRef<HTMLDivElement>(null);
 
   const [lookingUpAddress, setLookingUpAddress] = useState(false);
