@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, FileUp, Upload } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -374,115 +374,113 @@ export default function ShowDetailPage() {
   return (
     <div className="animate-fade-in max-w-3xl">
       {/* Header */}
-      <div className="mb-5 space-y-1 sm:space-y-2">
-        {/* Row 1: Back arrow + Tour badge + venue name */}
-        <div className="flex items-start gap-2">
-          <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 mt-0.5" onClick={() => navigate("/")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="min-w-0 space-y-0.5">
-            {/* Tour category badge */}
-            {!editing && (show as any).tours?.name && (
-              <Link to={`/tours/${(show as any).tours.id}`}>
-                <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 hover:bg-secondary/80 transition-colors">
-                  {(show as any).tours.name}
-                </Badge>
-              </Link>
-            )}
-            {/* Settled badge */}
-            {!editing && (show as any).is_settled && (
-              <Badge className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 bg-green-600 hover:bg-green-600 text-white gap-1">
-                <CheckCircle2 className="h-2.5 w-2.5" />
-                Settled
-              </Badge>
-            )}
-            {editing ? (
-              <Input value={f("venue_name")} onChange={(e) => setF("venue_name", e.target.value)} className="text-lg sm:text-2xl font-bold h-auto py-1" />
-            ) : (
-              <h1 className="text-lg sm:text-2xl font-display font-bold tracking-tight leading-tight">{show.venue_name}</h1>
-            )}
-          </div>
-        </div>
+      <div className="mb-5 space-y-1.5 sm:space-y-2">
+        {/* Back arrow */}
+        <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 -ml-1" onClick={() => navigate("/")}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
 
-        {/* Row 2: Metadata — date · city · address */}
-        <div className="pl-9 sm:pl-10 space-y-0.5">
-          {editing ? (
-            <div className="space-y-2">
-              <Input value={f("venue_address") ?? ""} onChange={(e) => setF("venue_address", e.target.value)} placeholder="Venue address" className="text-sm h-9" />
-              <div className="flex items-center gap-2">
-                <Input value={f("city")} onChange={(e) => setF("city", e.target.value)} placeholder="City" className="text-sm h-9 w-40" />
-                <Select
-                  value={f("tour_id") ?? "none"}
-                  onValueChange={(v) => setF("tour_id" as keyof Show, v === "none" ? "" : v)}
-                >
-                  <SelectTrigger className="text-sm h-9 w-full sm:w-auto">
-                    <SelectValue placeholder="Standalone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Standalone</SelectItem>
-                    {toursList.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        {/* Tour badge */}
+        {!editing && (show as any).tours?.name && (
+          <Link to={`/tours/${(show as any).tours.id}`}>
+            <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 hover:bg-secondary/80 transition-colors">
+              {(show as any).tours.name}
+            </Badge>
+          </Link>
+        )}
+
+        {/* Settled badge */}
+        {!editing && (show as any).is_settled && (
+          <Badge className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 bg-[hsl(var(--primary))] text-primary-foreground gap-1 ml-1">
+            <CheckCircle2 className="h-2.5 w-2.5" />
+            Settled
+          </Badge>
+        )}
+
+        {/* Venue name */}
+        {editing ? (
+          <Input value={f("venue_name")} onChange={(e) => setF("venue_name", e.target.value)} className="text-lg sm:text-2xl font-bold h-auto py-1" />
+        ) : (
+          <h1 className="text-xl sm:text-2xl font-display font-bold tracking-tight leading-tight">{show.venue_name}</h1>
+        )}
+
+        {/* Metadata — date · address */}
+        {editing ? (
+          <div className="space-y-2">
+            <Input value={f("venue_address") ?? ""} onChange={(e) => setF("venue_address", e.target.value)} placeholder="Venue address" className="text-sm h-9" />
+            <div className="flex items-center gap-2">
+              <Input value={f("city")} onChange={(e) => setF("city", e.target.value)} placeholder="City" className="text-sm h-9 w-40" />
+              <Select
+                value={f("tour_id") ?? "none"}
+                onValueChange={(v) => setF("tour_id" as keyof Show, v === "none" ? "" : v)}
+              >
+                <SelectTrigger className="text-sm h-9 w-full sm:w-auto">
+                  <SelectValue placeholder="Standalone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Standalone</SelectItem>
+                  {toursList.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          ) : (
-            <p className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5">
-              <span>{format(parseISO(show.date), "EEEE, MMMM d, yyyy")}</span>
-              <span className="text-border">·</span>
-              {show.venue_address ? (
-                <a
-                  href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 hover:underline hover:text-foreground transition-colors"
+          </div>
+        ) : (
+          <p className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5">
+            <span>{format(parseISO(show.date), "EEEE, MMMM d, yyyy")}</span>
+            <span className="text-border">·</span>
+            {show.venue_address ? (
+              <a
+                href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 hover:underline hover:text-foreground transition-colors"
+              >
+                <MapPin className="h-3 w-3 shrink-0" />
+                {show.venue_address.replace(/,?\s*United States$/i, "")}
+              </a>
+            ) : (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3 w-3 shrink-0" />
+                <span>{formatCityState(show.city)}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
+                  disabled={lookingUpAddress}
+                  onClick={async () => {
+                    setLookingUpAddress(true);
+                    try {
+                      const { data, error } = await supabase.functions.invoke("lookup-venue-address", {
+                        body: { venue_name: show.venue_name, city: show.city },
+                      });
+                      if (error || data?.error) throw new Error(data?.error || error.message);
+                      const cleanAddress = (data.address as string).replace(/,?\s*United States$/, "");
+                      const { error: updateError } = await supabase
+                        .from("shows")
+                        .update({ venue_address: cleanAddress })
+                        .eq("id", show.id);
+                      if (updateError) throw updateError;
+                      queryClient.invalidateQueries({ queryKey: ["show", id] });
+                      toast.success("Address found and saved");
+                    } catch (err: any) {
+                      toast.error(err.message || "Could not find address");
+                    } finally {
+                      setLookingUpAddress(false);
+                    }
+                  }}
                 >
-                  <MapPin className="h-3 w-3 shrink-0" />
-                  {show.venue_address.replace(/,?\s*United States$/i, "")}
-                </a>
-              ) : (
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-3 w-3 shrink-0" />
-                  <span>{formatCityState(show.city)}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1 text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
-                    disabled={lookingUpAddress}
-                    onClick={async () => {
-                      setLookingUpAddress(true);
-                      try {
-                        const { data, error } = await supabase.functions.invoke("lookup-venue-address", {
-                          body: { venue_name: show.venue_name, city: show.city },
-                        });
-                        if (error || data?.error) throw new Error(data?.error || error.message);
-                        const cleanAddress = (data.address as string).replace(/,?\s*United States$/, "");
-                        const { error: updateError } = await supabase
-                          .from("shows")
-                          .update({ venue_address: cleanAddress })
-                          .eq("id", show.id);
-                        if (updateError) throw updateError;
-                        queryClient.invalidateQueries({ queryKey: ["show", id] });
-                        toast.success("Address found and saved");
-                      } catch (err: any) {
-                        toast.error(err.message || "Could not find address");
-                      } finally {
-                        setLookingUpAddress(false);
-                      }
-                    }}
-                  >
-                    {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                    Lookup
-                  </Button>
-                </span>
-              )}
-            </p>
-          )}
-        </div>
+                  {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                  Lookup
+                </Button>
+              </span>
+            )}
+          </p>
+        )}
 
         {/* Action buttons */}
-        <div className="pl-8 pt-0.5">
+        <div className="pt-1">
           {editing ? (
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setEditingSchedule(false); }} className="h-7 sm:h-8 text-xs">
@@ -497,10 +495,15 @@ export default function ShowDetailPage() {
           ) : (
             <>
               {/* Desktop */}
-              <div className="hidden md:flex items-center gap-1.5">
-                <SlackPushDialog showId={id!} show={show as Show} />
-                <EmailBandDialog show={show as Show} />
-                <ExportPdfDialog show={show as Show} />
+              <div className="hidden md:flex items-center gap-4">
+                {/* Primary: Send Advance actions */}
+                <div className="flex items-center gap-1.5">
+                  <SlackPushDialog showId={id!} show={show as Show} />
+                  <EmailBandDialog show={show as Show} />
+                  <ExportPdfDialog show={show as Show} />
+                </div>
+
+                {/* Secondary: Import */}
                 <ParseAdvanceForShowDialog
                   showId={id!}
                   currentShow={show as Show}
@@ -508,21 +511,30 @@ export default function ShowDetailPage() {
                     queryClient.invalidateQueries({ queryKey: ["show", id] });
                     queryClient.invalidateQueries({ queryKey: ["shows"] });
                   }}
+                  trigger={
+                    <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1">
+                      <Upload className="h-3.5 w-3.5" />
+                      Import Advance
+                    </Button>
+                  }
                 />
+
+                <Separator orientation="vertical" className="h-5" />
+
+                {/* Settle Show — visually distinct */}
                 {(show as any).is_settled ? (
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 text-xs text-green-600 hover:text-green-700"
+                    className="h-8 text-xs text-[hsl(142,71%,45%)] hover:text-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,45%,0.1)]"
                     onClick={() => { if (confirm("Clear settlement data?")) unsettleMutation.mutate(); }}
                   >
                     <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Settled
                   </Button>
                 ) : (
                   <Button
-                    variant="outline"
                     size="sm"
-                    className="h-8 text-xs"
+                    className="h-8 text-xs bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-white"
                     onClick={() => {
                       setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
                       setSettleOpen(true);
@@ -531,23 +543,33 @@ export default function ShowDetailPage() {
                     <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Settle Show
                   </Button>
                 )}
-                <Button variant="outline" size="sm" onClick={startEdit} className="h-8 text-xs">
-                  <Edit className="h-3.5 w-3.5 mr-1" /> Edit All
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  onClick={() => {
-                    if (confirm("Delete this show?")) deleteMutation.mutate();
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+
+                <Separator orientation="vertical" className="h-5" />
+
+                {/* Utility: Edit & Delete in overflow menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={startEdit}>
+                      <Edit className="h-3.5 w-3.5 mr-2" /> Edit All Fields
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => { if (confirm("Delete this show?")) deleteMutation.mutate(); }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Show
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {/* Mobile */}
               <div className="flex md:hidden items-center gap-1">
+                {/* Primary send actions */}
                 <SlackPushDialog
                   showId={id!}
                   show={show as Show}
@@ -557,9 +579,38 @@ export default function ShowDetailPage() {
                     </Button>
                   }
                 />
-                <Button variant="ghost" size="icon" onClick={startEdit} className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                  <Edit className="h-3.5 w-3.5" />
-                </Button>
+                <EmailBandDialog show={show as Show} trigger={
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                    <FileUp className="h-3.5 w-3.5" />
+                  </Button>
+                } />
+
+                <Separator orientation="vertical" className="h-4 mx-0.5" />
+
+                {/* Settle */}
+                {(show as any).is_settled ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-[10px] text-[hsl(142,71%,45%)] hover:text-[hsl(142,71%,35%)] px-2"
+                    onClick={() => { if (confirm("Clear settlement data?")) unsettleMutation.mutate(); }}
+                  >
+                    <CheckCircle2 className="h-3 w-3 mr-0.5" /> Settled
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="h-7 text-[10px] bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-white px-2"
+                    onClick={() => {
+                      setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
+                      setSettleOpen(true);
+                    }}
+                  >
+                    <CheckCircle2 className="h-3 w-3 mr-0.5" /> Settle
+                  </Button>
+                )}
+
+                {/* Overflow: PDF, Import, Edit, Delete */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
@@ -567,7 +618,6 @@ export default function ShowDetailPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
-                    <EmailBandDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email Band</DropdownMenuItem>} />
                     <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export PDF</DropdownMenuItem>} />
                     <ParseAdvanceForShowDialog
                       showId={id!}
@@ -576,32 +626,18 @@ export default function ShowDetailPage() {
                         queryClient.invalidateQueries({ queryKey: ["show", id] });
                         queryClient.invalidateQueries({ queryKey: ["shows"] });
                       }}
-                      trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Parse Advance</DropdownMenuItem>}
+                      trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Import Advance</DropdownMenuItem>}
                     />
-                    {(show as any).is_settled ? (
-                      <DropdownMenuItem
-                        onClick={() => { if (confirm("Clear settlement data?")) unsettleMutation.mutate(); }}
-                      >
-                        Clear Settlement
-                      </DropdownMenuItem>
-                    ) : (
-                      <DropdownMenuItem
-                        onSelect={(e) => {
-                          e.preventDefault();
-                          setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
-                          setSettleOpen(true);
-                        }}
-                      >
-                        Settle Show
-                      </DropdownMenuItem>
-                    )}
+                    <DropdownMenuItem onClick={startEdit}>
+                      <Edit className="h-3.5 w-3.5 mr-2" /> Edit All
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive"
                       onClick={() => {
                         if (confirm("Delete this show?")) deleteMutation.mutate();
                       }}
                     >
-                      Delete Show
+                      <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Show
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
