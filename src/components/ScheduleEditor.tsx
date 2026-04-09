@@ -45,7 +45,7 @@ export default function ScheduleEditor({ initial, onSave, onCancel, saving }: Sc
               const normalized = normalizeTime(row.time);
               if (normalized !== row.time) update(i, { time: normalized });
             }}
-            placeholder="5:30 PM"
+            placeholder="e.g. 9:00 AM"
             className="text-sm h-9 w-24 font-mono shrink-0"
             autoFocus={i === 0 && rows.length === 1 && !row.time}
           />

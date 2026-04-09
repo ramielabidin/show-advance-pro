@@ -233,6 +233,7 @@ export default function ShowDetailPage() {
               value={inlineValue}
               onChange={(e) => setInlineValue(e.target.value)}
               className={cn("text-sm h-11 sm:h-9", opts?.mono && "font-mono")}
+              placeholder={opts?.timeFormat ? "e.g. 9:00 AM or 2:30 PM" : undefined}
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") saveInline();
