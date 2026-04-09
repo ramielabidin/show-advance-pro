@@ -59,6 +59,10 @@ export interface Show {
   catering_details: string | null;
   changeover_time: string | null;
   is_reviewed: boolean;
+  is_settled: boolean;
+  actual_tickets_sold: string | null;
+  actual_walkout: string | null;
+  settlement_notes: string | null;
   created_at: string;
   updated_at: string;
   schedule_entries?: ScheduleEntry[];

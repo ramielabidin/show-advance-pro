@@ -116,6 +116,8 @@ export type Database = {
       }
       shows: {
         Row: {
+          actual_tickets_sold: string | null
+          actual_walkout: string | null
           additional_info: string | null
           age_restriction: string | null
           artist_comps: string | null
@@ -142,6 +144,7 @@ export type Database = {
           hotel_name: string | null
           id: string
           is_reviewed: boolean
+          is_settled: boolean
           load_in_details: string | null
           merch_split: string | null
           net_gross: string | null
@@ -149,6 +152,7 @@ export type Database = {
           set_length: string | null
           settlement_guarantee: string | null
           settlement_method: string | null
+          settlement_notes: string | null
           support_act: string | null
           support_pay: string | null
           team_id: string | null
@@ -164,6 +168,8 @@ export type Database = {
           wifi_password: string | null
         }
         Insert: {
+          actual_tickets_sold?: string | null
+          actual_walkout?: string | null
           additional_info?: string | null
           age_restriction?: string | null
           artist_comps?: string | null
@@ -190,6 +196,7 @@ export type Database = {
           hotel_name?: string | null
           id?: string
           is_reviewed?: boolean
+          is_settled?: boolean
           load_in_details?: string | null
           merch_split?: string | null
           net_gross?: string | null
@@ -197,6 +204,7 @@ export type Database = {
           set_length?: string | null
           settlement_guarantee?: string | null
           settlement_method?: string | null
+          settlement_notes?: string | null
           support_act?: string | null
           support_pay?: string | null
           team_id?: string | null
@@ -212,6 +220,8 @@ export type Database = {
           wifi_password?: string | null
         }
         Update: {
+          actual_tickets_sold?: string | null
+          actual_walkout?: string | null
           additional_info?: string | null
           age_restriction?: string | null
           artist_comps?: string | null
@@ -238,6 +248,7 @@ export type Database = {
           hotel_name?: string | null
           id?: string
           is_reviewed?: boolean
+          is_settled?: boolean
           load_in_details?: string | null
           merch_split?: string | null
           net_gross?: string | null
@@ -245,6 +256,7 @@ export type Database = {
           set_length?: string | null
           settlement_guarantee?: string | null
           settlement_method?: string | null
+          settlement_notes?: string | null
           support_act?: string | null
           support_pay?: string | null
           team_id?: string | null

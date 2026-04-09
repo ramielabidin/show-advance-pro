@@ -254,11 +254,14 @@ export default function SettingsPage() {
   });
 
   return (
-    <div className="animate-fade-in max-w-xl space-y-6 sm:space-y-8">
+    <div className="animate-fade-in max-w-5xl space-y-6 sm:space-y-8">
       <div>
         <h1 className="text-2xl sm:text-3xl tracking-tight">Settings</h1>
         <p className="text-muted-foreground text-sm mt-1">Manage your team and integrations</p>
       </div>
+
+      {/* ── Desktop 2-column grid ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-start">
 
       {/* ── Slack Integration ── */}
       <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-6">
@@ -296,8 +299,6 @@ export default function SettingsPage() {
           {saveMutation.isPending ? "Saving…" : "Save Settings"}
         </Button>
       </div>
-
-      <Separator />
 
       {/* ── Touring Party ── */}
       <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
@@ -442,10 +443,8 @@ export default function SettingsPage() {
         )}
       </div>
 
-      <Separator />
-
-      {/* ── Team Members ── */}
-      <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
+      {/* ── Team Members ── (full width) */}
+      <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4 md:col-span-2">
         <div>
           <h2 className="font-medium text-foreground mb-0.5">Team Members</h2>
           <p className="text-sm text-muted-foreground">
@@ -534,6 +533,8 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      </div>{/* end 2-column grid */}
     </div>
   );
 }

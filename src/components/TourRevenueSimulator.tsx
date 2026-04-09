@@ -6,6 +6,8 @@ interface TourRevenueSimulatorProps {
   shows: Array<{
     guarantee?: string | null;
     walkout_potential?: string | null;
+    actual_walkout?: string | null;
+    is_settled?: boolean;
     ticket_price?: string | null;
     venue_capacity?: string | null;
     backend_deal?: string | null;
@@ -21,13 +23,14 @@ export default function TourRevenueSimulator({ shows }: TourRevenueSimulatorProp
   const financialShows = shows
     .map((s) => {
       const guarantee = parseDollar(s.guarantee) ?? 0;
-      const walkout = parseDollar(s.walkout_potential);
+      const effectiveWalkout = s.is_settled ? s.actual_walkout : s.walkout_potential;
+      const walkout = parseDollar(effectiveWalkout ?? null);
       const ticketPrice = parseDollar(s.ticket_price);
       const capacity = s.venue_capacity ? parseInt(s.venue_capacity.replace(/[^0-9]/g, ""), 10) : null;
       const backendPct = parseBackendPct(s.backend_deal);
       const validCapacity = capacity != null && !isNaN(capacity) ? capacity : null;
 
-      return { guarantee, walkout, ticketPrice, capacity: validCapacity, backendPct };
+      return { guarantee, walkout, ticketPrice, capacity: validCapacity, backendPct, isSettled: !!s.is_settled };
     })
     .filter((s) => s.walkout !== null || (s.ticketPrice != null && s.ticketPrice > 0 && s.capacity != null));
 
@@ -39,6 +42,14 @@ export default function TourRevenueSimulator({ shows }: TourRevenueSimulatorProp
   let totalProjected = 0;
 
   for (const s of financialShows) {
+    if (s.isSettled && s.walkout !== null) {
+      // Settled shows: use actual walkout directly, no slider adjustment
+      totalProjected += s.walkout;
+      totalWalkout += s.walkout;
+      estimateShowCount++;
+      continue;
+    }
+
     const ticketCount = s.capacity ? Math.round(s.capacity * (pct / 100)) : null;
     const hasGbor = s.ticketPrice != null && s.ticketPrice > 0 && ticketCount != null;
     const gbor = hasGbor ? ticketCount * s.ticketPrice! : null;
