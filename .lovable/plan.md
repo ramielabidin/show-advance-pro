@@ -1,53 +1,19 @@
 
 
-# Enhanced Revenue Simulator with Ticket Price and Backend Deal Data
+## Plan: Update Departure Notes Placeholder and Auto-Normalize Departure Time
 
-## Overview
+### Changes
 
-Upgrade the Revenue Simulator on both ShowDetailPage and TourDetailPage to use ticket price, capacity, and backend deal data when available. This makes the simulator calculate gross revenue from ticket sales and apply backend deal logic (e.g., "70% of GBOR") rather than relying solely on the walkout_potential interpolation.
+**1. Update placeholder text** in `src/pages/ShowDetailPage.tsx` (line 611)
+- Change `"e.g. Car 1 leaving from Rami's at 9am, Car 2 from JT's at 9:30am"` to something generic like `"e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am"`
 
-## How It Works for Users
+**2. Normalize time on save** in `src/pages/ShowDetailPage.tsx`
+- Currently, `normalizeTime` runs on blur but the raw value is still what gets saved. Update `saveInline` to detect if the current field has `timeFormat` and apply `normalizeTime` before saving. This way typing "1" saves as "1:00 PM", typing "330" saves as "3:30 PM", etc.
+- Store a ref or flag so `saveInline` knows if the current inline field uses time formatting. The simplest approach: normalize inside `saveInline` by checking if `inlineField` is one of the time fields (e.g., `departure_time`), or pass the `timeFormat` option through to the save function.
 
-- **When ticket price + capacity are available**: The simulator calculates gross box office revenue (GBOR) as `tickets_sold × ticket_price`, then shows both the GBOR line and the artist's projected take based on the backend deal
-- **When a backend deal like "70% of GBOR" is present**: The simulator shows which is higher — the guarantee or the backend percentage — since deals are typically "guarantee vs % of gross, whichever is greater"
-- **Fallback**: When only guarantee + walkout_potential exist (no ticket price), it continues using the current linear interpolation
+### Technical Detail
 
-## Technical Plan
+The `normalizeTime` utility already handles all the formats ("1" → "1:00 PM", "330" → "3:30 PM", "1530" → "3:30 PM", etc.). It just needs to be applied at save time, not only on blur. I'll store the current field's options in a ref so `saveInline` can access them.
 
-### 1. Update `RevenueSimulator.tsx`
-
-- Add `ticketPrice` and `backendDeal` props (both optional)
-- Add a `parseBackendPct` helper that extracts a percentage from strings like "70% of GBOR", "80% of gross", etc.
-- When ticket price + capacity are available, show a breakdown line: `~322 tickets × $25 = $8,050 GBOR`
-- When a backend percentage is parsed, calculate `GBOR × backendPct` and compare to guarantee, showing: `Artist take: max($500 guarantee, 70% of $8,050) = $5,635`
-- Keep the existing interpolation as the fallback/secondary view
-- Update the description note to reflect the calculation method used
-
-### 2. Update `ShowDetailPage.tsx` (line ~321-338)
-
-- Pass additional props to `RevenueSimulator`: `ticketPrice` (parsed from `show.ticket_price`) and `backendDeal` (raw string from `show.backend_deal`)
-- Also allow the simulator to show when only ticket price + capacity exist (even without walkout_potential), since GBOR can be calculated independently
-
-### 3. Update `TourRevenueSimulator.tsx`
-
-- Pass `ticket_price` and `backend_deal` through the show interface
-- For shows with ticket price + capacity + backend deal, use the smarter calculation
-- For shows with only guarantee/walkout, continue using interpolation
-- Show a note like "3 shows with deal terms, 2 with estimates"
-
-### Display Layout (Show Detail)
-
-```text
-PROJECTED WALKOUT                           75% · ~322 tickets
-$5,635
-
-~322 tickets × $25 = $8,050 GBOR
-Artist take: max($500 guarantee, 70% × $8,050) = $5,635
-
-[====================--------] slider
-
-Calculated from backend deal: $500 guarantee vs 70% of GBOR
-```
-
-When no backend deal or ticket price is available, the current simpler display remains unchanged.
+Two lines changed, one small addition to `saveInline`.
 
