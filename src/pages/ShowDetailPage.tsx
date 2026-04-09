@@ -159,7 +159,8 @@ export default function ShowDetailPage() {
   }
 
   // --- Inline edit helpers ---
-  const startInlineEdit = (key: string) => {
+  const startInlineEdit = (key: string, opts?: { timeFormat?: boolean }) => {
+    inlineTimeFormat.current = !!opts?.timeFormat;
     setInlineField(key);
     setInlineValue((show as any)[key] ?? "");
   };
@@ -169,9 +170,12 @@ export default function ShowDetailPage() {
     setInlineValue("");
   };
 
+  const inlineTimeFormat = useRef(false);
+
   const saveInline = () => {
     if (!inlineField) return;
-    updateMutation.mutate({ [inlineField]: inlineValue || null } as any);
+    const val = inlineTimeFormat.current ? normalizeTime(inlineValue) : inlineValue;
+    updateMutation.mutate({ [inlineField]: val || null } as any);
   };
 
   // --- Hotel group inline edit ---
@@ -608,7 +612,7 @@ export default function ShowDetailPage() {
         {/* Departure */}
         <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_location}>
           {editField("departure_time", "Departure Time", { mono: true, alwaysShow: true, timeFormat: true })}
-          {editField("departure_location", "Departure Notes", { multiline: true, alwaysShow: true, placeholder: "e.g. Car 1 leaving from Rami's at 9am, Car 2 from JT's at 9:30am" })}
+          {editField("departure_location", "Departure Notes", { multiline: true, alwaysShow: true, placeholder: "e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am" })}
         </FieldGroup>
 
         <Separator />
