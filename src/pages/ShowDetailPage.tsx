@@ -171,8 +171,6 @@ export default function ShowDetailPage() {
     setInlineValue("");
   };
 
-  const inlineTimeFormat = useRef(false);
-
   const saveInline = () => {
     if (!inlineField) return;
     const val = inlineTimeFormat.current ? normalizeTime(inlineValue) : inlineValue;
