@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
 import SlackPushDialog from "@/components/SlackPushDialog";
@@ -55,6 +61,14 @@ export default function ShowDetailPage() {
 
   const [lookingUpAddress, setLookingUpAddress] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(false);
+
+  // Settle modal state
+  const [settleOpen, setSettleOpen] = useState(false);
+  const [settleForm, setSettleForm] = useState({
+    actual_tickets_sold: "",
+    actual_walkout: "",
+    settlement_notes: "",
+  });
   const { data: show, isLoading } = useQuery({
     queryKey: ["show", id],
     queryFn: async () => {
@@ -113,6 +127,45 @@ export default function ShowDetailPage() {
       navigate("/");
       toast.success("Show deleted");
     },
+  });
+
+  const settleMutation = useMutation({
+    mutationFn: async (values: { actual_tickets_sold: string; actual_walkout: string; settlement_notes: string }) => {
+      const { error } = await supabase.from("shows").update({
+        is_settled: true,
+        actual_tickets_sold: values.actual_tickets_sold || null,
+        actual_walkout: values.actual_walkout || null,
+        settlement_notes: values.settlement_notes || null,
+      } as any).eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["show", id] });
+      queryClient.invalidateQueries({ queryKey: ["shows"] });
+      queryClient.invalidateQueries({ queryKey: ["tours"] });
+      setSettleOpen(false);
+      toast.success("Show settled");
+    },
+    onError: () => toast.error("Failed to settle show"),
+  });
+
+  const unsettleMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("shows").update({
+        is_settled: false,
+        actual_tickets_sold: null,
+        actual_walkout: null,
+        settlement_notes: null,
+      } as any).eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["show", id] });
+      queryClient.invalidateQueries({ queryKey: ["shows"] });
+      queryClient.invalidateQueries({ queryKey: ["tours"] });
+      toast.success("Settlement cleared");
+    },
+    onError: () => toast.error("Failed to clear settlement"),
   });
 
   if (isLoading) {
@@ -336,6 +389,13 @@ export default function ShowDetailPage() {
                 </Badge>
               </Link>
             )}
+            {/* Settled badge */}
+            {!editing && (show as any).is_settled && (
+              <Badge className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 bg-green-600 hover:bg-green-600 text-white gap-1">
+                <CheckCircle2 className="h-2.5 w-2.5" />
+                Settled
+              </Badge>
+            )}
             {editing ? (
               <Input value={f("venue_name")} onChange={(e) => setF("venue_name", e.target.value)} className="text-lg sm:text-2xl font-bold h-auto py-1" />
             ) : (
@@ -449,6 +509,28 @@ export default function ShowDetailPage() {
                     queryClient.invalidateQueries({ queryKey: ["shows"] });
                   }}
                 />
+                {(show as any).is_settled ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs text-green-600 hover:text-green-700"
+                    onClick={() => { if (confirm("Clear settlement data?")) unsettleMutation.mutate(); }}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Settled
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => {
+                      setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
+                      setSettleOpen(true);
+                    }}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Settle Show
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={startEdit} className="h-8 text-xs">
                   <Edit className="h-3.5 w-3.5 mr-1" /> Edit All
                 </Button>
@@ -496,6 +578,23 @@ export default function ShowDetailPage() {
                       }}
                       trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Parse Advance</DropdownMenuItem>}
                     />
+                    {(show as any).is_settled ? (
+                      <DropdownMenuItem
+                        onClick={() => { if (confirm("Clear settlement data?")) unsettleMutation.mutate(); }}
+                      >
+                        Clear Settlement
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
+                          setSettleOpen(true);
+                        }}
+                      >
+                        Settle Show
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive"
                       onClick={() => {
@@ -773,7 +872,104 @@ export default function ShowDetailPage() {
             </FieldGroup>
           </>
         )}
+
+        {/* Settlement Results — shown when settled */}
+        {!editing && (show as any).is_settled && (
+          <>
+            <Separator />
+            <FieldGroup title="Settlement Results">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Actual vs Projected Walkout */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Actual Walkout</p>
+                  <p className="text-lg font-semibold font-mono text-green-600">
+                    {(show as any).actual_walkout || "—"}
+                  </p>
+                  {show.walkout_potential && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Projected: {show.walkout_potential}
+                    </p>
+                  )}
+                </div>
+                {/* Actual Tickets Sold */}
+                {(show as any).actual_tickets_sold && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Actual Tickets Sold</p>
+                    <p className="text-lg font-semibold font-mono">
+                      {(show as any).actual_tickets_sold}
+                    </p>
+                    {show.venue_capacity && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Capacity: {show.venue_capacity}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+              {(show as any).settlement_notes && (
+                <div className="mt-3">
+                  <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
+                  <p className="text-sm whitespace-pre-wrap">{(show as any).settlement_notes}</p>
+                </div>
+              )}
+            </FieldGroup>
+          </>
+        )}
       </div>
+
+      {/* Settle Show Modal */}
+      <Dialog open={settleOpen} onOpenChange={setSettleOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Settle Show</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="actual_tickets_sold">Actual Tickets Sold</Label>
+              <Input
+                id="actual_tickets_sold"
+                value={settleForm.actual_tickets_sold}
+                onChange={(e) => setSettleForm((p) => ({ ...p, actual_tickets_sold: e.target.value }))}
+                placeholder={show.venue_capacity ? `Capacity: ${show.venue_capacity}` : "e.g. 450"}
+                className="h-11 sm:h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="actual_walkout">Final Walkout Amount</Label>
+              <Input
+                id="actual_walkout"
+                value={settleForm.actual_walkout}
+                onChange={(e) => setSettleForm((p) => ({ ...p, actual_walkout: e.target.value }))}
+                placeholder={show.walkout_potential ? `Projected: ${show.walkout_potential}` : "e.g. $4,200"}
+                className="h-11 sm:h-9 font-mono"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="settlement_notes">Notes</Label>
+              <Textarea
+                id="settlement_notes"
+                value={settleForm.settlement_notes}
+                onChange={(e) => setSettleForm((p) => ({ ...p, settlement_notes: e.target.value }))}
+                placeholder="Any notes about the settlement…"
+                className="min-h-[80px]"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button variant="ghost" className="flex-1 h-11 sm:h-9" onClick={() => setSettleOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 h-11 sm:h-9 bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => settleMutation.mutate(settleForm)}
+                disabled={settleMutation.isPending}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                {settleMutation.isPending ? "Settling…" : "Settle Show"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

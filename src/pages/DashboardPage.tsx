@@ -116,7 +116,9 @@ export default function DashboardPage() {
 
     let walkoutUpcoming = 0;
     upcoming.forEach((s) => {
-      const val = parseFloat(s.walkout_potential?.replace(/[^0-9.-]/g, "") || "");
+      const settled = (s as any).is_settled;
+      const rawWalkout = settled ? (s as any).actual_walkout : s.walkout_potential;
+      const val = parseFloat((rawWalkout as string | null)?.replace(/[^0-9.-]/g, "") || "");
       if (!isNaN(val)) walkoutUpcoming += val;
     });
 

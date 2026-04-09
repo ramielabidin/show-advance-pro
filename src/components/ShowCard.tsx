@@ -1,5 +1,5 @@
 import { format, parseISO, isPast, isToday } from "date-fns";
-import { MapPin, ChevronRight, Sparkles } from "lucide-react";
+import { MapPin, ChevronRight, Sparkles, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn, formatCityState } from "@/lib/utils";
 import type { Show } from "@/lib/types";
@@ -37,6 +37,12 @@ export default function ShowCard({ show }: ShowCardProps) {
               <span className="inline-flex items-center gap-1 rounded-full bg-badge-new/10 px-2 py-0.5 text-[11px] font-medium text-badge-new shrink-0">
                 <Sparkles className="h-3 w-3" />
                 New
+              </span>
+            )}
+            {(show as any).is_settled && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:text-green-400 shrink-0">
+                <CheckCircle2 className="h-3 w-3" />
+                Settled
               </span>
             )}
           </div>
