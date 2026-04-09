@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { FileText, Loader2, Check } from "lucide-react";
+import { useState, useRef } from "react";
+import { FileText, Loader2, Check, Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import type { Show } from "@/lib/types";
+import { extractTextFromPdf } from "@/lib/pdfExtract";
 
 const FIELD_LABELS: Record<string, string> = {
   venue_name: "Venue Name",
@@ -32,8 +33,6 @@ const FIELD_LABELS: Record<string, string> = {
   guest_list_details: "Guest List",
   wifi_network: "WiFi Network",
   wifi_password: "WiFi Password",
-  settlement_method: "Settlement Method",
-  settlement_guarantee: "Settlement Guarantee",
   hotel_name: "Accommodations Name",
   hotel_address: "Accommodations Address",
   hotel_confirmation: "Accommodations Confirmation",
@@ -43,19 +42,13 @@ const FIELD_LABELS: Record<string, string> = {
   set_length: "Set Length",
   curfew: "Curfew",
   backline_provided: "Backline Provided",
-  catering_details: "Catering",
   changeover_time: "Changeover Time",
   venue_capacity: "Venue Capacity",
   ticket_price: "Ticket Price",
-  age_restriction: "Age Restriction",
   guarantee: "Guarantee",
   backend_deal: "Backend Deal",
   hospitality: "Hospitality",
-  support_act: "Support Act",
-  support_pay: "Support Pay",
-  merch_split: "Merch Split",
   walkout_potential: "Walkout Potential",
-  net_gross: "Net Gross",
   artist_comps: "Artist Comps",
   additional_info: "Additional Info",
 };
@@ -82,6 +75,9 @@ export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdat
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [parsedSchedule, setParsedSchedule] = useState<any[] | null>(null);
   const [scheduleSelected, setScheduleSelected] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [extractingPdf, setExtractingPdf] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setText("");
@@ -90,13 +86,45 @@ export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdat
     setSelectedKeys(new Set());
     setParsedSchedule(null);
     setScheduleSelected(false);
+    setPdfFile(null);
+    setExtractingPdf(false);
     setLoading(false);
     setSaving(false);
   };
 
+  const handleFileSelect = async (file: File) => {
+    if (file.type !== "application/pdf") {
+      toast.error("Only PDF files are supported");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("File too large (max 20MB)");
+      return;
+    }
+    setPdfFile(file);
+    setExtractingPdf(true);
+    try {
+      const extracted = await extractTextFromPdf(file);
+      setText((prev) => prev ? prev + "\n\n--- PDF Content ---\n\n" + extracted : extracted);
+      toast.success(`Extracted text from ${file.name}`);
+    } catch (err) {
+      console.error("PDF extraction error:", err);
+      toast.error("Failed to extract text from PDF");
+      setPdfFile(null);
+    } finally {
+      setExtractingPdf(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  };
+
   const handleParse = async () => {
     if (!text.trim()) {
-      toast.error("Paste an advance email first");
+      toast.error("Paste text or upload a PDF first");
       return;
     }
     setLoading(true);
@@ -105,7 +133,7 @@ export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdat
         "parse-advance",
         { body: { emailText: text } }
       );
-      if (fnError) throw new Error(fnError.message || "Failed to parse email");
+      if (fnError) throw new Error(fnError.message || "Failed to parse");
       if (fnData?.error) throw new Error(fnData.error);
 
       const parsed = fnData.show;
@@ -147,7 +175,7 @@ export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdat
       setStep("confirm");
     } catch (err: any) {
       console.error("Parse error:", err);
-      toast.error(err.message || "Failed to parse email");
+      toast.error(err.message || "Failed to parse");
     } finally {
       setLoading(false);
     }
@@ -227,24 +255,78 @@ export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdat
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            {step === "paste" ? "Parse Advance Email" : "Confirm Updates"}
+            {step === "paste" ? "Import Advance" : "Confirm Updates"}
           </DialogTitle>
           <DialogDescription>
             {step === "paste"
-              ? "Paste the advance email below. AI will extract details and fill in empty fields only."
+              ? "Paste an advance email, venue tech packet, or any text with show info. You can also upload a PDF."
               : "Select which fields to update. Only empty fields are shown."}
           </DialogDescription>
         </DialogHeader>
 
         {step === "paste" && (
           <div className="space-y-4 pt-2">
+            {/* PDF upload zone */}
+            <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop}
+              className="relative border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileSelect(file);
+                  e.target.value = "";
+                }}
+              />
+              {extractingPdf ? (
+                <div className="flex items-center justify-center gap-2 py-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Extracting text from PDF…</span>
+                </div>
+              ) : pdfFile ? (
+                <div className="flex items-center justify-center gap-2 py-2">
+                  <FileText className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">{pdfFile.name}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPdfFile(null);
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1 py-2">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    Drop a PDF here or <span className="text-primary underline">browse</span>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="relative flex items-center gap-2">
+              <div className="flex-1 border-t border-border" />
+              <span className="text-xs text-muted-foreground">and / or paste text</span>
+              <div className="flex-1 border-t border-border" />
+            </div>
+
             <Textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Paste the advance email here..."
-              className="min-h-[200px] font-mono text-sm"
+              placeholder="Paste advance email, venue info, tech rider, or any show details..."
+              className="min-h-[160px] font-mono text-sm"
             />
-            <Button onClick={handleParse} disabled={loading} className="w-full">
+            <Button onClick={handleParse} disabled={loading || extractingPdf} className="w-full">
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
