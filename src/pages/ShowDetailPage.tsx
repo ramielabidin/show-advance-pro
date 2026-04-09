@@ -252,14 +252,14 @@ export default function ShowDetailPage() {
     // View mode
     const value = (show as any)[key];
     if (!value && opts?.alwaysShow) {
-      return <EmptyFieldPrompt label={label} onClick={() => startInlineEdit(key)} />;
+      return <EmptyFieldPrompt label={label} onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat })} />;
     }
     if (!value) return null;
 
     // Clickable value to enter inline edit
     return (
       <button
-        onClick={() => startInlineEdit(key)}
+        onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat })}
         className="w-full text-left group"
       >
         <FieldRow label={label} value={value} mono={opts?.mono} />
