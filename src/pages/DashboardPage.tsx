@@ -327,7 +327,7 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
             <div className="text-right shrink-0">
               <p
                 className="text-sm font-medium text-foreground"
-                title="Tracked fields: Schedule, Contact, Departure, Load In, Parking, WiFi, Hotel"
+                title="Tracked fields: Schedule, Contact, Departure, Load In, Parking, WiFi, Accommodations"
               >
                 {advanced}/{TOTAL_ADVANCE} advanced
               </p>

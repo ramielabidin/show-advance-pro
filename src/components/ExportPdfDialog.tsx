@@ -34,7 +34,7 @@ const SECTIONS = [
   { key: "guestList", label: "Guest List" },
   { key: "wifi", label: "WiFi" },
   { key: "settlement", label: "Settlement" },
-  { key: "hotel", label: "Hotel" },
+  { key: "hotel", label: "Accommodations" },
   { key: "travel", label: "Travel" },
   { key: "additional", label: "Additional Info" },
 ] as const;
@@ -291,7 +291,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       }
 
       if (has("hotel") && (val(show.hotel_name) || val(show.hotel_address))) {
-        drawSectionTitle("Hotel");
+        drawSectionTitle("Accommodations");
         drawField("Name", val(show.hotel_name));
         drawField("Address", val(show.hotel_address));
         drawField("Confirmation", val(show.hotel_confirmation), { mono: true });

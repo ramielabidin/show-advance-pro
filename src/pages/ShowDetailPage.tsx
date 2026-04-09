@@ -1,8 +1,8 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, FileUp, Upload } from "lucide-react";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { ArrowLeft, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, FileUp, Upload } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,10 +42,6 @@ export default function ShowDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Global edit mode (power-user mode)
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState<Partial<Show>>({});
-
   // Inline edit: which field key is currently being edited (null = none)
   const [inlineField, setInlineField] = useState<string | null>(null);
   const [inlineValue, setInlineValue] = useState<string>("");
@@ -69,6 +58,10 @@ export default function ShowDetailPage() {
     actual_walkout: "",
     settlement_notes: "",
   });
+
+  // Hotel group form state
+  const [hotelForm, setHotelForm] = useState<Record<string, string>>({});
+
   const { data: show, isLoading } = useQuery({
     queryKey: ["show", id],
     queryFn: async () => {
@@ -80,16 +73,6 @@ export default function ShowDetailPage() {
       if (error) throw error;
       return data;
     },
-  });
-
-  const { data: toursList = [] } = useQuery({
-    queryKey: ["tours"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("tours").select("id, name").order("name");
-      if (error) throw error;
-      return data;
-    },
-    enabled: editing,
   });
 
   // Scroll inline editor into view
@@ -109,7 +92,6 @@ export default function ShowDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["show", id] });
       queryClient.invalidateQueries({ queryKey: ["shows"] });
-      setEditing(false);
       setEditingSchedule(false);
       setInlineField(null);
       toast.success("Show updated");
@@ -176,24 +158,8 @@ export default function ShowDetailPage() {
     return <div className="text-center py-20 text-muted-foreground">Show not found</div>;
   }
 
-  // --- Global edit helpers ---
-  const startEdit = () => {
-    setInlineField(null);
-    setForm({ ...show });
-    setEditing(true);
-    setEditingSchedule(true);
-  };
-
-  const handleSave = () => {
-    updateMutation.mutate(form);
-  };
-
-  const f = (key: keyof Show) => editing ? (form as any)[key] ?? "" : (show as any)[key];
-  const setF = (key: keyof Show, value: string) => setForm((p) => ({ ...p, [key]: value }));
-
   // --- Inline edit helpers ---
   const startInlineEdit = (key: string) => {
-    if (editing) return; // Don't start inline when global edit is active
     setInlineField(key);
     setInlineValue((show as any)[key] ?? "");
   };
@@ -210,10 +176,8 @@ export default function ShowDetailPage() {
 
   // --- Hotel group inline edit ---
   const startHotelEdit = () => {
-    if (editing) return;
     setInlineField("hotel_group");
-    // We'll use form state for hotel group
-    setForm({
+    setHotelForm({
       hotel_name: show.hotel_name ?? "",
       hotel_address: show.hotel_address ?? "",
       hotel_confirmation: show.hotel_confirmation ?? "",
@@ -224,11 +188,11 @@ export default function ShowDetailPage() {
 
   const saveHotelGroup = () => {
     updateMutation.mutate({
-      hotel_name: (form.hotel_name as string) || null,
-      hotel_address: (form.hotel_address as string) || null,
-      hotel_confirmation: (form.hotel_confirmation as string) || null,
-      hotel_checkin: (form.hotel_checkin as string) || null,
-      hotel_checkout: (form.hotel_checkout as string) || null,
+      hotel_name: hotelForm.hotel_name || null,
+      hotel_address: hotelForm.hotel_address || null,
+      hotel_confirmation: hotelForm.hotel_confirmation || null,
+      hotel_checkin: hotelForm.hotel_checkin || null,
+      hotel_checkout: hotelForm.hotel_checkout || null,
     } as any);
   };
 
@@ -246,30 +210,8 @@ export default function ShowDetailPage() {
     </div>
   );
 
-  // Renders a field that supports both global edit and inline edit
+  // Renders a field with inline edit support only
   const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; placeholder?: string }) => {
-    // Global edit mode — same as before
-    if (editing) {
-      return (
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">{label}</Label>
-          {opts?.multiline ? (
-            <Textarea value={f(key) ?? ""} onChange={(e) => setF(key, e.target.value)} className="text-sm min-h-[44px]" placeholder={opts?.placeholder} />
-          ) : (
-            <Input
-              value={f(key) ?? ""}
-              onChange={(e) => setF(key, e.target.value)}
-              className={cn("text-sm h-11 sm:h-9", opts?.mono && "font-mono")}
-              onBlur={opts?.timeFormat ? () => {
-                const v = f(key);
-                if (v) { const n = normalizeTime(v); if (n !== v) setF(key, n); }
-              } : undefined}
-            />
-          )}
-        </div>
-      );
-    }
-
     // Inline editing for this specific field
     if (inlineField === key) {
       return (
@@ -326,20 +268,6 @@ export default function ShowDetailPage() {
   const renderGuestList = () => {
     const isInlineGuest = inlineField === "guest_list_details";
 
-    if (editing) {
-      return (
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Guest List</Label>
-          <GuestListEditor
-            value={f("guest_list_details")}
-            capacity={show.venue_capacity}
-            compsAllotment={show.artist_comps}
-            onChange={(val) => setF("guest_list_details" as keyof Show, val)}
-          />
-        </div>
-      );
-    }
-
     if (isInlineGuest) {
       return (
         <div ref={inlineRef} className="space-y-1">
@@ -381,7 +309,7 @@ export default function ShowDetailPage() {
         </Button>
 
         {/* Tour badge */}
-        {!editing && (show as any).tours?.name && (
+        {(show as any).tours?.name && (
           <Link to={`/tours/${(show as any).tours.id}`}>
             <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 hover:bg-secondary/80 transition-colors">
               {(show as any).tours.name}
@@ -390,7 +318,7 @@ export default function ShowDetailPage() {
         )}
 
         {/* Settled badge */}
-        {!editing && (show as any).is_settled && (
+        {(show as any).is_settled && (
           <Badge className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 bg-[hsl(var(--primary))] text-primary-foreground gap-1 ml-1">
             <CheckCircle2 className="h-2.5 w-2.5" />
             Settled
@@ -398,112 +326,184 @@ export default function ShowDetailPage() {
         )}
 
         {/* Venue name */}
-        {editing ? (
-          <Input value={f("venue_name")} onChange={(e) => setF("venue_name", e.target.value)} className="text-lg sm:text-2xl font-bold h-auto py-1" />
-        ) : (
-          <h1 className="text-xl sm:text-2xl font-display font-bold tracking-tight leading-tight">{show.venue_name}</h1>
-        )}
+        <h1 className="text-xl sm:text-2xl font-display font-bold tracking-tight leading-tight">{show.venue_name}</h1>
 
         {/* Metadata — date · address */}
-        {editing ? (
-          <div className="space-y-2">
-            <Input value={f("venue_address") ?? ""} onChange={(e) => setF("venue_address", e.target.value)} placeholder="Venue address" className="text-sm h-9" />
-            <div className="flex items-center gap-2">
-              <Input value={f("city")} onChange={(e) => setF("city", e.target.value)} placeholder="City" className="text-sm h-9 w-40" />
-              <Select
-                value={f("tour_id") ?? "none"}
-                onValueChange={(v) => setF("tour_id" as keyof Show, v === "none" ? "" : v)}
+        <p className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5">
+          <span>{format(parseISO(show.date), "EEEE, MMMM d, yyyy")}</span>
+          <span className="text-border">·</span>
+          {show.venue_address ? (
+            <a
+              href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 hover:underline hover:text-foreground transition-colors"
+            >
+              <MapPin className="h-3 w-3 shrink-0" />
+              {show.venue_address.replace(/,?\s*United States$/i, "")}
+            </a>
+          ) : (
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span>{formatCityState(show.city)}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
+                disabled={lookingUpAddress}
+                onClick={async () => {
+                  setLookingUpAddress(true);
+                  try {
+                    const { data, error } = await supabase.functions.invoke("lookup-venue-address", {
+                      body: { venue_name: show.venue_name, city: show.city },
+                    });
+                    if (error || data?.error) throw new Error(data?.error || error.message);
+                    const cleanAddress = (data.address as string).replace(/,?\s*United States$/, "");
+                    const { error: updateError } = await supabase
+                      .from("shows")
+                      .update({ venue_address: cleanAddress })
+                      .eq("id", show.id);
+                    if (updateError) throw updateError;
+                    queryClient.invalidateQueries({ queryKey: ["show", id] });
+                    toast.success("Address found and saved");
+                  } catch (err: any) {
+                    toast.error(err.message || "Could not find address");
+                  } finally {
+                    setLookingUpAddress(false);
+                  }
+                }}
               >
-                <SelectTrigger className="text-sm h-9 w-full sm:w-auto">
-                  <SelectValue placeholder="Standalone" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Standalone</SelectItem>
-                  {toursList.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        ) : (
-          <p className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5">
-            <span>{format(parseISO(show.date), "EEEE, MMMM d, yyyy")}</span>
-            <span className="text-border">·</span>
-            {show.venue_address ? (
-              <a
-                href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 hover:underline hover:text-foreground transition-colors"
-              >
-                <MapPin className="h-3 w-3 shrink-0" />
-                {show.venue_address.replace(/,?\s*United States$/i, "")}
-              </a>
-            ) : (
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="h-3 w-3 shrink-0" />
-                <span>{formatCityState(show.city)}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1 text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
-                  disabled={lookingUpAddress}
-                  onClick={async () => {
-                    setLookingUpAddress(true);
-                    try {
-                      const { data, error } = await supabase.functions.invoke("lookup-venue-address", {
-                        body: { venue_name: show.venue_name, city: show.city },
-                      });
-                      if (error || data?.error) throw new Error(data?.error || error.message);
-                      const cleanAddress = (data.address as string).replace(/,?\s*United States$/, "");
-                      const { error: updateError } = await supabase
-                        .from("shows")
-                        .update({ venue_address: cleanAddress })
-                        .eq("id", show.id);
-                      if (updateError) throw updateError;
-                      queryClient.invalidateQueries({ queryKey: ["show", id] });
-                      toast.success("Address found and saved");
-                    } catch (err: any) {
-                      toast.error(err.message || "Could not find address");
-                    } finally {
-                      setLookingUpAddress(false);
-                    }
-                  }}
-                >
-                  {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                  Lookup
-                </Button>
-              </span>
-            )}
-          </p>
-        )}
+                {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                Lookup
+              </Button>
+            </span>
+          )}
+        </p>
 
         {/* Action buttons */}
         <div className="pt-1">
-          {editing ? (
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setEditingSchedule(false); }} className="h-7 sm:h-8 text-xs">
-                <X className="h-3.5 w-3.5 mr-1" />
-                Cancel
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending} className="h-7 sm:h-8 text-xs">
-                <Save className="h-3.5 w-3.5 mr-1" />
-                Save
-              </Button>
+          {/* Desktop */}
+          <div className="hidden md:flex items-center gap-4">
+            {/* Primary: Send Advance actions */}
+            <div className="flex items-center gap-1.5">
+              <SlackPushDialog showId={id!} show={show as Show} />
+              <EmailBandDialog show={show as Show} />
+              <ExportPdfDialog show={show as Show} />
             </div>
-          ) : (
-            <>
-              {/* Desktop */}
-              <div className="hidden md:flex items-center gap-4">
-                {/* Primary: Send Advance actions */}
-                <div className="flex items-center gap-1.5">
-                  <SlackPushDialog showId={id!} show={show as Show} />
-                  <EmailBandDialog show={show as Show} />
-                  <ExportPdfDialog show={show as Show} />
-                </div>
 
-                {/* Secondary: Import */}
+            {/* Secondary: Import */}
+            <ParseAdvanceForShowDialog
+              showId={id!}
+              currentShow={show as Show}
+              onUpdated={() => {
+                queryClient.invalidateQueries({ queryKey: ["show", id] });
+                queryClient.invalidateQueries({ queryKey: ["shows"] });
+              }}
+              trigger={
+                <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1">
+                  <Upload className="h-3.5 w-3.5" />
+                  Import Advance
+                </Button>
+              }
+            />
+
+            <Separator orientation="vertical" className="h-5" />
+
+            {/* Settle Show — visually distinct */}
+            {(show as any).is_settled ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs text-[hsl(142,71%,45%)] hover:text-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,45%,0.1)]"
+                onClick={() => { if (confirm("Clear settlement data?")) unsettleMutation.mutate(); }}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Settled
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className="h-8 text-xs bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-white"
+                onClick={() => {
+                  setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
+                  setSettleOpen(true);
+                }}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Settle Show
+              </Button>
+            )}
+
+            <Separator orientation="vertical" className="h-5" />
+
+            {/* Utility: Delete in overflow */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => { if (confirm("Delete this show?")) deleteMutation.mutate(); }}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Show
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Mobile */}
+          <div className="flex md:hidden items-center gap-1">
+            {/* Primary send actions */}
+            <SlackPushDialog
+              showId={id!}
+              show={show as Show}
+              trigger={
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                  <Send className="h-3.5 w-3.5" />
+                </Button>
+              }
+            />
+            <EmailBandDialog show={show as Show} trigger={
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                <FileUp className="h-3.5 w-3.5" />
+              </Button>
+            } />
+
+            <Separator orientation="vertical" className="h-4 mx-0.5" />
+
+            {/* Settle */}
+            {(show as any).is_settled ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-[10px] text-[hsl(142,71%,45%)] hover:text-[hsl(142,71%,35%)] px-2"
+                onClick={() => { if (confirm("Clear settlement data?")) unsettleMutation.mutate(); }}
+              >
+                <CheckCircle2 className="h-3 w-3 mr-0.5" /> Settled
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className="h-7 text-[10px] bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-white px-2"
+                onClick={() => {
+                  setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
+                  setSettleOpen(true);
+                }}
+              >
+                <CheckCircle2 className="h-3 w-3 mr-0.5" /> Settle
+              </Button>
+            )}
+
+            {/* Overflow: PDF, Import, Delete */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export PDF</DropdownMenuItem>} />
                 <ParseAdvanceForShowDialog
                   showId={id!}
                   currentShow={show as Show}
@@ -511,139 +511,19 @@ export default function ShowDetailPage() {
                     queryClient.invalidateQueries({ queryKey: ["show", id] });
                     queryClient.invalidateQueries({ queryKey: ["shows"] });
                   }}
-                  trigger={
-                    <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1">
-                      <Upload className="h-3.5 w-3.5" />
-                      Import Advance
-                    </Button>
-                  }
+                  trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Import Advance</DropdownMenuItem>}
                 />
-
-                <Separator orientation="vertical" className="h-5" />
-
-                {/* Settle Show — visually distinct */}
-                {(show as any).is_settled ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 text-xs text-[hsl(142,71%,45%)] hover:text-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,45%,0.1)]"
-                    onClick={() => { if (confirm("Clear settlement data?")) unsettleMutation.mutate(); }}
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Settled
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    className="h-8 text-xs bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-white"
-                    onClick={() => {
-                      setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
-                      setSettleOpen(true);
-                    }}
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Settle Show
-                  </Button>
-                )}
-
-                <Separator orientation="vertical" className="h-5" />
-
-                {/* Utility: Edit & Delete in overflow menu */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem onClick={startEdit}>
-                      <Edit className="h-3.5 w-3.5 mr-2" /> Edit All Fields
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => { if (confirm("Delete this show?")) deleteMutation.mutate(); }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Show
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              {/* Mobile */}
-              <div className="flex md:hidden items-center gap-1">
-                {/* Primary send actions */}
-                <SlackPushDialog
-                  showId={id!}
-                  show={show as Show}
-                  trigger={
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                      <Send className="h-3.5 w-3.5" />
-                    </Button>
-                  }
-                />
-                <EmailBandDialog show={show as Show} trigger={
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                    <FileUp className="h-3.5 w-3.5" />
-                  </Button>
-                } />
-
-                <Separator orientation="vertical" className="h-4 mx-0.5" />
-
-                {/* Settle */}
-                {(show as any).is_settled ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-[10px] text-[hsl(142,71%,45%)] hover:text-[hsl(142,71%,35%)] px-2"
-                    onClick={() => { if (confirm("Clear settlement data?")) unsettleMutation.mutate(); }}
-                  >
-                    <CheckCircle2 className="h-3 w-3 mr-0.5" /> Settled
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    className="h-7 text-[10px] bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-white px-2"
-                    onClick={() => {
-                      setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
-                      setSettleOpen(true);
-                    }}
-                  >
-                    <CheckCircle2 className="h-3 w-3 mr-0.5" /> Settle
-                  </Button>
-                )}
-
-                {/* Overflow: PDF, Import, Edit, Delete */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                      <MoreHorizontal className="h-3.5 w-3.5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export PDF</DropdownMenuItem>} />
-                    <ParseAdvanceForShowDialog
-                      showId={id!}
-                      currentShow={show as Show}
-                      onUpdated={() => {
-                        queryClient.invalidateQueries({ queryKey: ["show", id] });
-                        queryClient.invalidateQueries({ queryKey: ["shows"] });
-                      }}
-                      trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Import Advance</DropdownMenuItem>}
-                    />
-                    <DropdownMenuItem onClick={startEdit}>
-                      <Edit className="h-3.5 w-3.5 mr-2" /> Edit All
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => {
-                        if (confirm("Delete this show?")) deleteMutation.mutate();
-                      }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Show
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </>
-          )}
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => {
+                    if (confirm("Delete this show?")) deleteMutation.mutate();
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Show
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
@@ -665,15 +545,13 @@ export default function ShowDetailPage() {
 
       <div className="space-y-6 sm:space-y-8">
         <div ref={scheduleRef}>
-        <FieldGroup title="Schedule" incomplete={!editing && !editingSchedule && scheduleEntries.length === 0}>
+        <FieldGroup title="Schedule" incomplete={!editingSchedule && scheduleEntries.length === 0}>
           {editingSchedule ? (
             <ScheduleEditor
               initial={scheduleEntries.map((e) => ({ time: e.time, label: e.label, is_band: e.is_band }))}
               onSave={async (rows) => {
                 try {
-                  // Delete existing entries
                   await supabase.from("schedule_entries").delete().eq("show_id", id!);
-                  // Insert new entries
                   if (rows.length > 0) {
                     const inserts = rows.map((r, i) => ({
                       show_id: id!,
@@ -720,15 +598,15 @@ export default function ShowDetailPage() {
             }} />
           )}
           {editField("set_length", "Set Length", { alwaysShow: true })}
-          {(editing || inlineField === "curfew" || show.curfew) ? editField("curfew", "Curfew") : null}
-          {(editing || inlineField === "changeover_time" || show.changeover_time) ? editField("changeover_time", "Changeover Time") : null}
+          {(inlineField === "curfew" || show.curfew) ? editField("curfew", "Curfew") : null}
+          {(inlineField === "changeover_time" || show.changeover_time) ? editField("changeover_time", "Changeover Time") : null}
         </FieldGroup>
         </div>
 
         <Separator />
 
         {/* Departure */}
-        <FieldGroup title="Departure" incomplete={!editing && !show.departure_time && !show.departure_location}>
+        <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_location}>
           {editField("departure_time", "Departure Time", { mono: true, alwaysShow: true, timeFormat: true })}
           {editField("departure_location", "Departure Notes", { multiline: true, alwaysShow: true, placeholder: "e.g. Car 1 leaving from Rami's at 9am, Car 2 from JT's at 9:30am" })}
         </FieldGroup>
@@ -736,7 +614,7 @@ export default function ShowDetailPage() {
         <Separator />
 
         {/* Day of Show Contact */}
-        <FieldGroup title="Day of Show Contact" incomplete={!editing && !show.dos_contact_name && !show.dos_contact_phone}>
+        <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone}>
           {editField("dos_contact_name", "Name", { alwaysShow: true })}
           {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true })}
         </FieldGroup>
@@ -744,7 +622,7 @@ export default function ShowDetailPage() {
         <Separator />
 
         {/* Venue Details */}
-        <FieldGroup title="Venue Details" className="[&>div]:space-y-5" incomplete={!editing && !show.load_in_details && !show.parking_notes && !show.backline_provided}>
+        <FieldGroup title="Venue Details" className="[&>div]:space-y-5" incomplete={!show.load_in_details && !show.parking_notes && !show.backline_provided}>
           {editField("load_in_details", "Load In", { multiline: true, alwaysShow: true })}
           {editField("parking_notes", "Parking", { multiline: true, alwaysShow: true })}
           {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true })}
@@ -762,46 +640,34 @@ export default function ShowDetailPage() {
 
         <Separator />
 
-        {/* Hotel */}
-        <FieldGroup title="Hotel">
+        {/* Accommodations (formerly Hotel) */}
+        <FieldGroup title="Accommodations">
           {(() => {
             const hotelEmpty = !show.hotel_name && !show.hotel_address && !show.hotel_confirmation && !show.hotel_checkin && !show.hotel_checkout;
             const isHotelInline = inlineField === "hotel_group";
-
-            if (editing) {
-              return (
-                <>
-                  {editField("hotel_name", "Name", { alwaysShow: true })}
-                  {editField("hotel_address", "Address", { alwaysShow: true })}
-                  {editField("hotel_confirmation", "Confirmation #", { mono: true, alwaysShow: true })}
-                  {editField("hotel_checkin", "Check In", { mono: true, alwaysShow: true })}
-                  {editField("hotel_checkout", "Check Out", { mono: true, alwaysShow: true })}
-                </>
-              );
-            }
 
             if (isHotelInline) {
               return (
                 <div ref={inlineRef} className="space-y-2">
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Name</Label>
-                    <Input value={form.hotel_name ?? ""} onChange={(e) => setForm(p => ({ ...p, hotel_name: e.target.value }))} className="text-sm h-9" autoFocus />
+                    <Input value={hotelForm.hotel_name ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_name: e.target.value }))} className="text-sm h-9" autoFocus />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Address</Label>
-                    <Input value={form.hotel_address ?? ""} onChange={(e) => setForm(p => ({ ...p, hotel_address: e.target.value }))} className="text-sm h-9" />
+                    <Input value={hotelForm.hotel_address ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_address: e.target.value }))} className="text-sm h-9" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Confirmation #</Label>
-                    <Input value={form.hotel_confirmation ?? ""} onChange={(e) => setForm(p => ({ ...p, hotel_confirmation: e.target.value }))} className="text-sm h-9 font-mono" />
+                    <Input value={hotelForm.hotel_confirmation ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_confirmation: e.target.value }))} className="text-sm h-9 font-mono" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Check In</Label>
-                    <Input value={form.hotel_checkin ?? ""} onChange={(e) => setForm(p => ({ ...p, hotel_checkin: e.target.value }))} className="text-sm h-9 font-mono" />
+                    <Input value={hotelForm.hotel_checkin ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkin: e.target.value }))} className="text-sm h-9 font-mono" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Check Out</Label>
-                    <Input value={form.hotel_checkout ?? ""} onChange={(e) => setForm(p => ({ ...p, hotel_checkout: e.target.value }))} className="text-sm h-9 font-mono" />
+                    <Input value={hotelForm.hotel_checkout ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkout: e.target.value }))} className="text-sm h-9 font-mono" />
                   </div>
                   <InlineActions onSave={saveHotelGroup} onCancel={cancelInline} />
                 </div>
@@ -809,7 +675,7 @@ export default function ShowDetailPage() {
             }
 
             if (hotelEmpty) {
-              return <EmptyFieldPrompt label="hotel" onClick={startHotelEdit} />;
+              return <EmptyFieldPrompt label="accommodations" onClick={startHotelEdit} />;
             }
 
             return (
@@ -825,7 +691,7 @@ export default function ShowDetailPage() {
         </FieldGroup>
 
         {/* Travel */}
-        {(editing || inlineField === "travel_notes" || show.travel_notes) && (
+        {(inlineField === "travel_notes" || show.travel_notes) && (
           <>
             <Separator />
             <FieldGroup title="Travel">
@@ -834,49 +700,26 @@ export default function ShowDetailPage() {
           </>
         )}
 
-        {/* Deal */}
-        {(editing || show.guarantee || show.backend_deal || show.ticket_price || show.age_restriction || show.venue_capacity || show.merch_split || show.support_pay || show.settlement_method || show.settlement_guarantee || show.artist_comps) && (
+        {/* Deal — two-column grid for financial fields */}
+        {(show.guarantee || show.backend_deal || show.ticket_price || show.venue_capacity || show.walkout_potential || show.hospitality || show.artist_comps) && (
           <>
             <Separator />
             <FieldGroup title="Deal">
-              {editField("guarantee", "Guarantee", { mono: true })}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                <div>{editField("guarantee", "Guarantee", { mono: true, alwaysShow: true })}</div>
+                <div>{editField("ticket_price", "Ticket Price", { mono: true, alwaysShow: true })}</div>
+                <div>{editField("venue_capacity", "Capacity", { alwaysShow: true })}</div>
+                <div>{editField("walkout_potential", "Walkout Potential", { mono: true, alwaysShow: true })}</div>
+              </div>
               {editField("backend_deal", "Backend Deal")}
-              {editField("ticket_price", "Ticket Price", { mono: true })}
-              {editField("age_restriction", "Age Restriction")}
-              {editField("venue_capacity", "Capacity")}
-              {editField("merch_split", "Merch Split")}
-              {editField("support_pay", "Support Pay", { mono: true })}
-              {editField("settlement_method", "Settlement Method")}
-              {editField("settlement_guarantee", "Settlement Guarantee", { mono: true })}
+              {editField("hospitality", "Hospitality", { multiline: true })}
               {editField("artist_comps", "Artist Comps")}
             </FieldGroup>
           </>
         )}
 
-        {/* Production */}
-        {(editing || show.hospitality || show.support_act || show.catering_details) && (
-          <>
-            <Separator />
-            <FieldGroup title="Production">
-              {editField("hospitality", "Hospitality", { multiline: true })}
-              {editField("support_act", "Support Act")}
-              {editField("catering_details", "Catering / Meals", { multiline: true })}
-            </FieldGroup>
-          </>
-        )}
-
-        {/* Projections */}
-        {(editing || show.walkout_potential || show.net_gross) && (
-          <>
-            <Separator />
-            <FieldGroup title="Projections">
-              {editField("walkout_potential", "Walkout Potential", { mono: true })}
-              {editField("net_gross", "Net Gross", { mono: true })}
-            </FieldGroup>
-          </>
-        )}
-
-        {!editing && (() => {
+        {/* Revenue Simulator */}
+        {(() => {
           const wp = parseDollar(show.walkout_potential);
           const tp = parseDollar(show.ticket_price);
           const g = parseDollar(show.guarantee) ?? 0;
@@ -900,7 +743,7 @@ export default function ShowDetailPage() {
         })()}
 
         {/* Additional Info */}
-        {(editing || inlineField === "additional_info" || show.additional_info) && (
+        {(inlineField === "additional_info" || show.additional_info) && (
           <>
             <Separator />
             <FieldGroup title="Additional Info">
@@ -910,15 +753,14 @@ export default function ShowDetailPage() {
         )}
 
         {/* Settlement Results — shown when settled */}
-        {!editing && (show as any).is_settled && (
+        {(show as any).is_settled && (
           <>
             <Separator />
             <FieldGroup title="Settlement Results">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Actual vs Projected Walkout */}
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">Actual Walkout</p>
-                  <p className="text-lg font-semibold font-mono text-green-600">
+                  <p className="text-lg font-semibold font-mono text-[hsl(142,71%,45%)]">
                     {(show as any).actual_walkout || "—"}
                   </p>
                   {show.walkout_potential && (
@@ -927,7 +769,6 @@ export default function ShowDetailPage() {
                     </p>
                   )}
                 </div>
-                {/* Actual Tickets Sold */}
                 {(show as any).actual_tickets_sold && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Actual Tickets Sold</p>
@@ -995,7 +836,7 @@ export default function ShowDetailPage() {
                 Cancel
               </Button>
               <Button
-                className="flex-1 h-11 sm:h-9 bg-green-600 hover:bg-green-700 text-white"
+                className="flex-1 h-11 sm:h-9 bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-white"
                 onClick={() => settleMutation.mutate(settleForm)}
                 disabled={settleMutation.isPending}
               >
