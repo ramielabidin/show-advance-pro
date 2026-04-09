@@ -37,7 +37,7 @@ serve(async (req) => {
 
     const { emailText } = await req.json();
     if (!emailText || typeof emailText !== "string" || emailText.trim().length < 10) {
-      return new Response(JSON.stringify({ error: "Email text is required (min 10 chars)" }), {
+      return new Response(JSON.stringify({ error: "Text is required (min 10 chars)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -48,17 +48,26 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are an expert at parsing advance emails for live music shows. 
-An "advance" is an email exchange between a band's manager/tour manager and a venue's production contact. 
-It contains logistics for an upcoming show: load-in times, soundcheck, set times, parking, green room info, WiFi, settlement details, hotel info, etc.
+    const systemPrompt = `You are an expert at parsing advance information for live music shows.
 
-Your job is to extract all structured data from the email thread. 
-- If multiple emails are in the thread, synthesize the most up-to-date information.
-- For the schedule, extract ALL timed events (not just the band's). Mark events that are clearly the band's own events (load in, soundcheck, set time, doors for their show) with is_band=true.
-- For additional_info, include anything relevant that doesn't fit the structured fields — catering details, merch info, age restrictions, curfew, production specs, guest parking, dressing room codes, etc.
+You will receive text that could be in ANY of these formats:
+- A forwarded advance email thread between a band's manager and a venue contact
+- A venue tech packet or production rider (often extracted from a PDF)
+- Copy-pasted text from a venue's website
+- A partial advance with only a few fields filled in
+- Raw text with scattered show details
+
+Your job is to extract ALL structured data you can find, regardless of input format.
+
+Key rules:
+- Extract whatever relevant fields you can find. It's fine if most fields are missing — only return what's actually present in the text.
+- If multiple emails are in a thread, synthesize the most up-to-date information.
+- For the schedule, extract ALL timed events (not just the band's). Mark events that are clearly the band's own events (load in, soundcheck, set time) with is_band=true.
+- For additional_info, include anything relevant that doesn't fit the structured fields — production specs, dressing room codes, misc venue policies, etc.
 - Dates should be in YYYY-MM-DD format.
 - Times should be in simple format like "3:00 PM" or "15:00".
-- If a field isn't mentioned in the email, omit it (don't guess).`;
+- If a field isn't clearly present in the text, OMIT it entirely. Never guess or fabricate values.
+- If the input is messy or partial, do your best — even extracting 2-3 fields is valuable.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -70,14 +79,14 @@ Your job is to extract all structured data from the email thread.
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Parse this advance email and extract all show details:\n\n${emailText}` },
+          { role: "user", content: `Parse the following text and extract all show details you can find:\n\n${emailText}` },
         ],
         tools: [
           {
             type: "function",
             function: {
               name: "extract_show_details",
-              description: "Extract structured show details from an advance email",
+              description: "Extract structured show details from advance text in any format",
               parameters: {
                 type: "object",
                 properties: {
@@ -95,20 +104,24 @@ Your job is to extract all structured data from the email thread.
                   guest_list_details: { type: "string", description: "Guest list info and policies" },
                   wifi_network: { type: "string", description: "WiFi network name" },
                   wifi_password: { type: "string", description: "WiFi password" },
-                  settlement_method: { type: "string", description: "Payment method (check, cash, wire, etc.)" },
-                  settlement_guarantee: { type: "string", description: "Guarantee amount" },
-                  hotel_name: { type: "string", description: "Hotel name" },
-                  hotel_address: { type: "string", description: "Hotel address" },
+                  hotel_name: { type: "string", description: "Hotel / accommodations name" },
+                  hotel_address: { type: "string", description: "Hotel / accommodations address" },
                   hotel_confirmation: { type: "string", description: "Hotel confirmation number" },
                   hotel_checkin: { type: "string", description: "Hotel check-in time" },
                   hotel_checkout: { type: "string", description: "Hotel check-out time" },
                   travel_notes: { type: "string", description: "Travel/drive notes" },
-                  set_length: { type: "string", description: "Duration of the band's set, e.g. '75 min', '60-90 min'" },
+                  set_length: { type: "string", description: "Duration of the band's set, e.g. '75 min'" },
                   curfew: { type: "string", description: "Stage or venue curfew time, e.g. '11:00 PM'" },
-                  backline_provided: { type: "string", description: "Backline/gear provided by the venue, e.g. 'Full backline, no amps'" },
-                  catering_details: { type: "string", description: "Catering info, meal times, buyouts, rider details" },
+                  backline_provided: { type: "string", description: "Backline/gear provided by the venue" },
                   changeover_time: { type: "string", description: "Changeover time between acts, e.g. '20 min'" },
-                  additional_info: { type: "string", description: "Any other relevant info from the email that doesn't fit the structured fields above — merch, production specs, age restrictions, dressing room codes, etc." },
+                  venue_capacity: { type: "string", description: "Venue capacity" },
+                  ticket_price: { type: "string", description: "Ticket price" },
+                  guarantee: { type: "string", description: "Guarantee amount" },
+                  backend_deal: { type: "string", description: "Backend deal terms" },
+                  hospitality: { type: "string", description: "Hospitality / rider details" },
+                  walkout_potential: { type: "string", description: "Walkout potential amount" },
+                  artist_comps: { type: "string", description: "Artist comp tickets" },
+                  additional_info: { type: "string", description: "Any other relevant info that doesn't fit the structured fields above" },
                   schedule: {
                     type: "array",
                     description: "All timed events for the day",
