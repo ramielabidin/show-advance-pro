@@ -21,24 +21,14 @@ import { cn, formatCityState } from "@/lib/utils";
 import CreateShowDialog from "@/components/CreateShowDialog";
 import type { Show, Tour } from "@/lib/types";
 
-const ADVANCE_FIELDS: (keyof Show)[] = [
-  "dos_contact_name",
-  "departure_time",
-  "load_in_details",
-  "parking_notes",
-  "wifi_network",
-  "hotel_name",
-];
+const TOTAL_ADVANCE = 2; // venue_address + schedule
 
 function countAdvanced(show: Show, hasSchedule: boolean): number {
-  let count = hasSchedule ? 1 : 0;
-  ADVANCE_FIELDS.forEach((f) => {
-    if (show[f]) count++;
-  });
+  let count = 0;
+  if (show.venue_address) count++;
+  if (hasSchedule) count++;
   return count;
 }
-
-const TOTAL_ADVANCE = ADVANCE_FIELDS.length + 1; // +1 for schedule
 
 export default function DashboardPage() {
   const { data: shows = [], isLoading: showsLoading } = useQuery({
@@ -234,7 +224,7 @@ export default function DashboardPage() {
           >
             {activeTours.map((tour) => {
               const total = tour.shows?.length ?? 0;
-              const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]) >= 4).length;
+              const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]) >= TOTAL_ADVANCE).length;
               const pct = total > 0 ? (advanced / total) * 100 : 0;
               return (
                 <Link key={tour.id} to={`/tours/${tour.id}`} className="w-full block">
@@ -327,7 +317,7 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
             <div className="text-right shrink-0">
               <p
                 className="text-sm font-medium text-foreground"
-                title="Tracked fields: Schedule, Contact, Departure, Load In, Parking, WiFi, Accommodations"
+                title="Tracked fields: Venue Address, Schedule"
               >
                 {advanced}/{TOTAL_ADVANCE} advanced
               </p>

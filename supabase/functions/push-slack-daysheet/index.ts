@@ -88,6 +88,7 @@ function formatDaySheet(show: any, sections: Set<string>, note?: string): string
     for (const entry of sorted) {
       blocks.push(`    \`${entry.time}\`  ${entry.label}`);
     }
+    if (val(show.set_length)) blocks.push(`    Set Length: ${val(show.set_length)}`);
     blocks.push("");
   }
 
