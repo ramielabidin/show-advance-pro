@@ -261,8 +261,6 @@ export default function SettingsPage() {
       </div>
 
       {/* ── Slack Integration (full width) ── */}
-
-      {/* ── Slack Integration ── */}
       <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-6">
         <div>
           <h2 className="font-medium text-foreground mb-1">Slack Integration</h2>
