@@ -643,6 +643,7 @@ export default function ShowDetailPage() {
         {/* At The Venue */}
         <FieldGroup title="At The Venue">
           {editField("green_room_info", "Green Room", { multiline: true, alwaysShow: true })}
+          {editField("hospitality", "Hospitality", { multiline: true })}
           {editField("wifi_network", "WiFi Network", { mono: true, alwaysShow: true })}
           {editField("wifi_password", "WiFi Password", { mono: true, alwaysShow: true })}
           {renderGuestList()}
@@ -711,7 +712,7 @@ export default function ShowDetailPage() {
         )}
 
         {/* Deal — two-column grid for financial fields */}
-        {(show.guarantee || show.backend_deal || show.ticket_price || show.venue_capacity || show.walkout_potential || show.hospitality || show.artist_comps) && (
+        {(show.guarantee || show.backend_deal || show.ticket_price || show.venue_capacity || show.walkout_potential || show.artist_comps) && (
           <>
             <Separator />
             <FieldGroup title="Deal">
@@ -722,7 +723,6 @@ export default function ShowDetailPage() {
                 <div>{editField("walkout_potential", "Walkout Potential", { mono: true, alwaysShow: true })}</div>
               </div>
               {editField("backend_deal", "Backend Deal")}
-              {editField("hospitality", "Hospitality", { multiline: true })}
               {editField("artist_comps", "Artist Comps")}
             </FieldGroup>
           </>

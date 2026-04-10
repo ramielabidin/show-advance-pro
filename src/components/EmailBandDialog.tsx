@@ -102,6 +102,9 @@ function buildPlainTextBody(
   if (selected.has("greenRoom") && show.green_room_info?.trim()) {
     parts.push(sectionBlock("Green Room", [show.green_room_info.trim()]));
   }
+  if (selected.has("hospitality") && show.hospitality?.trim()) {
+    parts.push(sectionBlock("Hospitality", [show.hospitality.trim()]));
+  }
   if (selected.has("wifi")) {
     parts.push(sectionBlock("WiFi", [
       fieldLine("Network", show.wifi_network),
