@@ -224,7 +224,7 @@ export default function DashboardPage() {
           >
             {activeTours.map((tour) => {
               const total = tour.shows?.length ?? 0;
-              const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]) >= 4).length;
+              const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]) >= TOTAL_ADVANCE).length;
               const pct = total > 0 ? (advanced / total) * 100 : 0;
               return (
                 <Link key={tour.id} to={`/tours/${tour.id}`} className="w-full block">
@@ -317,7 +317,7 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
             <div className="text-right shrink-0">
               <p
                 className="text-sm font-medium text-foreground"
-                title="Tracked fields: Schedule, Contact, Departure, Load In, Parking, WiFi, Accommodations"
+                title="Tracked fields: Venue Address, Schedule"
               >
                 {advanced}/{TOTAL_ADVANCE} advanced
               </p>

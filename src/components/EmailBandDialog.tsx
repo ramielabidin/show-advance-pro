@@ -76,7 +76,9 @@ function buildPlainTextBody(
   }
   if (selected.has("schedule") && show.schedule_entries?.length) {
     const sorted = [...show.schedule_entries].sort((a, b) => a.sort_order - b.sort_order);
-    parts.push(sectionBlock("Schedule", sorted.map((e) => `${e.time}  ${e.label}`)));
+    const lines = sorted.map((e) => `${e.time}  ${e.label}`);
+    if (show.set_length?.trim()) lines.push(`Set Length: ${show.set_length.trim()}`);
+    parts.push(sectionBlock("Schedule", lines));
   }
   if (selected.has("departure")) {
     parts.push(sectionBlock("Departure", [
