@@ -136,7 +136,6 @@ function formatDaySheet(show: any, sections: Set<string>, note?: string): string
 
   if (has("production")) {
     const fields: [string, unknown][] = [
-      ["Hospitality", show.hospitality],
       ["Support Act", show.support_act],
       ["Support Pay", show.support_pay],
       ["Merch Split", show.merch_split],
@@ -178,6 +177,12 @@ function formatDaySheet(show: any, sections: Set<string>, note?: string): string
   if (has("greenRoom") && val(show.green_room_info)) {
     blocks.push(`🛋️ *Green Room*`);
     blocks.push(`    ${val(show.green_room_info)}`);
+    blocks.push("");
+  }
+
+  if (has("hospitality") && val(show.hospitality)) {
+    blocks.push(`🍽️ *Hospitality*`);
+    blocks.push(`    ${val(show.hospitality)}`);
     blocks.push("");
   }
 
