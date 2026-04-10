@@ -9,6 +9,7 @@ export const SECTIONS = [
   { key: "parking",     label: "Parking" },
   { key: "backline",    label: "Backline" },
   { key: "greenRoom",   label: "Green Room" },
+  { key: "hospitality", label: "Hospitality" },
   { key: "wifi",        label: "WiFi" },
   { key: "guestList",   label: "Guest List" },
   { key: "hotel",       label: "Accommodations" },
@@ -31,6 +32,7 @@ export const BAND_VIEW_KEYS: SectionKey[] = [
   "venue",
   "loadIn",
   "parking",
+  "hospitality",
   "wifi",
   "hotel",
   "travel",
@@ -59,6 +61,8 @@ export function hasData(
       return !!show.backline_provided?.trim();
     case "greenRoom":
       return !!show.green_room_info?.trim();
+    case "hospitality":
+      return !!show.hospitality?.trim();
     case "guestList":
       return !!show.guest_list_details?.trim();
     case "wifi":
