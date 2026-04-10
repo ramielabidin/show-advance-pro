@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { FolderOpen, Plus, ChevronRight, Calendar, MapPin } from "lucide-react";
+import { FolderOpen, Plus, ChevronRight, Calendar, MapPin, Upload } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { formatCityState } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,15 +14,22 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import EmptyState from "@/components/EmptyState";
+import BulkUploadDialog from "@/components/BulkUploadDialog";
 import { toast } from "sonner";
 
 export default function ToursPage() {
   const queryClient = useQueryClient();
   const { teamId } = useTeam();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [csvOpen, setCsvOpen] = useState(false);
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -70,14 +77,26 @@ export default function ToursPage() {
             {tours.length} tour{tours.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button size="sm" className="gap-1.5">
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">New Tour</span>
               <span className="sm:hidden">New</span>
             </Button>
-          </DialogTrigger>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Tour
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setCsvOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import from CSV
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>New Tour</DialogTitle>
@@ -103,6 +122,7 @@ export default function ToursPage() {
             </div>
           </DialogContent>
         </Dialog>
+        <BulkUploadDialog externalOpen={csvOpen} onExternalOpenChange={setCsvOpen} />
       </div>
 
       {isLoading ? (

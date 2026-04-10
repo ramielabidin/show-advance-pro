@@ -125,8 +125,10 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
-export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: string }) {
-  const [open, setOpen] = useState(false);
+export default function BulkUploadDialog({ defaultTourId, externalOpen, onExternalOpenChange }: { defaultTourId?: string; externalOpen?: boolean; onExternalOpenChange?: (open: boolean) => void }) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen ?? internalOpen;
+  const setOpen = onExternalOpenChange ?? setInternalOpen;
   const [rows, setRows] = useState<ValidatedRow[]>([]);
   const [fileName, setFileName] = useState("");
   const [selectedTourId, setSelectedTourId] = useState(defaultTourId ?? "none");
@@ -270,11 +272,13 @@ export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: st
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Upload className="h-4 w-4 mr-1" /> Import CSV
-        </Button>
-      </DialogTrigger>
+      {onExternalOpenChange == null && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Upload className="h-4 w-4 mr-1" /> Import CSV
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Bulk Import Shows</DialogTitle>
