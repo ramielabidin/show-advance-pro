@@ -298,7 +298,6 @@ export default function SettingsPage() {
           {saveMutation.isPending ? "Saving…" : "Save Settings"}
         </Button>
       </div>
-      </div>
 
       {/* ── Two-column grid: Touring Party + Team Members ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-start">
