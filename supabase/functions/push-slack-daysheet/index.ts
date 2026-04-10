@@ -7,12 +7,35 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/** Return value only if it's a non-empty, non-TBD string */
+/** Return value only if it's a non-empty, non-TBD, non-n/a string */
 function val(v: unknown): string | null {
   if (v == null) return null;
   const s = String(v).trim();
-  if (!s || s.toLowerCase() === "tbd") return null;
+  if (!s || s.toLowerCase() === "tbd" || s.toLowerCase() === "n/a") return null;
   return s;
+}
+
+/** Strip ", United States" suffix from address */
+function stripCountry(addr: string): string {
+  return addr.replace(/,\s*United States$/i, "");
+}
+
+/** Format guest list JSON into readable text */
+function formatGuestList(raw: string): string | null {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    return parsed
+      .map((g: any) => {
+        const name = g.name || "Guest";
+        const plus = g.guests ? ` +${g.guests}` : "";
+        return `${name}${plus}`;
+      })
+      .join(", ");
+  } catch {
+    // Not JSON, return as-is if non-empty
+    return raw;
+  }
 }
 
 function formatDate(dateStr: string): string {
