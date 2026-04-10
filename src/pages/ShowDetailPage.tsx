@@ -217,6 +217,12 @@ export default function ShowDetailPage() {
   const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; placeholder?: string }) => {
     // Inline editing for this specific field
     if (inlineField === key) {
+      const handleBlurSave = () => {
+        if (!inlineField) return;
+        const val = inlineTimeFormat.current ? normalizeTime(inlineValue) : inlineValue;
+        updateMutation.mutate({ [inlineField]: val || null } as any);
+      };
+
       return (
         <div ref={inlineRef} className="space-y-1">
           <Label className="text-xs text-muted-foreground">{label}</Label>
@@ -224,28 +230,28 @@ export default function ShowDetailPage() {
             <Textarea
               value={inlineValue}
               onChange={(e) => setInlineValue(e.target.value)}
-              className="text-sm min-h-[44px]"
+              className="text-sm min-h-[44px] ring-2 ring-ring ring-offset-1 ring-offset-background"
               autoFocus
               placeholder={opts?.placeholder}
+              onBlur={handleBlurSave}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
+              }}
             />
           ) : (
             <Input
               value={inlineValue}
               onChange={(e) => setInlineValue(e.target.value)}
-              className={cn("text-sm h-11 sm:h-9", opts?.mono && "font-mono")}
+              className={cn("text-sm h-11 sm:h-9 ring-2 ring-ring ring-offset-1 ring-offset-background", opts?.mono && "font-mono")}
               placeholder={opts?.timeFormat ? "e.g. 9:00 AM or 2:30 PM" : undefined}
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === "Enter") saveInline();
-                if (e.key === "Escape") cancelInline();
+                if (e.key === "Enter") { e.preventDefault(); handleBlurSave(); }
+                if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
               }}
-              onBlur={opts?.timeFormat ? () => {
-                const n = normalizeTime(inlineValue);
-                if (n !== inlineValue) setInlineValue(n);
-              } : undefined}
+              onBlur={handleBlurSave}
             />
           )}
-          <InlineActions onSave={saveInline} onCancel={cancelInline} />
         </div>
       );
     }
