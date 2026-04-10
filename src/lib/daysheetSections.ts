@@ -12,6 +12,7 @@ export const SECTIONS = [
   { key: "wifi",        label: "WiFi" },
   { key: "hotel",       label: "Accommodations" },
   { key: "travel",      label: "Travel" },
+  { key: "dealTerms",   label: "Deal Terms" },
   { key: "additional",  label: "Additional Info" },
 ] as const;
 
@@ -67,6 +68,14 @@ export function hasData(
       );
     case "travel":
       return !!show.travel_notes?.trim();
+    case "dealTerms":
+      return !!(
+        show.guarantee ||
+        show.ticket_price ||
+        show.venue_capacity ||
+        show.walkout_potential ||
+        show.backend_deal
+      );
     case "additional":
       return !!show.additional_info?.trim();
   }
