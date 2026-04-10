@@ -55,6 +55,8 @@ export function hasData(
       return !!show.parking_notes?.trim();
     case "loadIn":
       return !!show.load_in_details?.trim();
+    case "backline":
+      return !!show.backline_provided?.trim();
     case "greenRoom":
       return !!show.green_room_info?.trim();
     case "guestList":
