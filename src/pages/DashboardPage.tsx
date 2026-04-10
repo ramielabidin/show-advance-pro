@@ -21,24 +21,14 @@ import { cn, formatCityState } from "@/lib/utils";
 import CreateShowDialog from "@/components/CreateShowDialog";
 import type { Show, Tour } from "@/lib/types";
 
-const ADVANCE_FIELDS: (keyof Show)[] = [
-  "dos_contact_name",
-  "departure_time",
-  "load_in_details",
-  "parking_notes",
-  "wifi_network",
-  "hotel_name",
-];
+const TOTAL_ADVANCE = 2; // venue_address + schedule
 
 function countAdvanced(show: Show, hasSchedule: boolean): number {
-  let count = hasSchedule ? 1 : 0;
-  ADVANCE_FIELDS.forEach((f) => {
-    if (show[f]) count++;
-  });
+  let count = 0;
+  if (show.venue_address) count++;
+  if (hasSchedule) count++;
   return count;
 }
-
-const TOTAL_ADVANCE = ADVANCE_FIELDS.length + 1; // +1 for schedule
 
 export default function DashboardPage() {
   const { data: shows = [], isLoading: showsLoading } = useQuery({
