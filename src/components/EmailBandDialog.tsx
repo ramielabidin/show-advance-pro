@@ -104,6 +104,15 @@ function buildPlainTextBody(
   if (selected.has("travel") && show.travel_notes?.trim()) {
     parts.push(sectionBlock("Travel", [show.travel_notes.trim()]));
   }
+  if (selected.has("dealTerms")) {
+    parts.push(sectionBlock("Deal Terms", [
+      fieldLine("Guarantee", show.guarantee),
+      fieldLine("Ticket Price", show.ticket_price),
+      fieldLine("Capacity", show.venue_capacity),
+      fieldLine("Walkout Potential", show.walkout_potential),
+      fieldLine("Backend Deal", show.backend_deal),
+    ]));
+  }
   if (selected.has("additional") && show.additional_info?.trim()) {
     parts.push(sectionBlock("Additional Info", [show.additional_info.trim()]));
   }
