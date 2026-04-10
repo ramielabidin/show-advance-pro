@@ -125,8 +125,10 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
-export default function BulkUploadDialog({ defaultTourId }: { defaultTourId?: string }) {
-  const [open, setOpen] = useState(false);
+export default function BulkUploadDialog({ defaultTourId, externalOpen, onExternalOpenChange }: { defaultTourId?: string; externalOpen?: boolean; onExternalOpenChange?: (open: boolean) => void }) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen ?? internalOpen;
+  const setOpen = onExternalOpenChange ?? setInternalOpen;
   const [rows, setRows] = useState<ValidatedRow[]>([]);
   const [fileName, setFileName] = useState("");
   const [selectedTourId, setSelectedTourId] = useState(defaultTourId ?? "none");
