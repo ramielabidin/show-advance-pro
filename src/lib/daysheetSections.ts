@@ -12,6 +12,7 @@ export const SECTIONS = [
   { key: "wifi",        label: "WiFi" },
   { key: "hotel",       label: "Accommodations" },
   { key: "travel",      label: "Travel" },
+  { key: "dealTerms",   label: "Deal Terms" },
   { key: "additional",  label: "Additional Info" },
 ] as const;
 
