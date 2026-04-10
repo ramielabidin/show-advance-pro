@@ -7,12 +7,35 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/** Return value only if it's a non-empty, non-TBD string */
+/** Return value only if it's a non-empty, non-TBD, non-n/a string */
 function val(v: unknown): string | null {
   if (v == null) return null;
   const s = String(v).trim();
-  if (!s || s.toLowerCase() === "tbd") return null;
+  if (!s || s.toLowerCase() === "tbd" || s.toLowerCase() === "n/a") return null;
   return s;
+}
+
+/** Strip ", United States" suffix from address */
+function stripCountry(addr: string): string {
+  return addr.replace(/,\s*United States$/i, "");
+}
+
+/** Format guest list JSON into readable text */
+function formatGuestList(raw: string): string | null {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    return parsed
+      .map((g: any) => {
+        const name = g.name || "Guest";
+        const plus = g.guests ? ` +${g.guests}` : "";
+        return `${name}${plus}`;
+      })
+      .join(", ");
+  } catch {
+    // Not JSON, return as-is if non-empty
+    return raw;
+  }
 }
 
 function formatDate(dateStr: string): string {
@@ -48,7 +71,7 @@ function formatDaySheet(show: any, sections: Set<string>, note?: string): string
 
   if (has("venue") && val(show.venue_address)) {
     blocks.push(`📍 *Venue*`);
-    blocks.push(`    ${val(show.venue_address)}`);
+    blocks.push(`    ${stripCountry(val(show.venue_address)!)}`);
     blocks.push("");
   }
 
@@ -159,9 +182,12 @@ function formatDaySheet(show: any, sections: Set<string>, note?: string): string
   }
 
   if (has("guestList") && val(show.guest_list_details)) {
-    blocks.push(`📋 *Guest List*`);
-    blocks.push(`    ${val(show.guest_list_details)}`);
-    blocks.push("");
+    const formatted = formatGuestList(val(show.guest_list_details)!);
+    if (formatted) {
+      blocks.push(`📋 *Guest List*`);
+      blocks.push(`    ${formatted}`);
+      blocks.push("");
+    }
   }
 
   if (has("wifi") && (val(show.wifi_network) || val(show.wifi_password))) {
@@ -179,7 +205,7 @@ function formatDaySheet(show: any, sections: Set<string>, note?: string): string
   }
 
   if (has("hotel") && (val(show.hotel_name) || val(show.hotel_address))) {
-    blocks.push(`🏨 *Hotel*`);
+    blocks.push(`🏨 *Accommodations*`);
     if (val(show.hotel_name)) blocks.push(`    ${val(show.hotel_name)}`);
     if (val(show.hotel_address)) blocks.push(`    ${val(show.hotel_address)}`);
     if (val(show.hotel_confirmation)) blocks.push(`    Confirmation: \`${val(show.hotel_confirmation)}\``);
