@@ -260,8 +260,7 @@ export default function SettingsPage() {
         <p className="text-muted-foreground text-sm mt-1">Manage your team and integrations</p>
       </div>
 
-      {/* ── Desktop 2-column grid ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-start">
+      {/* ── Slack Integration (full width) ── */}
 
       {/* ── Slack Integration ── */}
       <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-6">
@@ -299,6 +298,10 @@ export default function SettingsPage() {
           {saveMutation.isPending ? "Saving…" : "Save Settings"}
         </Button>
       </div>
+      </div>
+
+      {/* ── Two-column grid: Touring Party + Team Members ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-start">
 
       {/* ── Touring Party ── */}
       <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
@@ -443,8 +446,8 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* ── Team Members ── (full width) */}
-      <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4 md:col-span-2">
+      {/* ── Team Members ── */}
+      <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
         <div>
           <h2 className="font-medium text-foreground mb-0.5">Team Members</h2>
           <p className="text-sm text-muted-foreground">
