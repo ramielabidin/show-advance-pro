@@ -272,11 +272,20 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Upload className="h-4 w-4 mr-1" /> Import CSV
-        </Button>
-      </DialogTrigger>
+      {!externalOpen && externalOpen !== false && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Upload className="h-4 w-4 mr-1" /> Import CSV
+          </Button>
+        </DialogTrigger>
+      )}
+      {onExternalOpenChange == null && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Upload className="h-4 w-4 mr-1" /> Import CSV
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Bulk Import Shows</DialogTitle>
