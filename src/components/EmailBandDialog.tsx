@@ -72,8 +72,16 @@ function buildPlainTextBody(
   if (selected.has("venue")) {
     const rawAddr = show.venue_address?.replace(/,?\s*United States$/i, "") ?? "";
     const addrLine = rawAddr ? `Address: ${rawAddr}` : "";
-    parts.push(sectionBlock("Venue", [
-      addrLine,
+    parts.push(sectionBlock("Venue", [addrLine]));
+  }
+  if (selected.has("schedule") && show.schedule_entries?.length) {
+    const sorted = [...show.schedule_entries].sort((a, b) => a.sort_order - b.sort_order);
+    parts.push(sectionBlock("Schedule", sorted.map((e) => `${e.time}  ${e.label}`)));
+  }
+  if (selected.has("departure")) {
+    parts.push(sectionBlock("Departure", [
+      fieldLine("Time", show.departure_time),
+      fieldLine("Location", show.departure_location),
     ]));
   }
   if (selected.has("contact")) {
@@ -82,15 +90,26 @@ function buildPlainTextBody(
       fieldLine("Phone", show.dos_contact_phone),
     ]));
   }
-  if (selected.has("departure")) {
-    parts.push(sectionBlock("Departure", [
-      fieldLine("Time", show.departure_time),
-      fieldLine("Location", show.departure_location),
+  if (selected.has("loadIn") && show.load_in_details?.trim()) {
+    parts.push(sectionBlock("Load In", [show.load_in_details.trim()]));
+  }
+  if (selected.has("parking") && show.parking_notes?.trim()) {
+    parts.push(sectionBlock("Parking", [show.parking_notes.trim()]));
+  }
+  if (selected.has("backline") && show.backline_provided?.trim()) {
+    parts.push(sectionBlock("Backline", [show.backline_provided.trim()]));
+  }
+  if (selected.has("greenRoom") && show.green_room_info?.trim()) {
+    parts.push(sectionBlock("Green Room", [show.green_room_info.trim()]));
+  }
+  if (selected.has("wifi")) {
+    parts.push(sectionBlock("WiFi", [
+      fieldLine("Network", show.wifi_network),
+      fieldLine("Password", show.wifi_password),
     ]));
   }
-  if (selected.has("schedule") && show.schedule_entries?.length) {
-    const sorted = [...show.schedule_entries].sort((a, b) => a.sort_order - b.sort_order);
-    parts.push(sectionBlock("Schedule", sorted.map((e) => `${e.time}  ${e.label}`)));
+  if (selected.has("guestList") && show.guest_list_details?.trim()) {
+    parts.push(sectionBlock("Guest List", [formatGuestList(show.guest_list_details)]));
   }
   if (selected.has("hotel")) {
     parts.push(sectionBlock("Accommodations", [
