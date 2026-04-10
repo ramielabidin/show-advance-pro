@@ -26,16 +26,9 @@ import type { Show } from "@/lib/types";
 // HTML email body builder
 // ---------------------------------------------------------------------------
 
-function esc(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function fieldHtml(label: string, value: string | null | undefined): string {
+function fieldLine(label: string, value: string | null | undefined): string {
   if (!value?.trim()) return "";
-  return `${esc(label)}: ${esc(value.trim())}`;
+  return `${label}: ${value.trim()}`;
 }
 
 /** Parse guest_list_details which may be JSON or plain text. */
@@ -48,24 +41,24 @@ function formatGuestList(raw: string | null | undefined): string {
         .map((entry: any) => {
           const name = entry.name ?? entry.Name ?? "";
           const plus = entry.plusOnes ?? entry.plus_ones ?? entry.plusOne ?? 0;
-          return plus > 0 ? `${esc(String(name))} +${plus}` : esc(String(name));
+          return plus > 0 ? `${String(name)} +${plus}` : String(name);
         })
         .filter(Boolean)
-        .join("<br>");
+        .join("\n");
     }
   } catch {
     // not JSON — fall through to plain text
   }
-  return esc(raw.trim());
+  return raw.trim();
 }
 
 function sectionBlock(title: string, lines: string[]): string {
   const filled = lines.filter(Boolean);
   if (filled.length === 0) return "";
-  return `<b>${esc(title)}</b><br>${filled.join("<br>")}`;
+  return `${title.toUpperCase()}\n${filled.join("\n")}`;
 }
 
-function buildHtmlBody(
+function buildPlainTextBody(
   show: Show & { schedule_entries?: any[] },
   selected: Set<SectionKey>,
   greeting: string
@@ -73,58 +66,50 @@ function buildHtmlBody(
   const parts: string[] = [];
 
   if (greeting.trim()) {
-    parts.push(esc(greeting.trim()));
+    parts.push(greeting.trim());
   }
 
   if (selected.has("venue")) {
     const rawAddr = show.venue_address?.replace(/,?\s*United States$/i, "") ?? "";
-    const addrDisplay = esc(rawAddr);
-    const mapsUrl = rawAddr
-      ? `https://maps.google.com/?q=${encodeURIComponent(rawAddr)}`
-      : null;
-    const addrLine = rawAddr
-      ? mapsUrl
-        ? `Address: <a href="${mapsUrl}">${addrDisplay}</a>`
-        : `Address: ${addrDisplay}`
-      : "";
+    const addrLine = rawAddr ? `Address: ${rawAddr}` : "";
     parts.push(sectionBlock("Venue", [
       addrLine,
-      fieldHtml("City", formatCityState(show.city)),
+      fieldLine("City", formatCityState(show.city)),
     ]));
   }
   if (selected.has("contact")) {
     parts.push(sectionBlock("Day of Show Contact", [
-      fieldHtml("Name", show.dos_contact_name),
-      fieldHtml("Phone", show.dos_contact_phone),
+      fieldLine("Name", show.dos_contact_name),
+      fieldLine("Phone", show.dos_contact_phone),
     ]));
   }
   if (selected.has("departure")) {
     parts.push(sectionBlock("Departure", [
-      fieldHtml("Time", show.departure_time),
-      fieldHtml("Location", show.departure_location),
+      fieldLine("Time", show.departure_time),
+      fieldLine("Location", show.departure_location),
     ]));
   }
   if (selected.has("schedule") && show.schedule_entries?.length) {
     const sorted = [...show.schedule_entries].sort((a, b) => a.sort_order - b.sort_order);
-    parts.push(sectionBlock("Schedule", sorted.map((e) => `${esc(e.time)}  ${esc(e.label)}`)));
+    parts.push(sectionBlock("Schedule", sorted.map((e) => `${e.time}  ${e.label}`)));
   }
   if (selected.has("hotel")) {
     parts.push(sectionBlock("Accommodations", [
-      fieldHtml("Name", show.hotel_name),
-      fieldHtml("Address", show.hotel_address),
-      fieldHtml("Confirmation #", show.hotel_confirmation),
-      fieldHtml("Check In", show.hotel_checkin),
-      fieldHtml("Check Out", show.hotel_checkout),
+      fieldLine("Name", show.hotel_name),
+      fieldLine("Address", show.hotel_address),
+      fieldLine("Confirmation #", show.hotel_confirmation),
+      fieldLine("Check In", show.hotel_checkin),
+      fieldLine("Check Out", show.hotel_checkout),
     ]));
   }
   if (selected.has("travel") && show.travel_notes?.trim()) {
-    parts.push(sectionBlock("Travel", [esc(show.travel_notes.trim())]));
+    parts.push(sectionBlock("Travel", [show.travel_notes.trim()]));
   }
   if (selected.has("additional") && show.additional_info?.trim()) {
-    parts.push(sectionBlock("Additional Info", [esc(show.additional_info.trim())]));
+    parts.push(sectionBlock("Additional Info", [show.additional_info.trim()]));
   }
 
-  return parts.filter(Boolean).join("<br><br>");
+  return parts.filter(Boolean).join("\n\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -163,7 +148,7 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
     }
     const dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
     const subject = `${dateStr} - ${show.venue_name} (${formatCityState(show.city)}) - Day Sheet`;
-    const body = buildHtmlBody(show, selected, greeting);
+    const body = buildPlainTextBody(show, selected, greeting);
     const gmailUrl =
       "https://mail.google.com/mail/?view=cm" +
       `&to=${encodeURIComponent(emails.join(","))}` +
