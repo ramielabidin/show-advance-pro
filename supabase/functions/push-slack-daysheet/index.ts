@@ -301,7 +301,7 @@ serve(async (req) => {
       );
     }
 
-    const allSections = ["contact","venue","departure","schedule","band","venueDetails","dealTerms","production","projections","parking","loadIn","greenRoom","guestList","wifi","settlement","hotel","travel","additional"];
+    const allSections = ["contact","venue","departure","schedule","band","venueDetails","dealTerms","production","projections","parking","loadIn","greenRoom","hospitality","guestList","wifi","settlement","hotel","travel","additional"];
     const sections = new Set<string>(Array.isArray(sectionsArr) ? sectionsArr : allSections);
     const message = formatDaySheet(show, sections, typeof note === "string" ? note.trim() : undefined);
 
