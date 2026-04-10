@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { FolderOpen, Plus, ChevronRight, Calendar, MapPin } from "lucide-react";
+import { FolderOpen, Plus, ChevronRight, Calendar, MapPin, Upload } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { formatCityState } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,9 +14,15 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import EmptyState from "@/components/EmptyState";
+import BulkUploadDialog from "@/components/BulkUploadDialog";
 import { toast } from "sonner";
 
 export default function ToursPage() {
