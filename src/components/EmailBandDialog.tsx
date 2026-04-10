@@ -74,7 +74,6 @@ function buildPlainTextBody(
     const addrLine = rawAddr ? `Address: ${rawAddr}` : "";
     parts.push(sectionBlock("Venue", [
       addrLine,
-      fieldLine("City", formatCityState(show.city)),
     ]));
   }
   if (selected.has("contact")) {
