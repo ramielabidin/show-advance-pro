@@ -1,15 +1,16 @@
 import type { Show } from "@/lib/types";
 
 export const SECTIONS = [
-  { key: "contact",     label: "Day of Show Contact" },
   { key: "venue",       label: "Venue Address" },
-  { key: "departure",   label: "Departure" },
   { key: "schedule",    label: "Schedule" },
+  { key: "departure",   label: "Departure" },
+  { key: "contact",     label: "Day of Show Contact" },
   { key: "loadIn",      label: "Load In" },
   { key: "parking",     label: "Parking" },
+  { key: "backline",    label: "Backline" },
   { key: "greenRoom",   label: "Green Room" },
-  { key: "guestList",   label: "Guest List" },
   { key: "wifi",        label: "WiFi" },
+  { key: "guestList",   label: "Guest List" },
   { key: "hotel",       label: "Accommodations" },
   { key: "travel",      label: "Travel" },
   { key: "dealTerms",   label: "Deal Terms" },
