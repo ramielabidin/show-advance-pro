@@ -29,6 +29,7 @@ export default function ToursPage() {
   const queryClient = useQueryClient();
   const { teamId } = useTeam();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [csvOpen, setCsvOpen] = useState(false);
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
