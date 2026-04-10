@@ -108,68 +108,6 @@ function buildHtmlBody(
     const sorted = [...show.schedule_entries].sort((a, b) => a.sort_order - b.sort_order);
     parts.push(sectionBlock("Schedule", sorted.map((e) => `${esc(e.time)}  ${esc(e.label)}`)));
   }
-  if (selected.has("band")) {
-    parts.push(sectionBlock("Band / Performance", [
-      fieldHtml("Set Length", show.set_length),
-      fieldHtml("Curfew", show.curfew),
-      fieldHtml("Changeover", show.changeover_time),
-      fieldHtml("Backline", show.backline_provided),
-      fieldHtml("Catering", show.catering_details),
-    ]));
-  }
-  if (selected.has("venueDetails")) {
-    parts.push(sectionBlock("Venue Details", [
-      fieldHtml("Capacity", show.venue_capacity),
-      fieldHtml("Ticket Price", show.ticket_price),
-      fieldHtml("Age Restriction", show.age_restriction),
-    ]));
-  }
-  if (selected.has("dealTerms")) {
-    parts.push(sectionBlock("Deal Terms", [
-      fieldHtml("Guarantee", show.guarantee),
-      fieldHtml("Backend Deal", show.backend_deal),
-    ]));
-  }
-  if (selected.has("production")) {
-    parts.push(sectionBlock("Production", [
-      fieldHtml("Hospitality", show.hospitality),
-      fieldHtml("Support Act", show.support_act),
-      fieldHtml("Support Pay", show.support_pay),
-      fieldHtml("Merch Split", show.merch_split),
-    ]));
-  }
-  if (selected.has("projections")) {
-    parts.push(sectionBlock("Projections", [
-      fieldHtml("Walkout Potential", show.walkout_potential),
-      fieldHtml("Net Gross", show.net_gross),
-      fieldHtml("Artist Comps", show.artist_comps),
-    ]));
-  }
-  if (selected.has("parking") && show.parking_notes?.trim()) {
-    parts.push(sectionBlock("Parking", [esc(show.parking_notes.trim())]));
-  }
-  if (selected.has("loadIn") && show.load_in_details?.trim()) {
-    parts.push(sectionBlock("Load In", [esc(show.load_in_details.trim())]));
-  }
-  if (selected.has("greenRoom") && show.green_room_info?.trim()) {
-    parts.push(sectionBlock("Green Room", [esc(show.green_room_info.trim())]));
-  }
-  if (selected.has("guestList")) {
-    const gl = formatGuestList(show.guest_list_details);
-    if (gl) parts.push(sectionBlock("Guest List", [gl]));
-  }
-  if (selected.has("wifi")) {
-    parts.push(sectionBlock("WiFi", [
-      fieldHtml("Network", show.wifi_network),
-      fieldHtml("Password", show.wifi_password),
-    ]));
-  }
-  if (selected.has("settlement")) {
-    parts.push(sectionBlock("Settlement", [
-      fieldHtml("Method", show.settlement_method),
-      fieldHtml("Guarantee", show.settlement_guarantee),
-    ]));
-  }
   if (selected.has("hotel")) {
     parts.push(sectionBlock("Accommodations", [
       fieldHtml("Name", show.hotel_name),

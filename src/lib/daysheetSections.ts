@@ -5,17 +5,11 @@ export const SECTIONS = [
   { key: "venue",       label: "Venue Address" },
   { key: "departure",   label: "Departure" },
   { key: "schedule",    label: "Schedule" },
-  { key: "band",        label: "Band / Performance" },
-  { key: "venueDetails",label: "Venue Details" },
-  { key: "dealTerms",   label: "Deal Terms" },
-  { key: "production",  label: "Production" },
-  { key: "projections", label: "Projections" },
-  { key: "parking",     label: "Parking" },
   { key: "loadIn",      label: "Load In" },
+  { key: "parking",     label: "Parking" },
   { key: "greenRoom",   label: "Green Room" },
   { key: "guestList",   label: "Guest List" },
   { key: "wifi",        label: "WiFi" },
-  { key: "settlement",  label: "Settlement" },
   { key: "hotel",       label: "Accommodations" },
   { key: "travel",      label: "Travel" },
   { key: "additional",  label: "Additional Info" },
@@ -27,9 +21,6 @@ export const ALL_SECTION_KEYS: SectionKey[] = SECTIONS.map((s) => s.key);
 
 /**
  * Sections included in "Band View".
- * Matches what touring party members need on show day:
- * contact, departure, schedule, venue, load-in, parking, WiFi,
- * accommodations, travel, guest list.
  */
 export const BAND_VIEW_KEYS: SectionKey[] = [
   "contact",
@@ -58,27 +49,6 @@ export function hasData(
       return !!(show.departure_time || show.departure_location);
     case "schedule":
       return !!(show.schedule_entries?.length);
-    case "band":
-      return !!(
-        show.set_length ||
-        show.curfew ||
-        show.changeover_time ||
-        show.backline_provided ||
-        show.catering_details
-      );
-    case "venueDetails":
-      return !!(show.venue_capacity || show.ticket_price || show.age_restriction);
-    case "dealTerms":
-      return !!(show.guarantee || show.backend_deal);
-    case "production":
-      return !!(
-        show.hospitality ||
-        show.support_act ||
-        show.support_pay ||
-        show.merch_split
-      );
-    case "projections":
-      return !!(show.walkout_potential || show.net_gross || show.artist_comps);
     case "parking":
       return !!show.parking_notes?.trim();
     case "loadIn":
@@ -89,8 +59,6 @@ export function hasData(
       return !!show.guest_list_details?.trim();
     case "wifi":
       return !!(show.wifi_network || show.wifi_password);
-    case "settlement":
-      return !!(show.settlement_method || show.settlement_guarantee);
     case "hotel":
       return !!(
         show.hotel_name ||
