@@ -66,17 +66,6 @@ export default function DashboardPage() {
   const nextShow = upcoming[0] ?? null;
   const upcomingAfter = upcoming.slice(1, 8);
 
-  const activeTours = useMemo(() => {
-    const cutoff = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 60);
-    return tours.filter((t) => {
-      if (!t.shows || t.shows.length === 0) return false;
-      return t.shows.some((s) => {
-        const d = parseISO(s.date);
-        return (isToday(d) || !isPast(d)) && d <= cutoff;
-      });
-    });
-  }, [tours]);
-
   // The "active" tour is the one whose soonest upcoming show comes first.
   const activeTour = useMemo(() => {
     let best: (Tour & { shows: Show[] }) | null = null;
@@ -102,20 +91,14 @@ export default function DashboardPage() {
   // Tour-scoped stats for the active tour.
   const tourStats = useMemo(() => {
     if (!activeTour || !activeTour.shows) {
-      return {
-        totalShows: 0,
-        settledCount: 0,
-        actualIncome: 0,
-        projectedRemaining: 0,
-      };
+      return { totalShows: 0, settledCount: 0, actualIncome: 0, guaranteedRemaining: 0 };
     }
 
     const tourShows = activeTour.shows;
     const totalShows = tourShows.length;
-
     let settledCount = 0;
     let actualIncome = 0;
-    let projectedRemaining = 0;
+    let guaranteedRemaining = 0;
 
     tourShows.forEach((s) => {
       const settled = (s as any).is_settled as boolean;
@@ -125,21 +108,20 @@ export default function DashboardPage() {
         if (val != null) actualIncome += val;
       } else {
         const d = parseISO(s.date);
-        const isUpcoming = isToday(d) || !isPast(d);
-        if (isUpcoming) {
-          const val = parseDollar(s.walkout_potential ?? null);
-          if (val != null) projectedRemaining += val;
+        if (isToday(d) || !isPast(d)) {
+          const val = parseDollar((s as any).guarantee ?? null);
+          if (val != null) guaranteedRemaining += val;
         }
       }
     });
 
-    return {
-      totalShows,
-      settledCount,
-      actualIncome,
-      projectedRemaining,
-    };
+    return { totalShows, settledCount, actualIncome, guaranteedRemaining };
   }, [activeTour]);
+
+  const toursWithUpcoming = useMemo(
+    () => tours.filter((t) => t.shows?.some((s) => { const d = parseISO(s.date); return isToday(d) || !isPast(d); })),
+    [tours],
+  );
 
   if (showsLoading) {
     return (
@@ -186,8 +168,8 @@ export default function DashboardPage() {
               icon={DollarSign}
             />
             <StatCard
-              label="Projected Remaining"
-              value={tourStats.projectedRemaining ? `$${tourStats.projectedRemaining.toLocaleString()}` : "—"}
+              label="Guaranteed Remaining"
+              value={tourStats.guaranteedRemaining ? `$${tourStats.guaranteedRemaining.toLocaleString()}` : "—"}
               icon={TrendingUp}
             />
           </div>
@@ -197,7 +179,7 @@ export default function DashboardPage() {
           <StatCard label="Shows This Tour" value="—" icon={Calendar} />
           <StatCard label="Shows Settled" value="—" icon={CheckCircle2} />
           <StatCard label="Actual Income" value="—" icon={DollarSign} />
-          <StatCard label="Projected Remaining" value="—" icon={TrendingUp} />
+          <StatCard label="Guaranteed Remaining" value="—" icon={TrendingUp} />
         </div>
       )}
 
@@ -262,13 +244,13 @@ export default function DashboardPage() {
       )}
 
       {/* Tour Progress */}
-      {activeTours.length > 0 && (
+      {toursWithUpcoming.length > 0 && (
         <div>
           <h2 className="text-base font-medium mb-3">Tour Progress</h2>
           <div
-            className={cn("grid w-full gap-3", activeTours.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}
+            className={cn("grid w-full gap-3", toursWithUpcoming.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}
           >
-            {activeTours.map((tour) => {
+            {toursWithUpcoming.map((tour) => {
               const total = tour.shows?.length ?? 0;
               const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]) >= TOTAL_ADVANCE).length;
               const pct = total > 0 ? (advanced / total) * 100 : 0;
