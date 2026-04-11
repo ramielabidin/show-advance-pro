@@ -41,6 +41,7 @@ export default function SettingsPage() {
   const { team, teamId, isOwner } = useTeam();
   const { session } = useAuth();
   const [webhookUrl, setWebhookUrl] = useState("");
+  const [homeBaseCity, setHomeBaseCity] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
 
   // Touring party state
@@ -60,6 +61,7 @@ export default function SettingsPage() {
         .single();
       if (error && error.code !== "PGRST116") throw error;
       setWebhookUrl(data?.slack_webhook_url ?? "");
+      setHomeBaseCity(data?.home_base_city ?? "");
       return data;
     },
     enabled: !!teamId,
@@ -73,15 +75,19 @@ export default function SettingsPage() {
         .eq("team_id", teamId!)
         .limit(1)
         .single();
+      const payload = {
+        slack_webhook_url: webhookUrl || null,
+        home_base_city: homeBaseCity.trim() || null,
+      };
       if (!existing) {
         const { error } = await supabase
           .from("app_settings")
-          .insert({ team_id: teamId!, slack_webhook_url: webhookUrl || null });
+          .insert({ team_id: teamId!, ...payload });
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("app_settings")
-          .update({ slack_webhook_url: webhookUrl || null })
+          .update(payload)
           .eq("id", existing.id);
         if (error) throw error;
       }
@@ -260,7 +266,7 @@ export default function SettingsPage() {
         <p className="text-muted-foreground text-sm mt-1">Manage your team and integrations</p>
       </div>
 
-      {/* ── Slack Integration (full width) ── */}
+      {/* ── App Settings (full width) ── */}
       <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-6">
         <div>
           <h2 className="font-medium text-foreground mb-1">Slack Integration</h2>
@@ -283,6 +289,24 @@ export default function SettingsPage() {
               onChange={(e) => setWebhookUrl(e.target.value)}
               placeholder="https://hooks.slack.com/services/T00/B00/xxx"
               className="font-mono text-sm h-11 sm:h-9"
+              disabled={settingsLoading}
+            />
+          </div>
+        </div>
+        <Separator />
+        <div>
+          <h2 className="font-medium text-foreground mb-1">Home Base City</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Used to calculate drive times for the first show of a tour when there's no previous show to depart from.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="home-base-city">City</Label>
+            <Input
+              id="home-base-city"
+              value={homeBaseCity}
+              onChange={(e) => setHomeBaseCity(e.target.value)}
+              placeholder="e.g. Nashville, TN"
+              className="text-sm h-11 sm:h-9"
               disabled={settingsLoading}
             />
           </div>

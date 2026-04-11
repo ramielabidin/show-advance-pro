@@ -1,10 +1,11 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, FileUp, Upload } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { ArrowLeft, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, FileUp, Upload, Clock } from "lucide-react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { useTeam } from "@/components/TeamProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +42,7 @@ export default function ShowDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { teamId } = useTeam();
 
   // Inline edit: which field key is currently being edited (null = none)
   const [inlineField, setInlineField] = useState<string | null>(null);
@@ -75,6 +77,119 @@ export default function ShowDetailPage() {
       return data;
     },
   });
+
+  // ── Drive-time: app settings (for home base city) ──
+  const { data: appSettings } = useQuery({
+    queryKey: ["app-settings", teamId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("home_base_city")
+        .eq("team_id", teamId!)
+        .limit(1)
+        .single();
+      if (error && error.code !== "PGRST116") throw error;
+      return data;
+    },
+    enabled: !!teamId,
+  });
+
+  // ── Drive-time: previous show in the same tour ──
+  const { data: previousShow } = useQuery({
+    queryKey: ["previous-show-in-tour", (show as any)?.tour_id, show?.date, show?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("shows")
+        .select("id, city, venue_name, venue_address, date")
+        .eq("tour_id", (show as any).tour_id)
+        .lt("date", show!.date)
+        .order("date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!show && !!(show as any).tour_id,
+  });
+
+  // Departure origin = previous show's city if in same tour, else home base city
+  const departureOrigin = useMemo(() => {
+    if (previousShow?.city) {
+      return { label: previousShow.city, query: previousShow.venue_address || previousShow.city };
+    }
+    const home = appSettings?.home_base_city?.trim();
+    if (home) {
+      return { label: home, query: home };
+    }
+    return null;
+  }, [previousShow, appSettings]);
+
+  // Destination = current show's venue address or city
+  const destinationQuery = useMemo(() => {
+    if (!show) return null;
+    return show.venue_address || `${show.venue_name}, ${show.city}`;
+  }, [show]);
+
+  // ── Drive-time: call edge function ──
+  const { data: driveTime } = useQuery({
+    queryKey: ["drive-time", departureOrigin?.query, destinationQuery],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("calculate-drive-time", {
+        body: { origin: departureOrigin!.query, destination: destinationQuery! },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as {
+        duration_seconds: number;
+        duration_text: string;
+        distance_text?: string;
+      };
+    },
+    enabled: !!departureOrigin && !!destinationQuery,
+    staleTime: 1000 * 60 * 60, // 1 hour
+    retry: false,
+  });
+
+  // Parse load-in time from schedule entries into minutes since midnight
+  const loadInMinutes = useMemo(() => {
+    const entries = (show as any)?.schedule_entries ?? [];
+    const loadIn = entries.find((e: any) => /load\s*-?\s*in/i.test(e.label));
+    if (!loadIn?.time) return null;
+    const match = (loadIn.time as string).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (!match) return null;
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const ampm = match[3]?.toUpperCase();
+    if (ampm === "PM" && hours < 12) hours += 12;
+    if (ampm === "AM" && hours === 12) hours = 0;
+    // No AM/PM given — load-in is almost always afternoon; assume PM when hour < 8
+    if (!ampm && hours < 8) hours += 12;
+    return hours * 60 + minutes;
+  }, [show]);
+
+  // Recommended departure = load-in - drive - 45min buffer
+  const recommendedDeparture = useMemo(() => {
+    if (loadInMinutes == null || !driveTime?.duration_seconds) return null;
+    const driveMin = Math.round(driveTime.duration_seconds / 60);
+    const mins = loadInMinutes - driveMin - 45;
+    if (mins < 0) return null;
+    const h24 = Math.floor(mins / 60) % 24;
+    const m = mins % 60;
+    const ampm = h24 >= 12 ? "PM" : "AM";
+    const h12 = ((h24 + 11) % 12) + 1;
+    return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
+  }, [loadInMinutes, driveTime]);
+
+  // Formatted drive duration: "X hr Y min"
+  const driveTimeLabel = useMemo(() => {
+    if (!driveTime?.duration_seconds) return null;
+    const totalMin = Math.round(driveTime.duration_seconds / 60);
+    const hrs = Math.floor(totalMin / 60);
+    const mins = totalMin % 60;
+    if (hrs === 0) return `${mins} min`;
+    if (mins === 0) return `${hrs} hr`;
+    return `${hrs} hr ${mins} min`;
+  }, [driveTime]);
 
   // Scroll inline editor into view
   useEffect(() => {
@@ -626,7 +741,36 @@ export default function ShowDetailPage() {
 
         {/* Departure */}
         <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_location}>
+          {driveTimeLabel && departureOrigin && (
+            <div className="flex items-start gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              <Clock className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+              <div className="flex-1 min-w-0">
+                <div className="text-foreground">
+                  <span className="font-medium">{driveTimeLabel}</span>
+                  <span className="text-muted-foreground"> from {departureOrigin.label}</span>
+                </div>
+                {driveTime?.distance_text && (
+                  <div className="text-xs text-muted-foreground">{driveTime.distance_text}</div>
+                )}
+              </div>
+            </div>
+          )}
           {editField("departure_time", "Departure Time", { mono: true, alwaysShow: true, timeFormat: true })}
+          {recommendedDeparture && inlineField !== "departure_time" && show.departure_time !== recommendedDeparture && (
+            <div className="-mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1.5"
+                onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture } as any)}
+                disabled={updateMutation.isPending}
+              >
+                <Clock className="h-3 w-3" />
+                Use {recommendedDeparture}
+                <span className="text-muted-foreground">· load-in − drive − 45 min</span>
+              </Button>
+            </div>
+          )}
           {editField("departure_location", "Departure Notes", { multiline: true, alwaysShow: true, placeholder: "e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am" })}
         </FieldGroup>
 
