@@ -298,6 +298,9 @@ export default function SettingsPage() {
         </Button>
       </div>
 
+      {/* ── Band Documents (full width) ── */}
+      <BandDocuments />
+
       {/* ── Two-column grid: Touring Party + Team Members ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-start">
 
