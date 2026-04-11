@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import BandDocuments from "@/components/BandDocuments";
 
 const PARTY_ROLES = ["Artist", "Manager", "Crew", "Photographer", "Driver", "Other"] as const;
 
