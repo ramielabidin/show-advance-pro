@@ -7,18 +7,14 @@ import {
   isPast,
   isToday,
   differenceInCalendarDays,
-  startOfYear,
-  endOfYear,
-  startOfMonth,
-  endOfMonth,
 } from "date-fns";
-import { Calendar, MapPin, ChevronRight, TrendingUp, DollarSign, AlertTriangle, BarChart3 } from "lucide-react";
+import { Calendar, MapPin, ChevronRight, TrendingUp, DollarSign, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn, formatCityState } from "@/lib/utils";
 import CreateShowDialog from "@/components/CreateShowDialog";
+import { parseDollar } from "@/components/RevenueSimulator";
 import type { Show, Tour } from "@/lib/types";
 
 const TOTAL_ADVANCE = 2; // venue_address + schedule
@@ -81,44 +77,69 @@ export default function DashboardPage() {
     });
   }, [tours]);
 
-  // Quick stats
-  const stats = useMemo(() => {
-    const yearStart = startOfYear(today);
-    const yearEnd = endOfYear(today);
-    const monthStart = startOfMonth(today);
-    const monthEnd = endOfMonth(today);
+  // The "active" tour is the one whose soonest upcoming show comes first.
+  const activeTour = useMemo(() => {
+    let best: (Tour & { shows: Show[] }) | null = null;
+    let bestDate: Date | null = null;
+    for (const t of tours) {
+      if (!t.shows || t.shows.length === 0) continue;
+      const upcomingForTour = t.shows
+        .filter((s) => {
+          const d = parseISO(s.date);
+          return isToday(d) || !isPast(d);
+        })
+        .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+      if (upcomingForTour.length === 0) continue;
+      const earliest = parseISO(upcomingForTour[0].date);
+      if (!bestDate || earliest < bestDate) {
+        bestDate = earliest;
+        best = t;
+      }
+    }
+    return best;
+  }, [tours]);
 
-    const thisYear = shows.filter((s) => {
-      const d = parseISO(s.date);
-      return d >= yearStart && d <= yearEnd;
-    });
+  // Tour-scoped stats for the active tour.
+  const tourStats = useMemo(() => {
+    if (!activeTour || !activeTour.shows) {
+      return {
+        totalShows: 0,
+        settledCount: 0,
+        actualIncome: 0,
+        projectedRemaining: 0,
+      };
+    }
 
-    const thisMonth = shows.filter((s) => {
-      const d = parseISO(s.date);
-      return d >= monthStart && d <= monthEnd;
-    });
+    const tourShows = activeTour.shows;
+    const totalShows = tourShows.length;
 
-    let totalGuarantee = 0;
-    upcoming.forEach((s) => {
-      const val = parseFloat(s.guarantee?.replace(/[^0-9.-]/g, "") || "");
-      if (!isNaN(val)) totalGuarantee += val;
-    });
+    let settledCount = 0;
+    let actualIncome = 0;
+    let projectedRemaining = 0;
 
-    let walkoutUpcoming = 0;
-    upcoming.forEach((s) => {
-      const settled = (s as any).is_settled;
-      const rawWalkout = settled ? (s as any).actual_walkout : s.walkout_potential;
-      const val = parseFloat((rawWalkout as string | null)?.replace(/[^0-9.-]/g, "") || "");
-      if (!isNaN(val)) walkoutUpcoming += val;
+    tourShows.forEach((s) => {
+      const settled = (s as any).is_settled as boolean;
+      if (settled) {
+        settledCount += 1;
+        const val = parseDollar((s as any).actual_walkout ?? null);
+        if (val != null) actualIncome += val;
+      } else {
+        const d = parseISO(s.date);
+        const isUpcoming = isToday(d) || !isPast(d);
+        if (isUpcoming) {
+          const val = parseDollar(s.walkout_potential ?? null);
+          if (val != null) projectedRemaining += val;
+        }
+      }
     });
 
     return {
-      totalThisYear: thisYear.length,
-      totalGuarantee,
-      walkoutUpcoming,
-      showsThisMonth: thisMonth.length,
+      totalShows,
+      settledCount,
+      actualIncome,
+      projectedRemaining,
     };
-  }, [shows]);
+  }, [activeTour]);
 
   if (showsLoading) {
     return (
@@ -139,21 +160,46 @@ export default function DashboardPage() {
         <CreateShowDialog />
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-        <StatCard label="Shows This Year" value={stats.totalThisYear} icon={Calendar} />
-        <StatCard
-          label="Guaranteed Upcoming"
-          value={stats.totalGuarantee ? `$${stats.totalGuarantee.toLocaleString()}` : "—"}
-          icon={DollarSign}
-        />
-        <StatCard
-          label="Walkout Potential (Upcoming)"
-          value={stats.walkoutUpcoming ? `$${stats.walkoutUpcoming.toLocaleString()}` : "—"}
-          icon={TrendingUp}
-        />
-        <StatCard label="Shows This Month" value={stats.showsThisMonth} icon={BarChart3} />
-      </div>
+      {/* Active Tour Stats */}
+      {activeTour ? (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-base font-medium truncate">
+              <Link to={`/tours/${activeTour.id}`} className="hover:underline">
+                {activeTour.name}
+              </Link>
+            </h2>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium shrink-0">
+              Active Tour
+            </span>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            <StatCard label="Shows This Tour" value={tourStats.totalShows} icon={Calendar} />
+            <StatCard
+              label="Shows Settled"
+              value={`${tourStats.settledCount}/${tourStats.totalShows}`}
+              icon={CheckCircle2}
+            />
+            <StatCard
+              label="Actual Income"
+              value={tourStats.actualIncome ? `$${tourStats.actualIncome.toLocaleString()}` : "—"}
+              icon={DollarSign}
+            />
+            <StatCard
+              label="Projected Remaining"
+              value={tourStats.projectedRemaining ? `$${tourStats.projectedRemaining.toLocaleString()}` : "—"}
+              icon={TrendingUp}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+          <StatCard label="Shows This Tour" value="—" icon={Calendar} />
+          <StatCard label="Shows Settled" value="—" icon={CheckCircle2} />
+          <StatCard label="Actual Income" value="—" icon={DollarSign} />
+          <StatCard label="Projected Remaining" value="—" icon={TrendingUp} />
+        </div>
+      )}
 
       {/* Next Show */}
       {nextShow && (

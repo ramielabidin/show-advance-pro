@@ -463,76 +463,85 @@ export default function ShowDetailPage() {
           </div>
 
           {/* Mobile */}
-          <div className="flex md:hidden items-center gap-1">
-            {/* Primary send actions */}
-            <SlackPushDialog
-              showId={id!}
-              show={show as Show}
-              trigger={
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                  <Send className="h-3.5 w-3.5" />
-                </Button>
-              }
-            />
-            <EmailBandDialog show={show as Show} trigger={
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                <FileUp className="h-3.5 w-3.5" />
-              </Button>
-            } />
-
-            <Separator orientation="vertical" className="h-4 mx-0.5" />
-
-            {/* Settle */}
+          <div className="flex md:hidden flex-col gap-2">
+            {/* Settle Show — prominent, full-width primary action */}
             {(show as any).is_settled ? (
               <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-[10px] text-[hsl(142,71%,45%)] hover:text-[hsl(142,71%,35%)] px-2"
+                variant="outline"
+                className="h-11 w-full text-sm font-medium border-[hsl(142,71%,45%)] text-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,45%,0.1)] hover:text-[hsl(142,71%,35%)]"
                 onClick={() => { if (confirm("Clear settlement data?")) unsettleMutation.mutate(); }}
               >
-                <CheckCircle2 className="h-3 w-3 mr-0.5" /> Settled
+                <CheckCircle2 className="h-4 w-4 mr-2" /> Settled — Tap to Clear
               </Button>
             ) : (
               <Button
-                size="sm"
-                className="h-7 text-[10px] bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-white px-2"
+                className="h-12 w-full text-base font-semibold bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-white shadow-sm"
                 onClick={() => {
                   setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
                   setSettleOpen(true);
                 }}
               >
-                <CheckCircle2 className="h-3 w-3 mr-0.5" /> Settle
+                <CheckCircle2 className="h-5 w-5 mr-2" /> Settle Show
               </Button>
             )}
 
-            {/* Overflow: PDF, Import, Delete */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                  <MoreHorizontal className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export PDF</DropdownMenuItem>} />
-                <ParseAdvanceForShowDialog
-                  showId={id!}
-                  currentShow={show as Show}
-                  onUpdated={() => {
-                    queryClient.invalidateQueries({ queryKey: ["show", id] });
-                    queryClient.invalidateQueries({ queryKey: ["shows"] });
-                  }}
-                  trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Import Advance</DropdownMenuItem>}
-                />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => {
-                    if (confirm("Delete this show?")) deleteMutation.mutate();
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Show
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Secondary send actions — larger tap targets with labels */}
+            <div className="flex items-center gap-2">
+              <SlackPushDialog
+                showId={id!}
+                show={show as Show}
+                trigger={
+                  <Button
+                    variant="outline"
+                    className="h-11 flex-1 text-sm font-medium gap-2"
+                  >
+                    <Send className="h-4 w-4" />
+                    Slack
+                  </Button>
+                }
+              />
+              <EmailBandDialog
+                show={show as Show}
+                trigger={
+                  <Button
+                    variant="outline"
+                    className="h-11 flex-1 text-sm font-medium gap-2"
+                  >
+                    <FileUp className="h-4 w-4" />
+                    Email
+                  </Button>
+                }
+              />
+
+              {/* Overflow: PDF, Import, Delete */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-11 w-11 text-muted-foreground hover:text-foreground shrink-0">
+                    <MoreHorizontal className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export PDF</DropdownMenuItem>} />
+                  <ParseAdvanceForShowDialog
+                    showId={id!}
+                    currentShow={show as Show}
+                    onUpdated={() => {
+                      queryClient.invalidateQueries({ queryKey: ["show", id] });
+                      queryClient.invalidateQueries({ queryKey: ["shows"] });
+                    }}
+                    trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Import Advance</DropdownMenuItem>}
+                  />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => {
+                      if (confirm("Delete this show?")) deleteMutation.mutate();
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Show
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </div>
