@@ -46,6 +46,39 @@ export type Database = {
           },
         ]
       }
+      band_documents: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          slot: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          slot: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          slot?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       schedule_entries: {
         Row: {
           id: string
