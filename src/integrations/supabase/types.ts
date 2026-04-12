@@ -17,7 +17,6 @@ export type Database = {
       app_settings: {
         Row: {
           created_at: string
-          home_base_city: string | null
           id: string
           slack_webhook_url: string | null
           team_id: string | null
@@ -25,7 +24,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          home_base_city?: string | null
           id?: string
           slack_webhook_url?: string | null
           team_id?: string | null
@@ -33,7 +31,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          home_base_city?: string | null
           id?: string
           slack_webhook_url?: string | null
           team_id?: string | null
