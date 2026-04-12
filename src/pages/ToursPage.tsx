@@ -31,8 +31,6 @@ export default function ToursPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
   const [name, setName] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
 
   const { data: tours = [], isLoading } = useQuery({
     queryKey: ["tours"],
@@ -51,8 +49,6 @@ export default function ToursPage() {
       if (!name) throw new Error("Name required");
       const { error } = await supabase.from("tours").insert({
         name,
-        start_date: startDate || null,
-        end_date: endDate || null,
         team_id: teamId,
       });
       if (error) throw error;
@@ -61,8 +57,6 @@ export default function ToursPage() {
       queryClient.invalidateQueries({ queryKey: ["tours"] });
       setDialogOpen(false);
       setName("");
-      setStartDate("");
-      setEndDate("");
       toast.success("Tour created");
     },
     onError: () => toast.error("Failed to create tour"),
@@ -106,16 +100,6 @@ export default function ToursPage() {
                 <Label>Name</Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Fall 2026 East Coast Run" className="h-11 sm:h-9" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Start Date</Label>
-                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-11 sm:h-9" />
-                </div>
-                <div className="space-y-2">
-                  <Label>End Date</Label>
-                  <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-11 sm:h-9" />
-                </div>
-              </div>
               <Button onClick={() => createMutation.mutate()} disabled={!name || createMutation.isPending} className="w-full h-11 sm:h-9">
                 {createMutation.isPending ? "Creating…" : "Create Tour"}
               </Button>
@@ -142,11 +126,13 @@ export default function ToursPage() {
           {tours.map((tour) => {
             const shows = (tour.shows as any[]) ?? [];
             const sortedShows = [...shows].sort((a, b) => a.date.localeCompare(b.date));
+            const firstDate = sortedShows.length > 0 ? sortedShows[0].date : null;
+            const lastDate = sortedShows.length > 0 ? sortedShows[sortedShows.length - 1].date : null;
             const dateRange =
-              tour.start_date && tour.end_date
-                ? `${format(parseISO(tour.start_date), "MMM d")} – ${format(parseISO(tour.end_date), "MMM d, yyyy")}`
-                : tour.start_date
-                ? `Starting ${format(parseISO(tour.start_date), "MMM d, yyyy")}`
+              firstDate && lastDate && firstDate !== lastDate
+                ? `${format(parseISO(firstDate), "MMM d")} – ${format(parseISO(lastDate), "MMM d, yyyy")}`
+                : firstDate
+                ? format(parseISO(firstDate), "MMM d, yyyy")
                 : null;
 
             return (
