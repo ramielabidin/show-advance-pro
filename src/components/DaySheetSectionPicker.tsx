@@ -17,24 +17,16 @@ interface DaySheetSectionPickerProps {
   show: Show & { schedule_entries?: any[] };
   selected: Set<SectionKey>;
   onChange: (next: Set<SectionKey>) => void;
+  onBandModeChange?: (bandMode: boolean) => void;
   /** Prefix for HTML id attrs — prevents conflicts when two pickers exist. */
   idPrefix?: string;
 }
 
-/**
- * Shared section-picker UI used by both SlackPushDialog and EmailBandDialog.
- *
- * Preset logic:
- *   - "Band View"  → BAND_VIEW_KEYS filtered to sections that have data
- *   - "Full View"  → all sections filtered to sections that have data
- *
- * Sections without data are rendered dimmed and unchecked so the user can
- * see what fields exist without being misled into sending empty content.
- */
 export default function DaySheetSectionPicker({
   show,
   selected,
   onChange,
+  onBandModeChange,
   idPrefix = "dsp",
 }: DaySheetSectionPickerProps) {
   const toggle = (key: SectionKey) => {
@@ -42,12 +34,14 @@ export default function DaySheetSectionPicker({
     if (next.has(key)) next.delete(key);
     else next.add(key);
     onChange(next);
+    onBandModeChange?.(false); // manual toggle exits band mode
   };
 
   const allSelected = selected.size === SECTIONS.length;
 
   const toggleAll = () => {
     onChange(allSelected ? new Set() : new Set(ALL_SECTION_KEYS));
+    onBandModeChange?.(false);
   };
 
   return (
@@ -59,7 +53,10 @@ export default function DaySheetSectionPicker({
           variant="outline"
           size="sm"
           className="gap-1.5"
-          onClick={() => onChange(new Set(BAND_VIEW_KEYS))}
+          onClick={() => {
+            onChange(withData(BAND_VIEW_KEYS, show));
+            onBandModeChange?.(true);
+          }}
         >
           <Users className="h-3.5 w-3.5" />
           Band View
@@ -69,7 +66,10 @@ export default function DaySheetSectionPicker({
           variant="outline"
           size="sm"
           className="gap-1.5"
-          onClick={() => onChange(withData(ALL_SECTION_KEYS, show))}
+          onClick={() => {
+            onChange(withData(ALL_SECTION_KEYS, show));
+            onBandModeChange?.(false);
+          }}
         >
           <LayoutList className="h-3.5 w-3.5" />
           Full View
@@ -88,7 +88,7 @@ export default function DaySheetSectionPicker({
         </Label>
       </div>
 
-      {/* Section grid — empty sections dimmed, not disabled (user can still force-include) */}
+      {/* Section grid */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
         {SECTIONS.map((s) => {
           const populated = hasData(show, s.key);

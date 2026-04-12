@@ -28,13 +28,19 @@ export default function SlackPushDialog({ showId, show, trigger }: SlackPushDial
   const [open, setOpen] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [selected, setSelected] = useState<Set<SectionKey>>(new Set());
+  const [bandMode, setBandMode] = useState(false);
   const [note, setNote] = useState("");
 
   const handlePush = async () => {
     setPushing(true);
     try {
       const { data, error } = await supabase.functions.invoke("push-slack-daysheet", {
-        body: { showId, sections: Array.from(selected), note: note.trim() || undefined },
+        body: {
+          showId,
+          sections: Array.from(selected),
+          bandMode,
+          note: note.trim() || undefined,
+        },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
@@ -50,8 +56,8 @@ export default function SlackPushDialog({ showId, show, trigger }: SlackPushDial
   const handleOpen = (v: boolean) => {
     setOpen(v);
     if (v) {
-      // Default to Full View filtered to sections that have data.
       setSelected(withData(ALL_SECTION_KEYS, show));
+      setBandMode(false);
       setNote("");
     }
   };
@@ -76,10 +82,10 @@ export default function SlackPushDialog({ showId, show, trigger }: SlackPushDial
             show={show}
             selected={selected}
             onChange={setSelected}
+            onBandModeChange={setBandMode}
             idPrefix="slack"
           />
 
-          {/* Personal note */}
           <div className="space-y-1.5 pt-2 border-t border-border">
             <Label htmlFor="slack-note" className="text-sm text-muted-foreground">
               Personal note (optional)

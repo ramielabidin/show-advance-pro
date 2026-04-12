@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/** Return value only if it's a non-empty, non-TBD, non-n/a string */
+/** Return value only if non-empty, non-TBD, non-n/a */
 function val(v: unknown): string | null {
   if (v == null) return null;
   const s = String(v).trim();
@@ -15,12 +15,10 @@ function val(v: unknown): string | null {
   return s;
 }
 
-/** Strip ", United States" suffix from address */
 function stripCountry(addr: string): string {
   return addr.replace(/,\s*United States$/i, "");
 }
 
-/** Format guest list JSON into readable text */
 function formatGuestList(raw: string): string | null {
   try {
     const parsed = JSON.parse(raw);
@@ -28,12 +26,11 @@ function formatGuestList(raw: string): string | null {
     return parsed
       .map((g: any) => {
         const name = g.name || "Guest";
-        const plus = g.guests ? ` +${g.guests}` : "";
-        return `${name}${plus}`;
+        const plus = g.guests || g.plusOnes || g.plus_ones || 0;
+        return plus > 0 ? `${name} +${plus}` : name;
       })
       .join(", ");
   } catch {
-    // Not JSON, return as-is if non-empty
     return raw;
   }
 }
@@ -48,9 +45,21 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function formatDaySheet(show: any, sections: Set<string>, note?: string): string {
+/** Band-mode field hiding — mirrors src/lib/daysheetSections.ts */
+const BAND_HIDDEN_FIELDS: Record<string, string[]> = {
+  venueDetails: ["ticket_price"],
+  band: ["support_pay"],
+};
+
+function isBandHidden(sectionKey: string, fieldName: string, bandMode: boolean): boolean {
+  if (!bandMode) return false;
+  return BAND_HIDDEN_FIELDS[sectionKey]?.includes(fieldName) ?? false;
+}
+
+function formatDaySheet(show: any, sections: Set<string>, bandMode: boolean, note?: string): string {
   const blocks: string[] = [];
   const has = (key: string) => sections.has(key);
+  const hidden = (sec: string, field: string) => isBandHidden(sec, field, bandMode);
 
   if (note) {
     blocks.push(`💬 ${note}`);
@@ -75,92 +84,22 @@ function formatDaySheet(show: any, sections: Set<string>, note?: string): string
     blocks.push("");
   }
 
+  if (has("schedule") && show.schedule_entries?.length > 0) {
+    const sorted = [...show.schedule_entries].sort((a: any, b: any) => a.sort_order - b.sort_order);
+    blocks.push(`🕐 *Schedule*`);
+    for (const entry of sorted) {
+      const setInline = entry.is_band && val(show.set_length) ? ` (${val(show.set_length)})` : "";
+      blocks.push(`    \`${entry.time}\`  ${entry.label}${setInline}`);
+    }
+    if (val(show.curfew)) blocks.push(`    \`${val(show.curfew)}\`  Curfew`);
+    blocks.push("");
+  }
+
   if (has("departure") && (val(show.departure_time) || val(show.departure_location))) {
     blocks.push(`🚐 *Departure*`);
     if (val(show.departure_time)) blocks.push(`    ⏰ ${val(show.departure_time)}`);
     if (val(show.departure_location)) blocks.push(`    Notes: ${val(show.departure_location)}`);
     blocks.push("");
-  }
-
-  if (has("schedule") && show.schedule_entries?.length > 0) {
-    const sorted = [...show.schedule_entries].sort((a: any, b: any) => a.sort_order - b.sort_order);
-    blocks.push(`🕐 *Schedule*`);
-    for (const entry of sorted) {
-      blocks.push(`    \`${entry.time}\`  ${entry.label}`);
-    }
-    if (val(show.set_length)) blocks.push(`    Set Length: ${val(show.set_length)}`);
-    blocks.push("");
-  }
-
-  if (has("band")) {
-    const fields: [string, unknown][] = [
-      ["Set Length", show.set_length],
-      ["Curfew", show.curfew],
-      ["Changeover", show.changeover_time],
-      ["Backline", show.backline_provided],
-      ["Catering", show.catering_details],
-    ];
-    const filled = fields.filter(([, v]) => val(v));
-    if (filled.length) {
-      blocks.push(`🎸 *Band / Performance*`);
-      for (const [label, v] of filled) blocks.push(`    ${label}: ${val(v)}`);
-      blocks.push("");
-    }
-  }
-
-  if (has("venueDetails")) {
-    const fields: [string, unknown][] = [
-      ["Capacity", show.venue_capacity],
-      ["Ticket Price", show.ticket_price],
-      ["Age Restriction", show.age_restriction],
-    ];
-    const filled = fields.filter(([, v]) => val(v));
-    if (filled.length) {
-      blocks.push(`🏟️ *Venue Details*`);
-      for (const [label, v] of filled) blocks.push(`    ${label}: ${val(v)}`);
-      blocks.push("");
-    }
-  }
-
-  if (has("dealTerms")) {
-    const fields: [string, unknown][] = [
-      ["Guarantee", show.guarantee],
-      ["Backend", show.backend_deal],
-    ];
-    const filled = fields.filter(([, v]) => val(v));
-    if (filled.length) {
-      blocks.push(`💵 *Deal Terms*`);
-      for (const [label, v] of filled) blocks.push(`    ${label}: ${val(v)}`);
-      blocks.push("");
-    }
-  }
-
-  if (has("production")) {
-    const fields: [string, unknown][] = [
-      ["Support Act", show.support_act],
-      ["Support Pay", show.support_pay],
-      ["Merch Split", show.merch_split],
-    ];
-    const filled = fields.filter(([, v]) => val(v));
-    if (filled.length) {
-      blocks.push(`🎤 *Production*`);
-      for (const [label, v] of filled) blocks.push(`    ${label}: ${val(v)}`);
-      blocks.push("");
-    }
-  }
-
-  if (has("projections")) {
-    const fields: [string, unknown][] = [
-      ["Walkout Potential", show.walkout_potential],
-      ["Net/Gross", show.net_gross],
-      ["Artist Comps", show.artist_comps],
-    ];
-    const filled = fields.filter(([, v]) => val(v));
-    if (filled.length) {
-      blocks.push(`📊 *Projections*`);
-      for (const [label, v] of filled) blocks.push(`    ${label}: ${val(v)}`);
-      blocks.push("");
-    }
   }
 
   if (has("parking") && val(show.parking_notes)) {
@@ -181,6 +120,44 @@ function formatDaySheet(show: any, sections: Set<string>, note?: string): string
     blocks.push("");
   }
 
+  if (has("venueDetails")) {
+    const lines: string[] = [];
+    if (val(show.venue_capacity)) lines.push(`    Capacity: ${val(show.venue_capacity)}`);
+    if (!hidden("venueDetails", "ticket_price") && val(show.ticket_price))
+      lines.push(`    Ticket Price: ${val(show.ticket_price)}`);
+    if (val(show.age_restriction)) lines.push(`    Age Restriction: ${val(show.age_restriction)}`);
+    if (lines.length) {
+      blocks.push(`🏟️ *Venue Details*`);
+      blocks.push(...lines);
+      blocks.push("");
+    }
+  }
+
+  if (has("band")) {
+    const lines: string[] = [];
+    if (val(show.set_length)) lines.push(`    Set Length: ${val(show.set_length)}`);
+    if (val(show.curfew)) lines.push(`    Curfew: ${val(show.curfew)}`);
+    if (val(show.support_act)) lines.push(`    Support Act: ${val(show.support_act)}`);
+    if (!hidden("band", "support_pay") && val(show.support_pay))
+      lines.push(`    Support Pay: ${val(show.support_pay)}`);
+    if (lines.length) {
+      blocks.push(`🎸 *Band & Performance*`);
+      blocks.push(...lines);
+      blocks.push("");
+    }
+  }
+
+  if (has("dealTerms")) {
+    const lines: string[] = [];
+    if (val(show.guarantee)) lines.push(`    Guarantee: ${val(show.guarantee)}`);
+    if (val(show.backend_deal)) lines.push(`    Backend: ${val(show.backend_deal)}`);
+    if (lines.length) {
+      blocks.push(`💵 *Deal Terms*`);
+      blocks.push(...lines);
+      blocks.push("");
+    }
+  }
+
   if (has("hospitality") && val(show.hospitality)) {
     blocks.push(`🍽️ *Hospitality*`);
     blocks.push(`    ${val(show.hospitality)}`);
@@ -196,17 +173,21 @@ function formatDaySheet(show: any, sections: Set<string>, note?: string): string
     }
   }
 
+  if (has("projections")) {
+    const lines: string[] = [];
+    if (val(show.walkout_potential)) lines.push(`    Walkout Potential: ${val(show.walkout_potential)}`);
+    if (val(show.net_gross)) lines.push(`    Net/Gross: ${val(show.net_gross)}`);
+    if (lines.length) {
+      blocks.push(`📊 *Projections*`);
+      blocks.push(...lines);
+      blocks.push("");
+    }
+  }
+
   if (has("wifi") && (val(show.wifi_network) || val(show.wifi_password))) {
     blocks.push(`📶 *WiFi*`);
     if (val(show.wifi_network)) blocks.push(`    Network: \`${val(show.wifi_network)}\``);
     if (val(show.wifi_password)) blocks.push(`    Password: \`${val(show.wifi_password)}\``);
-    blocks.push("");
-  }
-
-  if (has("settlement") && (val(show.settlement_method) || val(show.settlement_guarantee))) {
-    blocks.push(`💰 *Settlement*`);
-    if (val(show.settlement_method)) blocks.push(`    ${val(show.settlement_method)}`);
-    if (val(show.settlement_guarantee)) blocks.push(`    ${val(show.settlement_guarantee)}`);
     blocks.push("");
   }
 
@@ -226,10 +207,15 @@ function formatDaySheet(show: any, sections: Set<string>, note?: string): string
     blocks.push("");
   }
 
-  if (has("additional") && val(show.additional_info)) {
-    blocks.push(`ℹ️ *Additional Info*`);
-    blocks.push(`    ${val(show.additional_info)}`);
-    blocks.push("");
+  if (has("additional")) {
+    const lines: string[] = [];
+    if (val(show.additional_info)) lines.push(`    ${val(show.additional_info)}`);
+    if (val(show.merch_split)) lines.push(`    Merch Split: ${val(show.merch_split)}`);
+    if (lines.length) {
+      blocks.push(`ℹ️ *Additional Info*`);
+      blocks.push(...lines);
+      blocks.push("");
+    }
   }
 
   return blocks.join("\n");
@@ -241,7 +227,6 @@ serve(async (req) => {
   }
 
   try {
-    // Validate JWT
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing authorization header" }), {
@@ -263,7 +248,7 @@ serve(async (req) => {
       });
     }
 
-    const { showId, sections: sectionsArr, note } = await req.json();
+    const { showId, sections: sectionsArr, bandMode: rawBandMode, note } = await req.json();
     if (!showId || typeof showId !== "string") {
       return new Response(JSON.stringify({ error: "showId is required" }), {
         status: 400,
@@ -302,9 +287,10 @@ serve(async (req) => {
       );
     }
 
-    const allSections = ["contact","venue","departure","schedule","band","venueDetails","dealTerms","production","projections","parking","loadIn","greenRoom","hospitality","guestList","wifi","settlement","hotel","travel","additional"];
+    const allSections = ["contact","venue","schedule","departure","parking","loadIn","greenRoom","venueDetails","band","dealTerms","hospitality","guestList","projections","wifi","hotel","travel","additional"];
     const sections = new Set<string>(Array.isArray(sectionsArr) ? sectionsArr : allSections);
-    const message = formatDaySheet(show, sections, typeof note === "string" ? note.trim() : undefined);
+    const bandMode = rawBandMode === true;
+    const message = formatDaySheet(show, sections, bandMode, typeof note === "string" ? note.trim() : undefined);
 
     const slackRes = await fetch(webhookUrl, {
       method: "POST",
