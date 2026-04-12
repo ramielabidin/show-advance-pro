@@ -126,9 +126,11 @@ export default function TourDetailPage() {
 
   const shows = ((tour as any).shows as any[]) ?? [];
   const sortedShows = [...shows].sort((a, b) => a.date.localeCompare(b.date));
+  const derivedStartDate = sortedShows.length > 0 ? sortedShows[0].date : null;
+  const derivedEndDate = sortedShows.length > 0 ? sortedShows[sortedShows.length - 1].date : null;
 
   const startEdit = () => {
-    setForm({ name: tour.name, start_date: tour.start_date ?? "", end_date: tour.end_date ?? "", notes: tour.notes ?? "" });
+    setForm({ name: tour.name, notes: tour.notes ?? "" });
     setEditing(true);
   };
 
@@ -144,9 +146,17 @@ export default function TourDetailPage() {
           ) : (
             <h1 className="text-xl sm:text-2xl tracking-tight truncate">{tour.name}</h1>
           )}
-          {tour.start_date && tour.end_date && (
+          {derivedStartDate && derivedEndDate && derivedStartDate !== derivedEndDate ? (
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-              {format(parseISO(tour.start_date), "MMM d")} – {format(parseISO(tour.end_date), "MMM d, yyyy")} · {shows.length} show{shows.length !== 1 ? "s" : ""}
+              {format(parseISO(derivedStartDate), "MMM d")} – {format(parseISO(derivedEndDate), "MMM d, yyyy")} · {shows.length} show{shows.length !== 1 ? "s" : ""}
+            </p>
+          ) : derivedStartDate ? (
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+              {format(parseISO(derivedStartDate), "MMM d, yyyy")} · 1 show
+            </p>
+          ) : (
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+              {shows.length} show{shows.length !== 1 ? "s" : ""}
             </p>
           )}
         </div>
@@ -185,16 +195,6 @@ export default function TourDetailPage() {
 
       {editing && (
         <div className="space-y-4 mb-8 rounded-lg border bg-card p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Start Date</Label>
-              <Input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} className="h-11 sm:h-9" />
-            </div>
-            <div className="space-y-2">
-              <Label>End Date</Label>
-              <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} className="h-11 sm:h-9" />
-            </div>
-          </div>
           <div className="space-y-2">
             <Label>Notes</Label>
             <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
