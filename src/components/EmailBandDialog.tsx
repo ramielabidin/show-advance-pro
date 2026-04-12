@@ -18,12 +18,18 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { formatCityState } from "@/lib/utils";
-import { ALL_SECTION_KEYS, BAND_VIEW_KEYS, withData, type SectionKey } from "@/lib/daysheetSections";
+import {
+  ALL_SECTION_KEYS,
+  BAND_VIEW_KEYS,
+  withData,
+  isBandHidden,
+  type SectionKey,
+} from "@/lib/daysheetSections";
 import DaySheetSectionPicker from "@/components/DaySheetSectionPicker";
 import type { Show } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
-// HTML email body builder
+// helpers
 // ---------------------------------------------------------------------------
 
 function fieldLine(label: string, value: string | null | undefined): string {
@@ -31,7 +37,13 @@ function fieldLine(label: string, value: string | null | undefined): string {
   return `${label}: ${value.trim()}`;
 }
 
-/** Parse guest_list_details which may be JSON or plain text. */
+function val(v: unknown): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s || s.toLowerCase() === "tbd" || s.toLowerCase() === "n/a") return null;
+  return s;
+}
+
 function formatGuestList(raw: string | null | undefined): string {
   if (!raw?.trim()) return "";
   try {
@@ -47,9 +59,9 @@ function formatGuestList(raw: string | null | undefined): string {
         .join("\n");
     }
   } catch {
-    // not JSON — fall through to plain text
+    // not JSON
   }
-  return raw.trim();
+  return raw!.trim();
 }
 
 function sectionBlock(title: string, lines: string[]): string {
@@ -61,84 +73,123 @@ function sectionBlock(title: string, lines: string[]): string {
 function buildPlainTextBody(
   show: Show & { schedule_entries?: any[] },
   selected: Set<SectionKey>,
-  greeting: string
+  greeting: string,
+  bandMode: boolean
 ): string {
   const parts: string[] = [];
+  const has = (k: SectionKey) => selected.has(k);
+  const hidden = (sec: SectionKey, field: string) => isBandHidden(sec, field, bandMode);
 
-  if (greeting.trim()) {
-    parts.push(greeting.trim());
+  if (greeting.trim()) parts.push(greeting.trim());
+
+  if (has("contact") && (val(show.dos_contact_name) || val(show.dos_contact_phone))) {
+    parts.push(sectionBlock("Day of Show Contact", [
+      fieldLine("Name", val(show.dos_contact_name)),
+      fieldLine("Phone", val(show.dos_contact_phone)),
+    ]));
   }
 
-  if (selected.has("venue")) {
+  if (has("venue")) {
     const rawAddr = show.venue_address?.replace(/,?\s*United States$/i, "") ?? "";
-    const addrLine = rawAddr ? `Address: ${rawAddr}` : "";
-    parts.push(sectionBlock("Venue", [addrLine]));
+    parts.push(sectionBlock("Venue", [rawAddr ? `Address: ${rawAddr}` : ""]));
   }
-  if (selected.has("schedule") && show.schedule_entries?.length) {
+
+  if (has("schedule") && show.schedule_entries?.length) {
     const sorted = [...show.schedule_entries].sort((a, b) => a.sort_order - b.sort_order);
-    const lines = sorted.map((e) => `${e.time}  ${e.label}`);
-    if (show.set_length?.trim()) lines.push(`Set Length: ${show.set_length.trim()}`);
+    const lines = sorted.map((e) => {
+      const setInline = e.is_band && val(show.set_length) ? ` (${val(show.set_length)})` : "";
+      return `${e.time}  ${e.label}${setInline}`;
+    });
+    if (val(show.curfew)) lines.push(`${val(show.curfew)}  Curfew`);
     parts.push(sectionBlock("Schedule", lines));
   }
-  if (selected.has("departure")) {
+
+  if (has("departure") && (val(show.departure_time) || val(show.departure_location))) {
     parts.push(sectionBlock("Departure", [
-      fieldLine("Time", show.departure_time),
-      fieldLine("Location", show.departure_location),
+      fieldLine("Time", val(show.departure_time)),
+      fieldLine("Notes", val(show.departure_location)),
     ]));
   }
-  if (selected.has("contact")) {
-    parts.push(sectionBlock("Day of Show Contact", [
-      fieldLine("Name", show.dos_contact_name),
-      fieldLine("Phone", show.dos_contact_phone),
+
+  if (has("parking") && val(show.parking_notes)) {
+    parts.push(sectionBlock("Parking", [val(show.parking_notes)!]));
+  }
+
+  if (has("loadIn") && val(show.load_in_details)) {
+    parts.push(sectionBlock("Load In", [val(show.load_in_details)!]));
+  }
+
+  if (has("greenRoom") && val(show.green_room_info)) {
+    parts.push(sectionBlock("Green Room", [val(show.green_room_info)!]));
+  }
+
+  if (has("venueDetails")) {
+    const fields: string[] = [];
+    if (val(show.venue_capacity)) fields.push(fieldLine("Capacity", val(show.venue_capacity)));
+    if (!hidden("venueDetails", "ticket_price") && val(show.ticket_price))
+      fields.push(fieldLine("Ticket Price", val(show.ticket_price)));
+    if (val(show.age_restriction)) fields.push(fieldLine("Age Restriction", val(show.age_restriction)));
+    if (fields.some(Boolean)) parts.push(sectionBlock("Venue Details", fields));
+  }
+
+  if (has("band")) {
+    const fields: string[] = [];
+    if (val(show.set_length)) fields.push(fieldLine("Set Length", val(show.set_length)));
+    if (val(show.curfew)) fields.push(fieldLine("Curfew", val(show.curfew)));
+    if (val(show.support_act)) fields.push(fieldLine("Support Act", val(show.support_act)));
+    if (!hidden("band", "support_pay") && val(show.support_pay))
+      fields.push(fieldLine("Support Pay", val(show.support_pay)));
+    if (fields.some(Boolean)) parts.push(sectionBlock("Band & Performance", fields));
+  }
+
+  if (has("dealTerms")) {
+    parts.push(sectionBlock("Deal Terms", [
+      fieldLine("Guarantee", val(show.guarantee)),
+      fieldLine("Backend", val(show.backend_deal)),
     ]));
   }
-  if (selected.has("loadIn") && show.load_in_details?.trim()) {
-    parts.push(sectionBlock("Load In", [show.load_in_details.trim()]));
+
+  if (has("hospitality") && val(show.hospitality)) {
+    parts.push(sectionBlock("Hospitality", [val(show.hospitality)!]));
   }
-  if (selected.has("parking") && show.parking_notes?.trim()) {
-    parts.push(sectionBlock("Parking", [show.parking_notes.trim()]));
-  }
-  if (selected.has("backline") && show.backline_provided?.trim()) {
-    parts.push(sectionBlock("Backline", [show.backline_provided.trim()]));
-  }
-  if (selected.has("greenRoom") && show.green_room_info?.trim()) {
-    parts.push(sectionBlock("Green Room", [show.green_room_info.trim()]));
-  }
-  if (selected.has("hospitality") && show.hospitality?.trim()) {
-    parts.push(sectionBlock("Hospitality", [show.hospitality.trim()]));
-  }
-  if (selected.has("wifi")) {
-    parts.push(sectionBlock("WiFi", [
-      fieldLine("Network", show.wifi_network),
-      fieldLine("Password", show.wifi_password),
-    ]));
-  }
-  if (selected.has("guestList") && show.guest_list_details?.trim()) {
+
+  if (has("guestList") && val(show.guest_list_details)) {
     parts.push(sectionBlock("Guest List", [formatGuestList(show.guest_list_details)]));
   }
-  if (selected.has("hotel")) {
+
+  if (has("projections")) {
+    parts.push(sectionBlock("Projections", [
+      fieldLine("Walkout Potential", val(show.walkout_potential)),
+      fieldLine("Net/Gross", val(show.net_gross)),
+    ]));
+  }
+
+  if (has("wifi") && (val(show.wifi_network) || val(show.wifi_password))) {
+    parts.push(sectionBlock("WiFi", [
+      fieldLine("Network", val(show.wifi_network)),
+      fieldLine("Password", val(show.wifi_password)),
+    ]));
+  }
+
+  if (has("hotel")) {
     parts.push(sectionBlock("Accommodations", [
-      fieldLine("Name", show.hotel_name),
-      fieldLine("Address", show.hotel_address),
-      fieldLine("Confirmation #", show.hotel_confirmation),
-      fieldLine("Check In", show.hotel_checkin),
-      fieldLine("Check Out", show.hotel_checkout),
+      fieldLine("Name", val(show.hotel_name)),
+      fieldLine("Address", val(show.hotel_address)),
+      fieldLine("Confirmation #", val(show.hotel_confirmation)),
+      fieldLine("Check In", val(show.hotel_checkin)),
+      fieldLine("Check Out", val(show.hotel_checkout)),
     ]));
   }
-  if (selected.has("travel") && show.travel_notes?.trim()) {
-    parts.push(sectionBlock("Travel", [show.travel_notes.trim()]));
+
+  if (has("travel") && val(show.travel_notes)) {
+    parts.push(sectionBlock("Travel", [val(show.travel_notes)!]));
   }
-  if (selected.has("dealTerms")) {
-    parts.push(sectionBlock("Deal Terms", [
-      fieldLine("Guarantee", show.guarantee),
-      fieldLine("Ticket Price", show.ticket_price),
-      fieldLine("Capacity", show.venue_capacity),
-      fieldLine("Walkout Potential", show.walkout_potential),
-      fieldLine("Backend Deal", show.backend_deal),
-    ]));
-  }
-  if (selected.has("additional") && show.additional_info?.trim()) {
-    parts.push(sectionBlock("Additional Info", [show.additional_info.trim()]));
+
+  if (has("additional")) {
+    const lines: string[] = [];
+    if (val(show.additional_info)) lines.push(val(show.additional_info)!);
+    if (val(show.merch_split)) lines.push(fieldLine("Merch Split", val(show.merch_split)));
+    if (lines.length) parts.push(sectionBlock("Additional Info", lines));
   }
 
   return parts.filter(Boolean).join("\n\n");
@@ -156,6 +207,7 @@ interface EmailBandDialogProps {
 export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<SectionKey>>(new Set());
+  const [bandMode, setBandMode] = useState(true);
   const [greeting, setGreeting] = useState("Hey fellas —");
   const { teamId } = useTeam();
 
@@ -180,7 +232,7 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
     }
     const dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
     const subject = `${dateStr} - ${show.venue_name} (${formatCityState(show.city)}) - Day Sheet`;
-    const body = buildPlainTextBody(show, selected, greeting);
+    const body = buildPlainTextBody(show, selected, greeting, bandMode);
     const gmailUrl =
       "https://mail.google.com/mail/?view=cm" +
       `&to=${encodeURIComponent(emails.join(","))}` +
@@ -193,7 +245,8 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
   const handleOpen = (v: boolean) => {
     setOpen(v);
     if (v) {
-      setSelected(new Set(BAND_VIEW_KEYS));
+      setSelected(withData(BAND_VIEW_KEYS, show));
+      setBandMode(true);
       setGreeting("Hey fellas —");
     }
   };
@@ -216,7 +269,6 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
         </DialogHeader>
 
         <div className="space-y-3 py-4">
-          {/* Greeting line */}
           <div className="space-y-1.5 pb-3 border-b border-border">
             <Label htmlFor="email-greeting" className="text-sm text-muted-foreground">
               Greeting
@@ -233,6 +285,7 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
             show={show}
             selected={selected}
             onChange={setSelected}
+            onBandModeChange={setBandMode}
             idPrefix="email"
           />
         </div>

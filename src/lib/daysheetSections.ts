@@ -1,21 +1,23 @@
 import type { Show } from "@/lib/types";
 
 export const SECTIONS = [
-  { key: "venue",       label: "Venue Address" },
-  { key: "schedule",    label: "Schedule" },
-  { key: "departure",   label: "Departure" },
-  { key: "contact",     label: "Day of Show Contact" },
-  { key: "loadIn",      label: "Load In" },
-  { key: "parking",     label: "Parking" },
-  { key: "backline",    label: "Backline" },
-  { key: "greenRoom",   label: "Green Room" },
-  { key: "hospitality", label: "Hospitality" },
-  { key: "wifi",        label: "WiFi" },
-  { key: "guestList",   label: "Guest List" },
-  { key: "hotel",       label: "Accommodations" },
-  { key: "travel",      label: "Travel" },
-  { key: "dealTerms",   label: "Deal Terms" },
-  { key: "additional",  label: "Additional Info" },
+  { key: "contact",      label: "Day of Show Contact" },
+  { key: "venue",        label: "Venue Address" },
+  { key: "schedule",     label: "Schedule" },
+  { key: "departure",    label: "Departure" },
+  { key: "parking",      label: "Parking" },
+  { key: "loadIn",       label: "Load In" },
+  { key: "greenRoom",    label: "Green Room" },
+  { key: "venueDetails", label: "Venue Details" },
+  { key: "band",         label: "Band & Performance" },
+  { key: "dealTerms",    label: "Deal Terms" },
+  { key: "hospitality",  label: "Hospitality" },
+  { key: "guestList",    label: "Guest List" },
+  { key: "projections",  label: "Projections" },
+  { key: "wifi",         label: "WiFi" },
+  { key: "hotel",        label: "Accommodations" },
+  { key: "travel",       label: "Travel" },
+  { key: "additional",   label: "Additional Info" },
 ] as const;
 
 export type SectionKey = (typeof SECTIONS)[number]["key"];
@@ -23,21 +25,48 @@ export type SectionKey = (typeof SECTIONS)[number]["key"];
 export const ALL_SECTION_KEYS: SectionKey[] = SECTIONS.map((s) => s.key);
 
 /**
- * Sections included in "Band View".
+ * Sections included in "Band View" — logistics the band needs, no financial details.
  */
 export const BAND_VIEW_KEYS: SectionKey[] = [
   "contact",
-  "departure",
-  "schedule",
   "venue",
-  "loadIn",
+  "schedule",
   "parking",
-  "hospitality",
-  "wifi",
-  "hotel",
-  "travel",
+  "loadIn",
+  "greenRoom",
+  "venueDetails",
+  "band",
   "guestList",
 ];
+
+/**
+ * Fields hidden per section in band view.
+ * Shared across all output formats (PDF, Slack, Email).
+ */
+const BAND_HIDDEN_FIELDS: Partial<Record<SectionKey, string[]>> = {
+  venueDetails: ["ticket_price"],
+  band: ["support_pay"],
+};
+
+/**
+ * Returns true if the given field should be hidden in band view.
+ * Used by all renderers to ensure consistent field filtering.
+ */
+export function isBandHidden(
+  sectionKey: SectionKey,
+  fieldName: string,
+  bandMode: boolean
+): boolean {
+  if (!bandMode) return false;
+  return BAND_HIDDEN_FIELDS[sectionKey]?.includes(fieldName) ?? false;
+}
+
+/** Helper — non-empty, non-TBD/n/a value */
+function v(f: unknown): boolean {
+  if (f == null) return false;
+  const s = String(f).trim().toLowerCase();
+  return s !== "" && s !== "tbd" && s !== "n/a";
+}
 
 /** Returns true if the section has at least one populated field in the show. */
 export function hasData(
@@ -46,52 +75,45 @@ export function hasData(
 ): boolean {
   switch (key) {
     case "contact":
-      return !!(show.dos_contact_name || show.dos_contact_phone);
+      return v(show.dos_contact_name) || v(show.dos_contact_phone);
     case "venue":
-      return !!(show.venue_address || show.city);
-    case "departure":
-      return !!(show.departure_time || show.departure_location);
+      return v(show.venue_address) || v(show.city);
     case "schedule":
       return !!(show.schedule_entries?.length);
+    case "departure":
+      return v(show.departure_time) || v(show.departure_location);
     case "parking":
-      return !!show.parking_notes?.trim();
+      return v(show.parking_notes);
     case "loadIn":
-      return !!show.load_in_details?.trim();
-    case "backline":
-      return !!show.backline_provided?.trim();
+      return v(show.load_in_details);
     case "greenRoom":
-      return !!show.green_room_info?.trim();
-    case "hospitality":
-      return !!show.hospitality?.trim();
-    case "guestList":
-      return !!show.guest_list_details?.trim();
-    case "wifi":
-      return !!(show.wifi_network || show.wifi_password);
-    case "hotel":
-      return !!(
-        show.hotel_name ||
-        show.hotel_address ||
-        show.hotel_confirmation
-      );
-    case "travel":
-      return !!show.travel_notes?.trim();
+      return v(show.green_room_info);
+    case "venueDetails":
+      return v(show.venue_capacity) || v(show.ticket_price) || v(show.age_restriction);
+    case "band":
+      return v(show.set_length) || v(show.curfew) || v(show.support_act) || v(show.support_pay);
     case "dealTerms":
-      return !!(
-        show.guarantee ||
-        show.ticket_price ||
-        show.venue_capacity ||
-        show.walkout_potential ||
-        show.backend_deal
-      );
+      return v(show.guarantee) || v(show.backend_deal);
+    case "hospitality":
+      return v(show.hospitality);
+    case "guestList":
+      return v(show.guest_list_details);
+    case "projections":
+      return v(show.walkout_potential) || v(show.net_gross);
+    case "wifi":
+      return v(show.wifi_network) || v(show.wifi_password);
+    case "hotel":
+      return v(show.hotel_name) || v(show.hotel_address) || v(show.hotel_confirmation);
+    case "travel":
+      return v(show.travel_notes);
     case "additional":
-      return !!show.additional_info?.trim();
+      return v(show.additional_info) || v(show.merch_split);
   }
 }
 
 /**
  * From the given list of keys, returns a Set containing only the keys
- * that have actual data in the show. Used by preset buttons so empty
- * sections are never pre-selected.
+ * that have actual data in the show.
  */
 export function withData(
   keys: SectionKey[],
