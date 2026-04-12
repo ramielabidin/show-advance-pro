@@ -169,13 +169,13 @@ export default function PasteAdvanceDialog() {
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5">
-          <FileText className="h-4 w-4" />
+         <FileText className="h-4 w-4" />
           Paste Advance
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Import Advance</DialogTitle>
+          <DialogTitle>Paste Advance</DialogTitle>
           <DialogDescription>
             Paste an advance email, venue tech packet, or any text with show info. You can also upload a PDF.
           </DialogDescription>
