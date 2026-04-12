@@ -450,12 +450,71 @@ export default function ShowDetailPage() {
           </Badge>
         )}
 
-        {/* Venue name */}
-        <h1 className="text-xl sm:text-2xl font-display font-bold tracking-tight leading-tight">{show.venue_name}</h1>
+        {/* Venue name — inline editable */}
+        {inlineField === "venue_name" ? (
+          <div ref={inlineRef}>
+            <Input
+              autoFocus
+              value={inlineValue}
+              onChange={(e) => setInlineValue(e.target.value)}
+              onBlur={() => {
+                if (inlineValue.trim() && inlineValue !== show.venue_name) {
+                  updateMutation.mutate({ venue_name: inlineValue.trim() } as any);
+                } else {
+                  setInlineField(null);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  (e.target as HTMLInputElement).blur();
+                } else if (e.key === "Escape") {
+                  setInlineField(null);
+                }
+              }}
+              className="text-xl sm:text-2xl font-display font-bold tracking-tight h-auto py-0.5 px-1 -ml-1"
+            />
+          </div>
+        ) : (
+          <h1
+            className="text-xl sm:text-2xl font-display font-bold tracking-tight leading-tight cursor-pointer hover:text-primary/80 transition-colors"
+            onClick={() => { setInlineField("venue_name"); setInlineValue(show.venue_name); }}
+          >
+            {show.venue_name}
+          </h1>
+        )}
 
         {/* Metadata — date · address */}
         <p className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5">
-          <span>{format(parseISO(show.date), "EEEE, MMMM d, yyyy")}</span>
+          {inlineField === "date" ? (
+            <Input
+              type="date"
+              autoFocus
+              value={inlineValue}
+              onChange={(e) => setInlineValue(e.target.value)}
+              onBlur={() => {
+                if (inlineValue && inlineValue !== show.date) {
+                  updateMutation.mutate({ date: inlineValue } as any);
+                } else {
+                  setInlineField(null);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  (e.target as HTMLInputElement).blur();
+                } else if (e.key === "Escape") {
+                  setInlineField(null);
+                }
+              }}
+              className="h-auto py-0 px-1 text-xs sm:text-sm w-auto inline-block"
+            />
+          ) : (
+            <span
+              className="cursor-pointer hover:text-foreground transition-colors"
+              onClick={() => { setInlineField("date"); setInlineValue(show.date); }}
+            >
+              {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
+            </span>
+          )}
           <span className="text-border">·</span>
           {show.venue_address ? (
             <a
