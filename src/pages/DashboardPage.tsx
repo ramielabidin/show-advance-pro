@@ -37,12 +37,16 @@ export default function DashboardPage() {
   });
 
   const { data: scheduleMap = {} } = useQuery({
-    queryKey: ["schedule-counts"],
+    queryKey: ["schedule-info"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("schedule_entries").select("show_id");
+      const { data, error } = await supabase.from("schedule_entries").select("show_id, label");
       if (error) throw error;
-      const map: Record<string, boolean> = {};
-      data.forEach((e) => (map[e.show_id] = true));
+      const map: Record<string, { hasSchedule: boolean; hasLoadIn: boolean }> = {};
+      data.forEach((e) => {
+        if (!map[e.show_id]) map[e.show_id] = { hasSchedule: false, hasLoadIn: false };
+        map[e.show_id].hasSchedule = true;
+        if (e.label.toLowerCase().includes("load")) map[e.show_id].hasLoadIn = true;
+      });
       return map;
     },
   });
@@ -187,7 +191,7 @@ export default function DashboardPage() {
       {nextShow && (
         <div>
           <h2 className="text-base font-medium mb-3">Next Show</h2>
-          <NextShowCard show={nextShow} hasSchedule={!!scheduleMap[nextShow.id]} />
+          <NextShowCard show={nextShow} hasSchedule={!!scheduleMap[nextShow.id]?.hasSchedule} />
         </div>
       )}
 
@@ -208,7 +212,21 @@ export default function DashboardPage() {
             <CardContent className="pt-4 space-y-1">
               {upcomingAfter.map((show) => {
                 const daysAway = differenceInCalendarDays(parseISO(show.date), today);
-                const isUrgentRow = daysAway >= 0 && daysAway < 7 && !scheduleMap[show.id] && !show.dos_contact_name;
+                const info = scheduleMap[show.id];
+                const hasLoadIn = !!info?.hasLoadIn;
+                const hasDosContact = !!show.dos_contact_name;
+                const advancedCount = (hasLoadIn ? 1 : 0) + (hasDosContact ? 1 : 0);
+                const isWithin7 = daysAway >= 0 && daysAway < 7;
+
+                let dotColor: string | null = null;
+                if (advancedCount === 2) {
+                  dotColor = "bg-green-500";
+                } else if (advancedCount === 1) {
+                  dotColor = isWithin7 ? "bg-red-500" : "bg-amber-400";
+                } else {
+                  dotColor = isWithin7 ? "bg-red-500" : "bg-amber-400";
+                }
+
                 return (
                   <Link
                     key={show.id}
@@ -218,7 +236,7 @@ export default function DashboardPage() {
                     <span
                       className={cn(
                         "text-xs w-16 shrink-0 font-medium",
-                        isUrgentRow ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground",
+                        isWithin7 && advancedCount < 2 ? "text-red-600 dark:text-red-400" : "text-muted-foreground",
                       )}
                     >
                       {format(parseISO(show.date), "MMM d")}
@@ -227,7 +245,8 @@ export default function DashboardPage() {
                       <span className="text-sm font-medium text-foreground truncate">{show.venue_name}</span>
                       <span className="text-xs text-muted-foreground truncate">{formatCityState(show.city)}</span>
                     </div>
-                    {!scheduleMap[show.id] && <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />}
+                    {advancedCount < 2 && <span className={cn("h-2 w-2 rounded-full shrink-0", dotColor)} />}
+                    {advancedCount === 2 && <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" />}
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </Link>
                 );
@@ -252,7 +271,7 @@ export default function DashboardPage() {
           >
             {toursWithUpcoming.map((tour) => {
               const total = tour.shows?.length ?? 0;
-              const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]) >= TOTAL_ADVANCE).length;
+              const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]?.hasSchedule) >= TOTAL_ADVANCE).length;
               const pct = total > 0 ? (advanced / total) * 100 : 0;
               return (
                 <Link key={tour.id} to={`/tours/${tour.id}`} className="w-full block">

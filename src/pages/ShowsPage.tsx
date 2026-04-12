@@ -24,6 +24,21 @@ export default function ShowsPage() {
     },
   });
 
+  const { data: scheduleMap = {} } = useQuery({
+    queryKey: ["schedule-info"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("schedule_entries").select("show_id, label");
+      if (error) throw error;
+      const map: Record<string, { hasSchedule: boolean; hasLoadIn: boolean }> = {};
+      data.forEach((e) => {
+        if (!map[e.show_id]) map[e.show_id] = { hasSchedule: false, hasLoadIn: false };
+        map[e.show_id].hasSchedule = true;
+        if (e.label.toLowerCase().includes("load")) map[e.show_id].hasLoadIn = true;
+      });
+      return map;
+    },
+  });
+
   const upcoming = shows.filter(
     (s) => !isPast(parseISO(s.date)) || isToday(parseISO(s.date))
   );
@@ -87,7 +102,12 @@ export default function ShowsPage() {
       ) : (
         <div className="space-y-2">
           {displayed.map((show) => (
-            <ShowCard key={show.id} show={show} />
+            <ShowCard
+              key={show.id}
+              show={show}
+              hasLoadIn={!!scheduleMap[show.id]?.hasLoadIn}
+              hasDosContact={!!show.dos_contact_name}
+            />
           ))}
         </div>
       )}

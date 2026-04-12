@@ -1,4 +1,4 @@
-import { format, parseISO, isPast, isToday } from "date-fns";
+import { format, parseISO, isPast, isToday, differenceInCalendarDays } from "date-fns";
 import { MapPin, ChevronRight, Sparkles, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn, formatCityState } from "@/lib/utils";
@@ -6,11 +6,29 @@ import type { Show } from "@/lib/types";
 
 interface ShowCardProps {
   show: Show;
+  hasLoadIn?: boolean;
+  hasDosContact?: boolean;
 }
 
-export default function ShowCard({ show }: ShowCardProps) {
+export default function ShowCard({ show, hasLoadIn, hasDosContact }: ShowCardProps) {
   const date = parseISO(show.date);
   const past = isPast(date) && !isToday(date);
+  const daysAway = differenceInCalendarDays(date, new Date());
+  const isUpcoming = !past;
+  const isWithin7 = isUpcoming && daysAway >= 0 && daysAway < 7;
+
+  // Compute dot color only for upcoming shows when advance info is provided
+  let dotColor: string | null = null;
+  if (isUpcoming && hasLoadIn !== undefined) {
+    const advancedCount = (hasLoadIn ? 1 : 0) + (hasDosContact ? 1 : 0);
+    if (advancedCount === 2) {
+      dotColor = "bg-green-500";
+    } else if (advancedCount === 1) {
+      dotColor = isWithin7 ? "bg-red-500" : "bg-amber-400";
+    } else {
+      dotColor = isWithin7 ? "bg-red-500" : "bg-amber-400";
+    }
+  }
 
   return (
     <Link
@@ -52,7 +70,10 @@ export default function ShowCard({ show }: ShowCardProps) {
           </div>
         </div>
       </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 md:transition-opacity shrink-0 ml-2 hidden sm:block" />
+      <div className="flex items-center gap-2 shrink-0 ml-2">
+        {dotColor && <span className={cn("h-2 w-2 rounded-full", dotColor)} />}
+        <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 md:transition-opacity hidden sm:block" />
+      </div>
     </Link>
   );
 }
