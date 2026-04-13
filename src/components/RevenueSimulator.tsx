@@ -93,7 +93,7 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
         {hasBackendCalc
           ? `Calculated from backend deal: ${formatDollar(guarantee)} guarantee vs ${backendPct}% of GBOR`
           : hasGborData
-            ? "GBOR calculated from ticket price × estimated tickets sold"
+            ? `Add a backend % to your deal (e.g. "${formatDollar(guarantee)} vs 70% of GBOR") to project from gross receipts`
             : "Estimate based on linear interpolation between guarantee and walkout potential"}
       </p>
     </div>

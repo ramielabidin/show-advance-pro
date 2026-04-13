@@ -971,7 +971,7 @@ export default function ShowDetailPage() {
               <div>{editField("venue_capacity", "Capacity", { alwaysShow: true })}</div>
               <div>{editField("walkout_potential", "Walkout Potential", { mono: true, alwaysShow: true, currency: true })}</div>
             </div>
-            {editField("backend_deal", "Backend Deal")}
+            {editField("backend_deal", "Backend Deal", { alwaysShow: true })}
             {editField("artist_comps", "Artist Comps")}
           </FieldGroup>
         </>
