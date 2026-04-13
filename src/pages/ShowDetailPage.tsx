@@ -38,6 +38,24 @@ import { normalizeTime } from "@/lib/timeFormat";
 import type { Show } from "@/lib/types";
 import RevenueSimulator, { parseDollar } from "@/components/RevenueSimulator";
 
+/**
+ * Format a raw dollar string for display. Only reformats plain numbers
+ * (e.g. "3000" → "$3,000", "18.50" → "$18.50"). Complex strings like
+ * "$500 vs 80% of gross" are returned unchanged.
+ */
+function formatCurrency(raw: string): string {
+  const stripped = raw.replace(/[\s$,]/g, "");
+  if (!/^\d+(\.\d{1,2})?$/.test(stripped)) return raw;
+  const num = parseFloat(stripped);
+  if (isNaN(num)) return raw;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: num % 1 !== 0 ? 2 : 0,
+  }).format(num);
+}
+
 export default function ShowDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -335,12 +353,13 @@ export default function ShowDetailPage() {
   );
 
   // Renders a field with inline edit support only
-  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; placeholder?: string }) => {
+  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; placeholder?: string; currency?: boolean }) => {
     // Inline editing for this specific field
     if (inlineField === key) {
       const handleBlurSave = () => {
         if (!inlineField) return;
-        const val = inlineTimeFormat.current ? normalizeTime(inlineValue) : inlineValue;
+        let val = inlineTimeFormat.current ? normalizeTime(inlineValue) : inlineValue;
+        if (opts?.currency && val) val = formatCurrency(val);
         updateMutation.mutate({ [inlineField]: val || null } as any);
       };
 
@@ -384,13 +403,15 @@ export default function ShowDetailPage() {
     }
     if (!value) return null;
 
+    const displayValue = opts?.currency ? formatCurrency(value) : value;
+
     // Clickable value to enter inline edit
     return (
       <button
         onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat })}
         className="w-full text-left group"
       >
-        <FieldRow label={label} value={value} mono={opts?.mono} />
+        <FieldRow label={label} value={displayValue} mono={opts?.mono} />
       </button>
     );
   };
@@ -945,10 +966,10 @@ export default function ShowDetailPage() {
           <Separator />
           <FieldGroup title="Deal" incomplete={!show.guarantee && !show.backend_deal && !show.ticket_price && !show.venue_capacity && !show.walkout_potential && !show.artist_comps}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-              <div>{editField("guarantee", "Guarantee", { mono: true, alwaysShow: true })}</div>
-              <div>{editField("ticket_price", "Ticket Price", { mono: true, alwaysShow: true })}</div>
+              <div>{editField("guarantee", "Guarantee", { mono: true, alwaysShow: true, currency: true })}</div>
+              <div>{editField("ticket_price", "Ticket Price", { mono: true, alwaysShow: true, currency: true })}</div>
               <div>{editField("venue_capacity", "Capacity", { alwaysShow: true })}</div>
-              <div>{editField("walkout_potential", "Walkout Potential", { mono: true, alwaysShow: true })}</div>
+              <div>{editField("walkout_potential", "Walkout Potential", { mono: true, alwaysShow: true, currency: true })}</div>
             </div>
             {editField("backend_deal", "Backend Deal")}
             {editField("artist_comps", "Artist Comps")}
