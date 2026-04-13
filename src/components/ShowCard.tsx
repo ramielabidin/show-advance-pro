@@ -1,5 +1,5 @@
 import { format, parseISO, isPast, isToday, differenceInCalendarDays } from "date-fns";
-import { MapPin, ChevronRight, Sparkles, CheckCircle2 } from "lucide-react";
+import { MapPin, ChevronRight, Sparkles, CheckCircle2, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn, formatCityState } from "@/lib/utils";
 import type { Show } from "@/lib/types";
@@ -8,9 +8,10 @@ interface ShowCardProps {
   show: Show;
   hasLoadIn?: boolean;
   hasDosContact?: boolean;
+  onDelete?: () => void;
 }
 
-export default function ShowCard({ show, hasLoadIn, hasDosContact }: ShowCardProps) {
+export default function ShowCard({ show, hasLoadIn, hasDosContact, onDelete }: ShowCardProps) {
   const date = parseISO(show.date);
   const past = isPast(date) && !isToday(date);
   const daysAway = differenceInCalendarDays(date, new Date());
@@ -72,6 +73,19 @@ export default function ShowCard({ show, hasLoadIn, hasDosContact }: ShowCardPro
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
         {dotColor && <span className={cn("h-2 w-2 rounded-full", dotColor)} />}
+        {onDelete && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-1.5 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all"
+            aria-label="Delete show"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
         <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 md:transition-opacity hidden sm:block" />
       </div>
     </Link>

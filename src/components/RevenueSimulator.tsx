@@ -11,14 +11,11 @@ interface RevenueSimulatorProps {
 
 function parseDollar(val: string | null | undefined): number | null {
   if (!val) return null;
-  // Handle slash-separated values like "$20/$25/$30" by averaging
+  // Handle slash-separated values like "$20/$25/$30" — use the first number
   if (val.includes("/")) {
-    const parts = val.split("/").map((p) => {
-      const n = parseFloat(p.replace(/[^0-9.\-]/g, ""));
-      return isNaN(n) ? null : n;
-    }).filter((n): n is number => n !== null);
-    if (parts.length === 0) return null;
-    return parts.reduce((a, b) => a + b, 0) / parts.length;
+    const first = val.split("/")[0];
+    const n = parseFloat(first.replace(/[^0-9.\-]/g, ""));
+    return isNaN(n) ? null : n;
   }
   const num = parseFloat(val.replace(/[^0-9.\-]/g, ""));
   return isNaN(num) ? null : num;

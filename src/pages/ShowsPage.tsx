@@ -1,16 +1,44 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isPast, isToday, parseISO } from "date-fns";
 import { Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import ShowCard from "@/components/ShowCard";
 import CreateShowDialog from "@/components/CreateShowDialog";
 import PasteAdvanceDialog from "@/components/PasteAdvanceDialog";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
 import EmptyState from "@/components/EmptyState";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function ShowsPage() {
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("shows").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Show deleted");
+      queryClient.invalidateQueries({ queryKey: ["shows"] });
+      queryClient.invalidateQueries({ queryKey: ["schedule-info"] });
+    },
+    onError: (err: Error) => {
+      toast.error("Failed to delete show: " + err.message);
+    },
+  });
 
   const { data: shows = [], isLoading } = useQuery({
     queryKey: ["shows"],
@@ -107,10 +135,34 @@ export default function ShowsPage() {
               show={show}
               hasLoadIn={!!scheduleMap[show.id]?.hasLoadIn}
               hasDosContact={!!show.dos_contact_name}
+              onDelete={() => setPendingDeleteId(show.id)}
             />
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this show?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the show and all associated schedule entries. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingDeleteId) deleteMutation.mutate(pendingDeleteId);
+                setPendingDeleteId(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
