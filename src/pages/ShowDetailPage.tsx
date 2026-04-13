@@ -983,7 +983,9 @@ export default function ShowDetailPage() {
           const wp = parseDollar(show.walkout_potential);
           const tp = parseDollar(show.ticket_price);
           const g = parseDollar(show.guarantee) ?? 0;
-          const cap = show.venue_capacity ? parseInt(show.venue_capacity.replace(/[^0-9]/g, ""), 10) : null;
+          // Strip commas only (not dots), so parseInt naturally truncates at the decimal point
+          // e.g. "430.0" → parseInt → 430, not 4300
+          const cap = show.venue_capacity ? parseInt(show.venue_capacity.replace(/,/g, ""), 10) : null;
           const validCap = cap != null && !isNaN(cap) ? cap : null;
           const canSimulate = wp !== null || (tp != null && tp > 0 && validCap != null);
           if (g === 0 && !canSimulate) return null;
