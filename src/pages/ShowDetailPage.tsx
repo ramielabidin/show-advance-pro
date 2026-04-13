@@ -93,7 +93,8 @@ export default function ShowDetailPage() {
     dealType: "vs" | "plus";
     tier2Pct: string;
     tier2Threshold: string;
-  }>({ pct: "", basis: "GBOR", dealType: "vs", tier2Pct: "", tier2Threshold: "" });
+    showTierRow: boolean;
+  }>({ pct: "", basis: "GBOR", dealType: "vs", tier2Pct: "", tier2Threshold: "", showTierRow: false });
 
   const { data: show, isLoading } = useQuery({
     queryKey: ["show", id],
@@ -357,7 +358,7 @@ export default function ShowDetailPage() {
     const tierMatch = raw.match(/then\s+(\d{1,3}(?:\.\d+)?)\s*%\s+above\s+(\d+)\s*tickets?/i);
     const tier2Pct = tierMatch ? tierMatch[1] : "";
     const tier2Threshold = tierMatch ? tierMatch[2] : "";
-    setBackendDealForm({ pct, basis, dealType, tier2Pct, tier2Threshold });
+    setBackendDealForm({ pct, basis, dealType, tier2Pct, tier2Threshold, showTierRow: !!tierMatch });
     setInlineField("backend_deal");
   };
 
@@ -1017,7 +1018,7 @@ export default function ShowDetailPage() {
             </div>
             {(() => {
               if (inlineField === "backend_deal") {
-                const hasTier = backendDealForm.tier2Pct.trim() !== "" || backendDealForm.tier2Threshold.trim() !== "";
+                const hasTier = backendDealForm.showTierRow;
                 return (
                   <div ref={inlineRef} className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Backend Deal</Label>
@@ -1105,7 +1106,7 @@ export default function ShowDetailPage() {
                         <span>tickets</span>
                         <button
                           type="button"
-                          onClick={() => setBackendDealForm(p => ({ ...p, tier2Pct: "", tier2Threshold: "" }))}
+                          onClick={() => setBackendDealForm(p => ({ ...p, tier2Pct: "", tier2Threshold: "", showTierRow: false }))}
                           className="text-xs text-muted-foreground hover:text-destructive ml-1"
                         >
                           Remove
@@ -1114,7 +1115,7 @@ export default function ShowDetailPage() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => setBackendDealForm(p => ({ ...p, tier2Pct: " ", tier2Threshold: "" }))}
+                        onClick={() => setBackendDealForm(p => ({ ...p, showTierRow: true }))}
                         className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
                       >
                         + Add escalating tier
