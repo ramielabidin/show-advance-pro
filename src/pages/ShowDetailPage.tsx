@@ -983,18 +983,25 @@ export default function ShowDetailPage() {
           const g = parseDollar(show.guarantee) ?? 0;
           const cap = show.venue_capacity ? parseInt(show.venue_capacity.replace(/[^0-9]/g, ""), 10) : null;
           const validCap = cap != null && !isNaN(cap) ? cap : null;
-          if (wp === null && !(tp != null && tp > 0 && validCap != null)) return null;
+          const canSimulate = wp !== null || (tp != null && tp > 0 && validCap != null);
+          if (g === 0 && !canSimulate) return null;
           return (
             <>
               <Separator />
               <FieldGroup title="Revenue Simulator">
-                <RevenueSimulator
-                  guarantee={g}
-                  walkoutPotential={wp ?? 0}
-                  venueCapacity={validCap}
-                  ticketPrice={tp}
-                  backendDeal={show.backend_deal}
-                />
+                {canSimulate ? (
+                  <RevenueSimulator
+                    guarantee={g}
+                    walkoutPotential={wp ?? 0}
+                    venueCapacity={validCap}
+                    ticketPrice={tp}
+                    backendDeal={show.backend_deal}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Add a <span className="font-medium text-foreground">walkout potential</span> or both <span className="font-medium text-foreground">ticket price</span> and <span className="font-medium text-foreground">capacity</span> to simulate projected revenue.
+                  </p>
+                )}
               </FieldGroup>
             </>
           );
