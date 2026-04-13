@@ -116,7 +116,7 @@ Key rules:
                 backline_provided: { type: "string", description: "Backline/gear provided by the venue" },
                 changeover_time: { type: "string", description: "Changeover time between acts, e.g. '20 min'" },
                 venue_capacity: { type: "string", description: "Venue capacity" },
-                ticket_price: { type: "string", description: "Ticket price" },
+                ticket_price: { type: "string", description: "Ticket price. If multiple tiers exist (e.g. presale/advance/door), preserve them with slash separators exactly as written, e.g. '$18/$20/$25'. Do NOT concatenate digits or omit the slashes." },
                 guarantee: { type: "string", description: "Guarantee amount" },
                 backend_deal: { type: "string", description: "Backend deal terms" },
                 hospitality: { type: "string", description: "Hospitality / rider details" },
