@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Save, UserPlus, Trash2, Crown, Plus, Pencil, X, Users } from "lucide-react";
+import { Save, UserPlus, Trash2, Crown, Plus, Pencil, X, Users, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
 import { useAuth } from "@/components/AuthProvider";
@@ -41,17 +41,17 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const { team, teamId, isOwner } = useTeam();
   const { session } = useAuth();
-  const [webhookUrl, setWebhookUrl] = useState("");
   const [homeBaseCity, setHomeBaseCity] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [connectingSlack, setConnectingSlack] = useState(false);
 
   // Touring party state
   const [partyDialogOpen, setPartyDialogOpen] = useState(false);
   const [partyEditingId, setPartyEditingId] = useState<string | null>(null);
   const [partyForm, setPartyForm] = useState<PartyMemberForm>(emptyPartyForm);
 
-  // ── App Settings (Slack) ──
-  const { isLoading: settingsLoading } = useQuery({
+  // ── App Settings ──
+  const { isLoading: settingsLoading, data: appSettings } = useQuery({
     queryKey: ["app-settings", teamId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -61,12 +61,26 @@ export default function SettingsPage() {
         .limit(1)
         .single();
       if (error && error.code !== "PGRST116") throw error;
-      setWebhookUrl(data?.slack_webhook_url ?? "");
       setHomeBaseCity(data?.home_base_city ?? "");
       return data;
     },
     enabled: !!teamId,
   });
+
+  // Detect OAuth redirect result (?slack=connected|error|denied)
+  useEffect(() => {
+    const result = new URLSearchParams(window.location.search).get("slack");
+    if (result === "connected") toast.success("Slack connected successfully!");
+    else if (result === "error") toast.error("Slack connection failed. Please try again.");
+    else if (result === "denied") toast.info("Slack connection was cancelled.");
+    if (result) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("slack");
+      window.history.replaceState({}, "", url.toString());
+      queryClient.invalidateQueries({ queryKey: ["app-settings", teamId] });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -76,10 +90,7 @@ export default function SettingsPage() {
         .eq("team_id", teamId!)
         .limit(1)
         .single();
-      const payload = {
-        slack_webhook_url: webhookUrl || null,
-        home_base_city: homeBaseCity.trim() || null,
-      };
+      const payload = { home_base_city: homeBaseCity.trim() || null };
       if (!existing) {
         const { error } = await supabase
           .from("app_settings")
@@ -98,6 +109,40 @@ export default function SettingsPage() {
       toast.success("Settings saved");
     },
     onError: () => toast.error("Failed to save settings"),
+  });
+
+  const handleConnectSlack = async () => {
+    setConnectingSlack(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("slack-oauth-initiate");
+      if (error || !data?.authorizationUrl) throw error ?? new Error("No authorization URL returned");
+      window.location.href = data.authorizationUrl;
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to start Slack connection");
+      setConnectingSlack(false);
+    }
+  };
+
+  const disconnectSlackMutation = useMutation({
+    mutationFn: async () => {
+      const { data: existing } = await supabase
+        .from("app_settings")
+        .select("id")
+        .eq("team_id", teamId!)
+        .limit(1)
+        .single();
+      if (!existing) return;
+      const { error } = await supabase
+        .from("app_settings")
+        .update({ slack_webhook_url: null, slack_channel_name: null, slack_team_name: null })
+        .eq("id", existing.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["app-settings", teamId] });
+      toast.success("Slack disconnected");
+    },
+    onError: () => toast.error("Failed to disconnect Slack"),
   });
 
   // ── Touring Party ──
@@ -269,32 +314,67 @@ export default function SettingsPage() {
 
       {/* ── App Settings (full width) ── */}
       <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-6">
+        {/* Slack Integration */}
         <div>
           <h2 className="font-medium text-foreground mb-1">Slack Integration</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            Add a Slack Incoming Webhook URL to push day sheets to your channel.{" "}
-            <a
-              href="https://api.slack.com/messaging/webhooks"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-foreground"
-            >
-              How to create a webhook
-            </a>
+            Connect your Slack workspace to push day sheets directly to a channel.
           </p>
-          <div className="space-y-2">
-            <Label htmlFor="webhook">Webhook URL</Label>
-            <Input
-              id="webhook"
-              value={webhookUrl}
-              onChange={(e) => setWebhookUrl(e.target.value)}
-              placeholder="https://hooks.slack.com/services/T00/B00/xxx"
-              className="font-mono text-sm h-11 sm:h-9"
-              disabled={settingsLoading}
-            />
-          </div>
+          {settingsLoading ? (
+            <div className="h-10 rounded-md bg-muted animate-pulse" />
+          ) : appSettings?.slack_webhook_url ? (
+            <div className="flex items-center justify-between rounded-md border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20 px-3 py-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground leading-tight">
+                    {appSettings.slack_channel_name ?? "Slack"} connected
+                  </p>
+                  {appSettings.slack_team_name && (
+                    <p className="text-xs text-muted-foreground">{appSettings.slack_team_name}</p>
+                  )}
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                disabled={disconnectSlackMutation.isPending}
+                onClick={() => {
+                  if (confirm("Disconnect Slack? Day sheets can no longer be pushed until you reconnect.")) {
+                    disconnectSlackMutation.mutate();
+                  }
+                }}
+              >
+                {disconnectSlackMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  "Disconnect"
+                )}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              onClick={handleConnectSlack}
+              disabled={connectingSlack || !teamId}
+              className="gap-2 h-11 sm:h-9"
+              style={{ backgroundColor: "#4A154B" }}
+            >
+              {connectingSlack ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                  <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
+                </svg>
+              )}
+              {connectingSlack ? "Connecting…" : "Connect Slack"}
+            </Button>
+          )}
         </div>
+
         <Separator />
+
+        {/* Home Base City */}
         <div>
           <h2 className="font-medium text-foreground mb-1">Home Base City</h2>
           <p className="text-sm text-muted-foreground mb-4">
