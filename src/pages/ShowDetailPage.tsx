@@ -86,6 +86,12 @@ export default function ShowDetailPage() {
   // Hotel group form state
   const [hotelForm, setHotelForm] = useState<Record<string, string>>({});
 
+  // Backend deal structured form state
+  const [backendDealForm, setBackendDealForm] = useState<{ pct: string; basis: "GBOR" | "NBOR" }>({
+    pct: "",
+    basis: "GBOR",
+  });
+
   const { data: show, isLoading } = useQuery({
     queryKey: ["show", id],
     queryFn: async () => {
@@ -336,6 +342,26 @@ export default function ShowDetailPage() {
       hotel_checkin: hotelForm.hotel_checkin || null,
       hotel_checkout: hotelForm.hotel_checkout || null,
     } as any);
+  };
+
+  // --- Backend deal structured inline edit ---
+  const startBackendDealEdit = () => {
+    const raw = show.backend_deal ?? "";
+    const pctMatch = raw.match(/(\d{1,3}(?:\.\d+)?)\s*%/);
+    const pct = pctMatch ? pctMatch[1] : "";
+    const basis: "GBOR" | "NBOR" = /NBOR/i.test(raw) ? "NBOR" : "GBOR";
+    setBackendDealForm({ pct, basis });
+    setInlineField("backend_deal");
+  };
+
+  const saveBackendDeal = () => {
+    const pctNum = parseFloat(backendDealForm.pct);
+    if (!backendDealForm.pct || isNaN(pctNum)) {
+      updateMutation.mutate({ backend_deal: null } as any);
+      return;
+    }
+    const pctStr = pctNum % 1 === 0 ? String(Math.round(pctNum)) : String(pctNum);
+    updateMutation.mutate({ backend_deal: `${pctStr}% of ${backendDealForm.basis}` } as any);
   };
 
   const scheduleEntries = show.schedule_entries?.sort((a, b) => a.sort_order - b.sort_order) ?? [];
@@ -973,7 +999,61 @@ export default function ShowDetailPage() {
               <div>{editField("venue_capacity", "Capacity", { alwaysShow: true })}</div>
               <div>{editField("walkout_potential", "Walkout Potential", { mono: true, alwaysShow: true, currency: true })}</div>
             </div>
-            {editField("backend_deal", "Backend Deal", { alwaysShow: true, placeholder: "e.g. 70% of GBOR after expenses" })}
+            {(() => {
+              if (inlineField === "backend_deal") {
+                return (
+                  <div ref={inlineRef} className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Backend Deal</Label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          step={0.5}
+                          value={backendDealForm.pct}
+                          onChange={(e) => setBackendDealForm(p => ({ ...p, pct: e.target.value }))}
+                          className="text-sm h-9 w-20 font-mono text-right ring-2 ring-ring ring-offset-1 ring-offset-background"
+                          placeholder="70"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); saveBackendDeal(); }
+                            if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
+                          }}
+                        />
+                        <span className="text-sm text-muted-foreground">% of</span>
+                      </div>
+                      <div className="flex rounded-md border border-input overflow-hidden text-sm">
+                        {(["GBOR", "NBOR"] as const).map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setBackendDealForm(p => ({ ...p, basis: opt }))}
+                            className={cn(
+                              "px-3 py-1.5 font-medium transition-colors",
+                              backendDealForm.basis === opt
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-background text-muted-foreground hover:bg-muted"
+                            )}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <InlineActions onSave={saveBackendDeal} onCancel={cancelInline} />
+                  </div>
+                );
+              }
+              if (show.backend_deal) {
+                return (
+                  <button onClick={startBackendDealEdit} className="w-full text-left group">
+                    <FieldRow label="Backend Deal" value={show.backend_deal} />
+                  </button>
+                );
+              }
+              return <EmptyFieldPrompt label="backend deal" onClick={startBackendDealEdit} />;
+            })()}
             {editField("artist_comps", "Artist Comps")}
           </FieldGroup>
         </>
