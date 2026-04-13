@@ -46,6 +46,23 @@ function parseBackendBasis(deal: string | null | undefined): "NBOR" | "GBOR" | "
   return "gross";
 }
 
+/** Detect vs/plus deal type from stored string */
+export function parseBackendType(deal: string | null | undefined): "vs" | "plus" {
+  if (!deal) return "vs";
+  return /\(plus\)/i.test(deal) ? "plus" : "vs";
+}
+
+/** Extract second-tier escalation or null */
+export function parseTieredDeal(deal: string | null | undefined): { tier2Pct: number; tier2Threshold: number } | null {
+  if (!deal) return null;
+  const m = deal.match(/then\s+(\d{1,3}(?:\.\d+)?)\s*%\s+above\s+(\d+)\s*tickets?/i);
+  if (!m) return null;
+  const tier2Pct = parseFloat(m[1]);
+  const tier2Threshold = parseInt(m[2], 10);
+  if (isNaN(tier2Pct) || isNaN(tier2Threshold)) return null;
+  return { tier2Pct, tier2Threshold };
+}
+
 export { parseDollar, formatDollar, parseBackendPct };
 
 export default function RevenueSimulator({ guarantee, walkoutPotential, venueCapacity, ticketPrice, backendDeal }: RevenueSimulatorProps) {
@@ -54,15 +71,31 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
   const ticketCount = venueCapacity ? Math.round(venueCapacity * (pct / 100)) : null;
   const backendPct = parseBackendPct(backendDeal);
   const backendBasis = parseBackendBasis(backendDeal);
+  const dealType = parseBackendType(backendDeal);
+  const tieredDeal = parseTieredDeal(backendDeal);
 
   // Smart calculation when we have ticket price + capacity
   const hasGborData = ticketPrice != null && ticketPrice > 0 && ticketCount != null;
   const gbor = hasGborData ? ticketCount * ticketPrice : null;
 
   // When we have GBOR + backend deal percentage, calculate artist take
-  const hasBackendCalc = gbor != null && backendPct != null;
-  const backendTake = hasBackendCalc ? gbor * (backendPct / 100) : null;
-  const artistTake = hasBackendCalc ? Math.max(guarantee, backendTake!) : null;
+  let backendTake: number | null = null;
+  if (hasGborData && backendPct != null) {
+    if (tieredDeal) {
+      const tier1Count = Math.min(ticketCount!, tieredDeal.tier2Threshold);
+      const tier2Count = Math.max(0, ticketCount! - tieredDeal.tier2Threshold);
+      backendTake = (tier1Count * ticketPrice! * (backendPct / 100))
+                  + (tier2Count * ticketPrice! * (tieredDeal.tier2Pct / 100));
+    } else {
+      backendTake = gbor! * (backendPct / 100);
+    }
+  }
+  const hasBackendCalc = backendTake != null;
+  const artistTake = hasBackendCalc
+    ? dealType === "plus"
+      ? guarantee + backendTake!
+      : Math.max(guarantee, backendTake!)
+    : null;
 
   // Fallback: linear interpolation between guarantee and walkout
   const interpolated = guarantee + (walkoutPotential - guarantee) * (pct / 100);
@@ -91,9 +124,24 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
       {hasGborData && (
         <div className="space-y-1 text-sm text-muted-foreground font-mono">
           <p>~{ticketCount!.toLocaleString()} tickets × {formatDollar(ticketPrice!)} = {formatDollar(gbor!)} GBOR</p>
-          {hasBackendCalc && (
+          {hasBackendCalc && tieredDeal && (
             <p>
-              Artist take: max({formatDollar(guarantee)} guarantee, {backendPct}% × {formatDollar(gbor!)}) = {formatDollar(artistTake!)}
+              Tier 1: {Math.min(ticketCount!, tieredDeal.tier2Threshold).toLocaleString()} tickets × {backendPct}% = {formatDollar((Math.min(ticketCount!, tieredDeal.tier2Threshold)) * ticketPrice! * (backendPct! / 100))}
+              {ticketCount! > tieredDeal.tier2Threshold && ` + Tier 2: ${Math.max(0, ticketCount! - tieredDeal.tier2Threshold).toLocaleString()} tickets × ${tieredDeal.tier2Pct}% = ${formatDollar(Math.max(0, ticketCount! - tieredDeal.tier2Threshold) * ticketPrice! * (tieredDeal.tier2Pct / 100))}`}
+            </p>
+          )}
+          {hasBackendCalc && !tieredDeal && (
+            <p>
+              {dealType === "plus"
+                ? `Artist take: ${formatDollar(guarantee)} guarantee + ${backendPct}% × ${formatDollar(gbor!)} = ${formatDollar(artistTake!)}`
+                : `Artist take: max(${formatDollar(guarantee)} guarantee, ${backendPct}% × ${formatDollar(gbor!)}) = ${formatDollar(artistTake!)}`}
+            </p>
+          )}
+          {hasBackendCalc && tieredDeal && (
+            <p>
+              {dealType === "plus"
+                ? `Artist take: ${formatDollar(guarantee)} guarantee + ${formatDollar(backendTake!)} backend = ${formatDollar(artistTake!)}`
+                : `Artist take: max(${formatDollar(guarantee)} guarantee, ${formatDollar(backendTake!)} backend) = ${formatDollar(artistTake!)}`}
             </p>
           )}
         </div>
@@ -113,7 +161,9 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
             ? `GBOR calc (${formatDollar(rawProjected)}) exceeds walkout potential — capped at ${formatDollar(walkoutPotential)}. Likely due to ${backendBasis === "NBOR" ? "venue expenses not factored in" : "deal terms reducing net payout"}.`
             : backendBasis === "NBOR"
               ? `Using GBOR as an approximation for NBOR — venue expenses not factored in`
-              : `${backendPct}% of GBOR vs ${formatDollar(guarantee)} guarantee`
+              : dealType === "plus"
+                ? `${formatDollar(guarantee)} guarantee + ${backendPct}% of GBOR`
+                : `${backendPct}% of GBOR vs ${formatDollar(guarantee)} guarantee`
           : hasGborData
             ? `Add a backend deal % (e.g. "70% of GBOR") to project from gross receipts — you don't need to repeat the guarantee here`
             : "Estimate based on linear interpolation between guarantee and walkout potential"}

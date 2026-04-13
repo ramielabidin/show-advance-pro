@@ -87,10 +87,13 @@ export default function ShowDetailPage() {
   const [hotelForm, setHotelForm] = useState<Record<string, string>>({});
 
   // Backend deal structured form state
-  const [backendDealForm, setBackendDealForm] = useState<{ pct: string; basis: "GBOR" | "NBOR" }>({
-    pct: "",
-    basis: "GBOR",
-  });
+  const [backendDealForm, setBackendDealForm] = useState<{
+    pct: string;
+    basis: "GBOR" | "NBOR";
+    dealType: "vs" | "plus";
+    tier2Pct: string;
+    tier2Threshold: string;
+  }>({ pct: "", basis: "GBOR", dealType: "vs", tier2Pct: "", tier2Threshold: "" });
 
   const { data: show, isLoading } = useQuery({
     queryKey: ["show", id],
@@ -350,7 +353,11 @@ export default function ShowDetailPage() {
     const pctMatch = raw.match(/(\d{1,3}(?:\.\d+)?)\s*%/);
     const pct = pctMatch ? pctMatch[1] : "";
     const basis: "GBOR" | "NBOR" = /NBOR/i.test(raw) ? "NBOR" : "GBOR";
-    setBackendDealForm({ pct, basis });
+    const dealType: "vs" | "plus" = /\(plus\)/i.test(raw) ? "plus" : "vs";
+    const tierMatch = raw.match(/then\s+(\d{1,3}(?:\.\d+)?)\s*%\s+above\s+(\d+)\s*tickets?/i);
+    const tier2Pct = tierMatch ? tierMatch[1] : "";
+    const tier2Threshold = tierMatch ? tierMatch[2] : "";
+    setBackendDealForm({ pct, basis, dealType, tier2Pct, tier2Threshold });
     setInlineField("backend_deal");
   };
 
@@ -361,7 +368,16 @@ export default function ShowDetailPage() {
       return;
     }
     const pctStr = pctNum % 1 === 0 ? String(Math.round(pctNum)) : String(pctNum);
-    updateMutation.mutate({ backend_deal: `${pctStr}% of ${backendDealForm.basis}` } as any);
+    const plusTag = backendDealForm.dealType === "plus" ? " (plus)" : "";
+    let deal = `${pctStr}% of ${backendDealForm.basis}${plusTag}`;
+    const tier2Num = parseFloat(backendDealForm.tier2Pct);
+    const thresholdNum = parseInt(backendDealForm.tier2Threshold, 10);
+    if (!isNaN(tier2Num) && backendDealForm.tier2Pct.trim() !== "" &&
+        !isNaN(thresholdNum) && backendDealForm.tier2Threshold.trim() !== "") {
+      const t2Str = tier2Num % 1 === 0 ? String(Math.round(tier2Num)) : String(tier2Num);
+      deal += `, then ${t2Str}% above ${thresholdNum} tickets`;
+    }
+    updateMutation.mutate({ backend_deal: deal } as any);
   };
 
   const scheduleEntries = show.schedule_entries?.sort((a, b) => a.sort_order - b.sort_order) ?? [];
@@ -1001,9 +1017,12 @@ export default function ShowDetailPage() {
             </div>
             {(() => {
               if (inlineField === "backend_deal") {
+                const hasTier = backendDealForm.tier2Pct.trim() !== "" || backendDealForm.tier2Threshold.trim() !== "";
                 return (
                   <div ref={inlineRef} className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Backend Deal</Label>
+
+                    {/* Row 1: percentage + GBOR/NBOR + vs/plus */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <div className="flex items-center gap-1.5">
                         <Input
@@ -1040,7 +1059,68 @@ export default function ShowDetailPage() {
                           </button>
                         ))}
                       </div>
+                      <div className="flex rounded-md border border-input overflow-hidden text-sm">
+                        {(["vs", "plus"] as const).map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setBackendDealForm(p => ({ ...p, dealType: opt }))}
+                            className={cn(
+                              "px-3 py-1.5 font-medium transition-colors",
+                              backendDealForm.dealType === opt
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-background text-muted-foreground hover:bg-muted"
+                            )}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
                     </div>
+
+                    {/* Row 2: optional escalating tier */}
+                    {hasTier ? (
+                      <div className="flex items-center gap-1.5 flex-wrap text-sm text-muted-foreground">
+                        <span>then</span>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          step={0.5}
+                          value={backendDealForm.tier2Pct}
+                          onChange={(e) => setBackendDealForm(p => ({ ...p, tier2Pct: e.target.value }))}
+                          className="text-sm h-8 w-16 font-mono text-right"
+                          placeholder="75"
+                        />
+                        <span>% above</span>
+                        <Input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={backendDealForm.tier2Threshold}
+                          onChange={(e) => setBackendDealForm(p => ({ ...p, tier2Threshold: e.target.value }))}
+                          className="text-sm h-8 w-24 font-mono text-right"
+                          placeholder="200"
+                        />
+                        <span>tickets</span>
+                        <button
+                          type="button"
+                          onClick={() => setBackendDealForm(p => ({ ...p, tier2Pct: "", tier2Threshold: "" }))}
+                          className="text-xs text-muted-foreground hover:text-destructive ml-1"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setBackendDealForm(p => ({ ...p, tier2Pct: " ", tier2Threshold: "" }))}
+                        className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                      >
+                        + Add escalating tier
+                      </button>
+                    )}
+
                     <InlineActions onSave={saveBackendDeal} onCancel={cancelInline} />
                   </div>
                 );
