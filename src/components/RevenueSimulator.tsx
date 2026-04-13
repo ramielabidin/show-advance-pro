@@ -34,6 +34,18 @@ function parseBackendPct(deal: string | null | undefined): number | null {
   return pct > 0 && pct <= 100 ? pct : null;
 }
 
+/**
+ * Detect whether the deal references NBOR (net) or GBOR/gross.
+ * NBOR deals deduct venue expenses before the % applies; since we don't
+ * have expense data we apply the % to GBOR and flag it as an approximation.
+ */
+function parseBackendBasis(deal: string | null | undefined): "NBOR" | "GBOR" | "gross" {
+  if (!deal) return "gross";
+  if (/NBOR/i.test(deal)) return "NBOR";
+  if (/GBOR/i.test(deal)) return "GBOR";
+  return "gross";
+}
+
 export { parseDollar, formatDollar, parseBackendPct };
 
 export default function RevenueSimulator({ guarantee, walkoutPotential, venueCapacity, ticketPrice, backendDeal }: RevenueSimulatorProps) {
@@ -41,6 +53,7 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
 
   const ticketCount = venueCapacity ? Math.round(venueCapacity * (pct / 100)) : null;
   const backendPct = parseBackendPct(backendDeal);
+  const backendBasis = parseBackendBasis(backendDeal);
 
   // Smart calculation when we have ticket price + capacity
   const hasGborData = ticketPrice != null && ticketPrice > 0 && ticketCount != null;
@@ -91,9 +104,11 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
 
       <p className="text-xs text-muted-foreground">
         {hasBackendCalc
-          ? `Calculated from backend deal: ${formatDollar(guarantee)} guarantee vs ${backendPct}% of GBOR`
+          ? backendBasis === "NBOR"
+            ? `Using GBOR as an approximation for NBOR — venue expenses not factored in`
+            : `${backendPct}% of GBOR vs ${formatDollar(guarantee)} guarantee`
           : hasGborData
-            ? `Add a backend % to your deal (e.g. "${formatDollar(guarantee)} vs 70% of GBOR") to project from gross receipts`
+            ? `Add a backend deal % (e.g. "70% of GBOR") to project from gross receipts — you don't need to repeat the guarantee here`
             : "Estimate based on linear interpolation between guarantee and walkout potential"}
       </p>
     </div>
