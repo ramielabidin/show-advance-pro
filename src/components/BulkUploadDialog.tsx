@@ -100,7 +100,41 @@ function cleanFinancialField(val: string | undefined): string | null {
   return cleaned;
 }
 
-/** Remap parsed row keys using CSV_COLUMN_MAP so validation/import use canonical names */
+/**
+ * Normalize a backend deal string from a spreadsheet into the canonical format
+ * our parsers expect: "{pct}% of {GBOR|NBOR}" or "{pct}% of {GBOR|NBOR} (plus)"
+ * optionally followed by ", then {pct2}% above {N} tickets".
+ *
+ * If no percentage is found the raw string is returned unchanged so free-text
+ * notes like "see contract" are preserved.
+ */
+function normalizeBackendDeal(raw: string): string {
+  const pctMatch = raw.match(/(\d{1,3}(?:\.\d+)?)\s*%/);
+  if (!pctMatch) return raw;
+
+  const pct = parseFloat(pctMatch[1]);
+  const pctStr = pct % 1 === 0 ? String(Math.round(pct)) : String(pct);
+  const basis = /NBOR/i.test(raw) ? "NBOR" : "GBOR";
+
+  // Detect "plus" in any of its common spreadsheet spellings
+  const isPlus = /\(plus\)/i.test(raw) || /(^|[\s+&,])plus($|[\s,])/i.test(raw);
+  const plusTag = isPlus ? " (plus)" : "";
+
+  // Preserve a second tier if it's already in the canonical format
+  const tierMatch = raw.match(/then\s+(\d{1,3}(?:\.\d+)?)\s*%\s+above\s+(\d+)\s*tickets?/i);
+  let deal = `${pctStr}% of ${basis}${plusTag}`;
+  if (tierMatch) {
+    const t2Pct = parseFloat(tierMatch[1]);
+    const t2Thresh = parseInt(tierMatch[2], 10);
+    if (!isNaN(t2Pct) && !isNaN(t2Thresh)) {
+      const t2Str = t2Pct % 1 === 0 ? String(Math.round(t2Pct)) : String(t2Pct);
+      deal += `, then ${t2Str}% above ${t2Thresh} tickets`;
+    }
+  }
+  return deal;
+}
+
+
 function normalizeRow(raw: ParsedRow): ParsedRow {
   const out: ParsedRow = {};
   for (const [key, value] of Object.entries(raw)) {
@@ -254,7 +288,13 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
         for (const [csvKey, dbCol] of Object.entries(CSV_COLUMN_MAP)) {
           const raw = r.data[csvKey]?.trim();
           if (!raw) continue;
-          extras[dbCol] = FINANCIAL_FIELDS.has(dbCol) ? cleanFinancialField(raw) : raw;
+          if (FINANCIAL_FIELDS.has(dbCol)) {
+            extras[dbCol] = cleanFinancialField(raw);
+          } else if (dbCol === "backend_deal") {
+            extras[dbCol] = normalizeBackendDeal(raw);
+          } else {
+            extras[dbCol] = raw;
+          }
         }
 
         return {
