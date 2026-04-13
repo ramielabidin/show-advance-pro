@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save, UserPlus, Trash2, Crown, Plus, Pencil, X, Users, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +42,11 @@ export default function SettingsPage() {
   const { team, teamId, isOwner } = useTeam();
   const { session } = useAuth();
   const [homeBaseCity, setHomeBaseCity] = useState("");
+  const [cityPredictions, setCityPredictions] = useState<{ description: string; place_id: string }[]>([]);
+  const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
+  const [cityAutocompleteLoading, setCityAutocompleteLoading] = useState(false);
+  const cityInputRef = useRef<HTMLInputElement>(null);
+  const cityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [connectingSlack, setConnectingSlack] = useState(false);
 
@@ -110,6 +115,43 @@ export default function SettingsPage() {
     },
     onError: () => toast.error("Failed to save settings"),
   });
+
+  const fetchCityPredictions = useCallback(async (input: string) => {
+    if (input.trim().length < 2) {
+      setCityPredictions([]);
+      setCityDropdownOpen(false);
+      return;
+    }
+    setCityAutocompleteLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("autocomplete-place", {
+        body: { input },
+      });
+      if (error) throw error;
+      const preds = (data?.predictions ?? []) as { description: string; place_id: string }[];
+      setCityPredictions(preds);
+      setCityDropdownOpen(preds.length > 0);
+    } catch {
+      setCityPredictions([]);
+      setCityDropdownOpen(false);
+    } finally {
+      setCityAutocompleteLoading(false);
+    }
+  }, []);
+
+  const handleCityInput = (value: string) => {
+    setHomeBaseCity(value);
+    if (cityDebounceRef.current) clearTimeout(cityDebounceRef.current);
+    cityDebounceRef.current = setTimeout(() => fetchCityPredictions(value), 300);
+  };
+
+  const selectCityPrediction = (description: string) => {
+    // Strip trailing country name ("Brooklyn, NY, USA" → "Brooklyn, NY")
+    const normalized = description.replace(/,\s*USA$/, "").trim();
+    setHomeBaseCity(normalized);
+    setCityPredictions([]);
+    setCityDropdownOpen(false);
+  };
 
   const handleConnectSlack = async () => {
     setConnectingSlack(true);
@@ -382,14 +424,51 @@ export default function SettingsPage() {
           </p>
           <div className="space-y-2">
             <Label htmlFor="home-base-city">City</Label>
-            <Input
-              id="home-base-city"
-              value={homeBaseCity}
-              onChange={(e) => setHomeBaseCity(e.target.value)}
-              placeholder="e.g. Nashville, TN"
-              className="text-sm h-11 sm:h-9"
-              disabled={settingsLoading}
-            />
+            <div className="relative">
+              <Input
+                id="home-base-city"
+                ref={cityInputRef}
+                value={homeBaseCity}
+                onChange={(e) => handleCityInput(e.target.value)}
+                onFocus={() => {
+                  if (cityPredictions.length > 0) setCityDropdownOpen(true);
+                }}
+                onBlur={() => {
+                  // Small delay so click on a suggestion registers first
+                  setTimeout(() => setCityDropdownOpen(false), 150);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setCityDropdownOpen(false);
+                }}
+                placeholder="e.g. Nashville, TN"
+                className="text-sm h-11 sm:h-9"
+                disabled={settingsLoading}
+                autoComplete="off"
+              />
+              {cityAutocompleteLoading && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+              {cityDropdownOpen && cityPredictions.length > 0 && (
+                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+                  <ul className="py-1">
+                    {cityPredictions.map((p) => (
+                      <li key={p.place_id}>
+                        <button
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                          onMouseDown={(e) => {
+                            e.preventDefault(); // prevent blur before click
+                            selectCityPrediction(p.description);
+                          }}
+                        >
+                          {p.description}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <Button

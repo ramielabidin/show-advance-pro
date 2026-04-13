@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, FileUp, Upload, Clock } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,9 @@ export default function ShowDetailPage() {
 
   const [lookingUpAddress, setLookingUpAddress] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(false);
+  const [driveCardDismissed, setDriveCardDismissed] = useState(() =>
+    id ? localStorage.getItem(`drive-card-dismissed-${id}`) === "true" : false
+  );
 
   // Settle modal state
   const [settleOpen, setSettleOpen] = useState(false);
@@ -112,17 +115,20 @@ export default function ShowDetailPage() {
     enabled: !!show && !!(show as any).tour_id,
   });
 
-  // Departure origin = previous show's city if in same tour, else home base city
+  // Departure origin = previous show's city if ≤3 days ago (band still on road), else home base
   const departureOrigin = useMemo(() => {
-    if (previousShow?.city) {
-      return { label: previousShow.city, query: previousShow.venue_address || previousShow.city };
+    if (previousShow?.city && show?.date) {
+      const dayGap = differenceInDays(parseISO(show.date), parseISO(previousShow.date));
+      if (dayGap <= 3) {
+        return { label: previousShow.city, query: previousShow.venue_address || previousShow.city };
+      }
     }
     const home = appSettings?.home_base_city?.trim();
     if (home) {
       return { label: home, query: home };
     }
     return null;
-  }, [previousShow, appSettings]);
+  }, [previousShow, appSettings, show]);
 
   // Destination = current show's venue address or city
   const destinationQuery = useMemo(() => {
@@ -800,7 +806,7 @@ export default function ShowDetailPage() {
 
         {/* Departure */}
         <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_location}>
-          {driveTimeLabel && departureOrigin && (
+          {driveTimeLabel && departureOrigin && !driveCardDismissed && (
             <div className="flex items-start gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
               <Clock className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
               <div className="flex-1 min-w-0">
@@ -812,6 +818,17 @@ export default function ShowDetailPage() {
                   <div className="text-xs text-muted-foreground">{driveTime.distance_text}</div>
                 )}
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (id) localStorage.setItem(`drive-card-dismissed-${id}`, "true");
+                  setDriveCardDismissed(true);
+                }}
+                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Dismiss drive time suggestion"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
           )}
           {editField("departure_time", "Departure Time", { mono: true, alwaysShow: true, timeFormat: true })}
