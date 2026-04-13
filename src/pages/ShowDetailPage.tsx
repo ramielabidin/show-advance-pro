@@ -570,9 +570,11 @@ export default function ShowDetailPage() {
                     });
                     if (error || data?.error) throw new Error(data?.error || error.message);
                     const cleanAddress = (data.address as string).replace(/,?\s*United States$/, "");
+                    // Also strip any trailing asterisks from city when confirming the address
+                    const cleanCity = show.city?.replace(/\*+$/, "").trim() ?? show.city;
                     const { error: updateError } = await supabase
                       .from("shows")
-                      .update({ venue_address: cleanAddress })
+                      .update({ venue_address: cleanAddress, city: cleanCity })
                       .eq("id", show.id);
                     if (updateError) throw updateError;
                     queryClient.invalidateQueries({ queryKey: ["show", id] });
