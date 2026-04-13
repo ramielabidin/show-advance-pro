@@ -68,7 +68,12 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
   const interpolated = guarantee + (walkoutPotential - guarantee) * (pct / 100);
 
   // Use the smarter calculation when available, otherwise fallback
-  const projected = artistTake ?? interpolated;
+  const rawProjected = artistTake ?? interpolated;
+
+  // Cap at walkout potential — it's the booker's informed ceiling and accounts
+  // for factors (like expenses) that the simulator can't model
+  const cappedByWalkout = walkoutPotential > 0 && rawProjected > walkoutPotential;
+  const projected = cappedByWalkout ? walkoutPotential : rawProjected;
 
   return (
     <div className="space-y-4">
@@ -104,9 +109,11 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
 
       <p className="text-xs text-muted-foreground">
         {hasBackendCalc
-          ? backendBasis === "NBOR"
-            ? `Using GBOR as an approximation for NBOR — venue expenses not factored in`
-            : `${backendPct}% of GBOR vs ${formatDollar(guarantee)} guarantee`
+          ? cappedByWalkout
+            ? `GBOR calc (${formatDollar(rawProjected)}) exceeds walkout potential — capped at ${formatDollar(walkoutPotential)}. Likely due to ${backendBasis === "NBOR" ? "venue expenses not factored in" : "deal terms reducing net payout"}.`
+            : backendBasis === "NBOR"
+              ? `Using GBOR as an approximation for NBOR — venue expenses not factored in`
+              : `${backendPct}% of GBOR vs ${formatDollar(guarantee)} guarantee`
           : hasGborData
             ? `Add a backend deal % (e.g. "70% of GBOR") to project from gross receipts — you don't need to repeat the guarantee here`
             : "Estimate based on linear interpolation between guarantee and walkout potential"}
