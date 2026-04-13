@@ -75,6 +75,31 @@ const CSV_COLUMN_MAP: Record<string, string> = {
   artist_comps: "artist_comps",
 };
 
+/** Financial DB columns that should be stored as clean numbers (no $, commas, or ranges) */
+const FINANCIAL_FIELDS = new Set([
+  "guarantee",
+  "walkout_potential",
+  "net_gross",
+  "ticket_price",
+  "support_pay",
+  "venue_capacity",
+  "artist_comps",
+  "merch_split",
+]);
+
+/**
+ * Strip currency symbols, commas, and spaces from a financial string.
+ * For ranges like "$20/$25", takes the first value.
+ * Returns null if the result is not a valid number.
+ */
+function cleanFinancialField(val: string | undefined): string | null {
+  if (!val || !val.trim()) return null;
+  const first = val.trim().split("/")[0];
+  const cleaned = first.replace(/[^0-9.]/g, "");
+  if (!cleaned || isNaN(parseFloat(cleaned))) return null;
+  return cleaned;
+}
+
 /** Remap parsed row keys using CSV_COLUMN_MAP so validation/import use canonical names */
 function normalizeRow(raw: ParsedRow): ParsedRow {
   const out: ParsedRow = {};
@@ -224,11 +249,12 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
         const tourFallbackId = selectedTourId !== "none" ? selectedTourId : null;
         const tour_id = tourName ? tourNameMap.get(tourName.toLowerCase()) ?? tourFallbackId : tourFallbackId;
 
-        // Map extra CSV columns to DB columns
+        // Map extra CSV columns to DB columns, cleaning financial fields
         const extras: Record<string, string | null> = {};
         for (const [csvKey, dbCol] of Object.entries(CSV_COLUMN_MAP)) {
-          const val = r.data[csvKey]?.trim();
-          if (val) extras[dbCol] = val;
+          const raw = r.data[csvKey]?.trim();
+          if (!raw) continue;
+          extras[dbCol] = FINANCIAL_FIELDS.has(dbCol) ? cleanFinancialField(raw) : raw;
         }
 
         return {
