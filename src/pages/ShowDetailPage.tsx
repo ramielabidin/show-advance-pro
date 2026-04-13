@@ -941,21 +941,19 @@ export default function ShowDetailPage() {
         )}
 
         {/* Deal — two-column grid for financial fields */}
-        {(show.guarantee || show.backend_deal || show.ticket_price || show.venue_capacity || show.walkout_potential || show.artist_comps) && (
-          <>
-            <Separator />
-            <FieldGroup title="Deal">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                <div>{editField("guarantee", "Guarantee", { mono: true, alwaysShow: true })}</div>
-                <div>{editField("ticket_price", "Ticket Price", { mono: true, alwaysShow: true })}</div>
-                <div>{editField("venue_capacity", "Capacity", { alwaysShow: true })}</div>
-                <div>{editField("walkout_potential", "Walkout Potential", { mono: true, alwaysShow: true })}</div>
-              </div>
-              {editField("backend_deal", "Backend Deal")}
-              {editField("artist_comps", "Artist Comps")}
-            </FieldGroup>
-          </>
-        )}
+        <>
+          <Separator />
+          <FieldGroup title="Deal" incomplete={!show.guarantee && !show.backend_deal && !show.ticket_price && !show.venue_capacity && !show.walkout_potential && !show.artist_comps}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+              <div>{editField("guarantee", "Guarantee", { mono: true, alwaysShow: true })}</div>
+              <div>{editField("ticket_price", "Ticket Price", { mono: true, alwaysShow: true })}</div>
+              <div>{editField("venue_capacity", "Capacity", { alwaysShow: true })}</div>
+              <div>{editField("walkout_potential", "Walkout Potential", { mono: true, alwaysShow: true })}</div>
+            </div>
+            {editField("backend_deal", "Backend Deal")}
+            {editField("artist_comps", "Artist Comps")}
+          </FieldGroup>
+        </>
 
         {/* Revenue Simulator */}
         {(() => {
