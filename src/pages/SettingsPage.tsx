@@ -156,14 +156,7 @@ export default function SettingsPage() {
   const handleConnectSlack = async () => {
     setConnectingSlack(true);
     try {
-      // Fetch a fresh session at invocation time — the cached React state
-      // may hold a token that's been silently refreshed by the client.
-      const { data: { session: freshSession } } = await supabase.auth.getSession();
-      const accessToken = freshSession?.access_token ?? session?.access_token;
-      if (!accessToken) throw new Error("Session expired. Please refresh the page.");
-      const { data, error } = await supabase.functions.invoke("slack-oauth-initiate", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const { data, error } = await supabase.functions.invoke("slack-oauth-initiate");
       if (error || !data?.authorizationUrl) throw error ?? new Error("No authorization URL returned");
       window.location.href = data.authorizationUrl;
     } catch (err: any) {

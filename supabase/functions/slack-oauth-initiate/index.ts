@@ -23,6 +23,24 @@ async function hmacSign(data: string, secret: string): Promise<string> {
     .join("");
 }
 
+/**
+ * Decode a JWT payload without verification.
+ * Safe here because Supabase infrastructure (verify_jwt=true) has already
+ * verified the signature before this function runs.
+ */
+function decodeJwtPayload(jwt: string): Record<string, unknown> | null {
+  try {
+    const parts = jwt.split(".");
+    if (parts.length !== 3) return null;
+    // base64url → base64 → decode
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const json = atob(base64);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -30,7 +48,7 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const stateSecret = Deno.env.get("SLACK_STATE_SECRET");
     const clientId = Deno.env.get("SLACK_CLIENT_ID");
 
@@ -41,7 +59,7 @@ serve(async (req) => {
       );
     }
 
-    // Authenticate the user via their JWT
+    // Read the JWT from the Authorization header
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       console.error("slack-oauth-initiate: missing Authorization header");
@@ -60,23 +78,25 @@ serve(async (req) => {
       });
     }
 
-    const supabase = createClient(supabaseUrl, anonKey, {
-      global: { headers: { authorization: `Bearer ${jwt}` } },
-    });
+    // Decode the JWT payload.
+    // Supabase infrastructure already verified the signature (verify_jwt=true),
+    // so we only need to extract the user identity from the claims.
+    const payload = decodeJwtPayload(jwt);
+    const userId = typeof payload?.sub === "string" && payload.sub.length > 0
+      ? payload.sub
+      : null;
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser(jwt);
-    if (userError || !user) {
+    if (!userId) {
       console.error(
-        "slack-oauth-initiate: auth.getUser failed",
+        "slack-oauth-initiate: JWT has no sub claim — likely received anon key instead of user token",
         JSON.stringify({
-          userError: userError?.message,
-          hasUser: !!user,
+          role: payload?.role,
           jwtPrefix: jwt.slice(0, 12),
           jwtLength: jwt.length,
         }),
       );
       return new Response(
-        JSON.stringify({ error: `Unauthorized: ${userError?.message ?? "no user"}` }),
+        JSON.stringify({ error: "Unauthorized: no user identity in token" }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -84,15 +104,18 @@ serve(async (req) => {
       );
     }
 
-    // Get the user's team_id
+    // Use service-role client to look up the user's team (bypasses RLS)
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+
     const { data: membership, error: memberError } = await supabase
       .from("team_members")
       .select("team_id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .limit(1)
       .single();
 
     if (memberError || !membership?.team_id) {
+      console.error("slack-oauth-initiate: no team found for user", userId, memberError?.message);
       return new Response(JSON.stringify({ error: "No team found for user" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -104,9 +127,9 @@ serve(async (req) => {
     // Build signed state token: "teamId.expiry.hmac"
     // Expiry: 10 minutes from now
     const expiry = Date.now() + 10 * 60 * 1000;
-    const payload = `${teamId}.${expiry}`;
-    const hmac = await hmacSign(payload, stateSecret);
-    const state = `${payload}.${hmac}`;
+    const statePayload = `${teamId}.${expiry}`;
+    const hmac = await hmacSign(statePayload, stateSecret);
+    const state = `${statePayload}.${hmac}`;
 
     // Construct the Slack OAuth authorization URL
     const redirectUri = `${supabaseUrl}/functions/v1/slack-oauth-callback`;
