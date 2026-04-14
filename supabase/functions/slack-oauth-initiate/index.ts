@@ -44,23 +44,44 @@ serve(async (req) => {
     // Authenticate the user via their JWT
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      console.error("slack-oauth-initiate: missing Authorization header");
+      return new Response(JSON.stringify({ error: "Unauthorized: missing Authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (!jwt) {
+      console.error("slack-oauth-initiate: empty JWT after stripping Bearer");
+      return new Response(JSON.stringify({ error: "Unauthorized: empty token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const supabase = createClient(supabaseUrl, anonKey, {
-      global: { headers: { authorization: authHeader } },
+      global: { headers: { authorization: `Bearer ${jwt}` } },
     });
 
-    const jwt = authHeader.replace(/^Bearer\s+/i, "");
     const { data: { user }, error: userError } = await supabase.auth.getUser(jwt);
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error(
+        "slack-oauth-initiate: auth.getUser failed",
+        JSON.stringify({
+          userError: userError?.message,
+          hasUser: !!user,
+          jwtPrefix: jwt.slice(0, 12),
+          jwtLength: jwt.length,
+        }),
+      );
+      return new Response(
+        JSON.stringify({ error: `Unauthorized: ${userError?.message ?? "no user"}` }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Get the user's team_id
