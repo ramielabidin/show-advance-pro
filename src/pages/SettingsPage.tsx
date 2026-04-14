@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Save, UserPlus, Trash2, Crown, Plus, Pencil, X, Users, Loader2 } from "lucide-react";
+import { Save, UserPlus, Trash2, Crown, Plus, Pencil, X, Users, Loader2, Music } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
 import { useAuth } from "@/components/AuthProvider";
@@ -358,7 +358,23 @@ export default function SettingsPage() {
     <div className="animate-fade-in max-w-5xl space-y-6 sm:space-y-8">
       <div>
         <h1 className="text-2xl sm:text-3xl tracking-tight">Settings</h1>
-        <p className="text-muted-foreground text-sm mt-1">Manage your team and integrations</p>
+        <p className="text-muted-foreground text-sm mt-1">Manage your artist profile and integrations</p>
+      </div>
+
+      {/* ── Active Artist ── */}
+      <div className="rounded-lg border bg-card p-4 sm:p-6">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Active Artist</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
+              <Music className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <span className="text-xl font-semibold tracking-tight text-foreground">{team?.name}</span>
+          </div>
+          <Badge variant={isOwner ? "default" : "secondary"} className="gap-1">
+            {isOwner ? <><Crown className="h-3 w-3" />Owner</> : "Member"}
+          </Badge>
+        </div>
       </div>
 
       {/* ── App Settings (full width) ── */}
