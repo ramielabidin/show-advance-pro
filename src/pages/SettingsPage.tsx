@@ -156,7 +156,10 @@ export default function SettingsPage() {
   const handleConnectSlack = async () => {
     setConnectingSlack(true);
     try {
-      const { data, error } = await supabase.functions.invoke("slack-oauth-initiate");
+      if (!session?.access_token) throw new Error("Session expired. Please refresh the page.");
+      const { data, error } = await supabase.functions.invoke("slack-oauth-initiate", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
       if (error || !data?.authorizationUrl) throw error ?? new Error("No authorization URL returned");
       window.location.href = data.authorizationUrl;
     } catch (err: any) {
