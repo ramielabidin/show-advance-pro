@@ -1,6 +1,6 @@
 
 -- Create the band_documents table
-CREATE TABLE public.band_documents (
+CREATE TABLE IF NOT EXISTS public.band_documents (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   team_id UUID NOT NULL,
   slot TEXT NOT NULL,
@@ -30,6 +30,7 @@ CREATE POLICY "Team members can delete band documents"
 ON public.band_documents FOR DELETE TO authenticated
 USING (team_id IN (SELECT user_team_ids(auth.uid())));
 
+DROP TRIGGER IF EXISTS update_band_documents_updated_at ON public.band_documents;
 CREATE TRIGGER update_band_documents_updated_at
 BEFORE UPDATE ON public.band_documents
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();

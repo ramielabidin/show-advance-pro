@@ -6,7 +6,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SET search_path = public;
 
-CREATE TABLE public.touring_party_members (
+CREATE TABLE IF NOT EXISTS public.touring_party_members (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT NOT NULL DEFAULT '',
@@ -16,7 +16,7 @@ CREATE TABLE public.touring_party_members (
 ALTER TABLE public.touring_party_members ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public access" ON public.touring_party_members FOR ALL USING (true) WITH CHECK (true);
 
-CREATE TABLE public.shows (
+CREATE TABLE IF NOT EXISTS public.shows (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   venue_name TEXT NOT NULL,
   venue_address TEXT,
@@ -47,9 +47,10 @@ CREATE TABLE public.shows (
 );
 ALTER TABLE public.shows ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public access" ON public.shows FOR ALL USING (true) WITH CHECK (true);
+DROP TRIGGER IF EXISTS update_shows_updated_at ON public.shows;
 CREATE TRIGGER update_shows_updated_at BEFORE UPDATE ON public.shows FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
-CREATE TABLE public.schedule_entries (
+CREATE TABLE IF NOT EXISTS public.schedule_entries (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   show_id UUID NOT NULL REFERENCES public.shows(id) ON DELETE CASCADE,
   time TEXT NOT NULL,
@@ -60,7 +61,7 @@ CREATE TABLE public.schedule_entries (
 ALTER TABLE public.schedule_entries ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public access" ON public.schedule_entries FOR ALL USING (true) WITH CHECK (true);
 
-CREATE TABLE public.show_party_members (
+CREATE TABLE IF NOT EXISTS public.show_party_members (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   show_id UUID NOT NULL REFERENCES public.shows(id) ON DELETE CASCADE,
   member_id UUID NOT NULL REFERENCES public.touring_party_members(id) ON DELETE CASCADE,

@@ -1,4 +1,4 @@
-CREATE TABLE public.app_settings (
+CREATE TABLE IF NOT EXISTS public.app_settings (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   slack_webhook_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
@@ -6,6 +6,7 @@ CREATE TABLE public.app_settings (
 );
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public access" ON public.app_settings FOR ALL USING (true) WITH CHECK (true);
+DROP TRIGGER IF EXISTS update_app_settings_updated_at ON public.app_settings;
 CREATE TRIGGER update_app_settings_updated_at BEFORE UPDATE ON public.app_settings FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Insert single settings row

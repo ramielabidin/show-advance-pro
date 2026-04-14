@@ -1,9 +1,12 @@
 
 -- Create team_role enum
-CREATE TYPE public.team_role AS ENUM ('owner', 'member');
+DO $$ BEGIN
+  CREATE TYPE public.team_role AS ENUM ('owner', 'member');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
 -- Teams table
-CREATE TABLE public.teams (
+CREATE TABLE IF NOT EXISTS public.teams (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   created_by uuid NOT NULL,
@@ -12,7 +15,7 @@ CREATE TABLE public.teams (
 ALTER TABLE public.teams ENABLE ROW LEVEL SECURITY;
 
 -- Team members table
-CREATE TABLE public.team_members (
+CREATE TABLE IF NOT EXISTS public.team_members (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   team_id uuid NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -23,7 +26,7 @@ CREATE TABLE public.team_members (
 ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
 
 -- Team invites table
-CREATE TABLE public.team_invites (
+CREATE TABLE IF NOT EXISTS public.team_invites (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   team_id uuid NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE,
   email text NOT NULL,
@@ -101,6 +104,7 @@ END;
 $$;
 
 -- Trigger to auto-accept invites when a user is created
+DROP TRIGGER IF EXISTS on_auth_user_created_accept_invites ON auth.users;
 CREATE TRIGGER on_auth_user_created_accept_invites
   AFTER INSERT ON auth.users
   FOR EACH ROW
