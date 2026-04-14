@@ -11,5 +11,5 @@ export function cn(...inputs: ClassValue[]) {
 export function formatCityState(city: string | null | undefined): string {
   if (!city) return "";
   const clean = city.replace(/\*+$/, "").trim();
-  return clean.replace(/^(.+)\s([A-Z]{2})$/, "$1, $2");
+  return clean.replace(/^(.+?),?\s([A-Z]{2})$/, "$1, $2");
 }
