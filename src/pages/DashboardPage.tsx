@@ -147,58 +147,38 @@ export default function DashboardPage() {
       </div>
 
       {/* Active Tour Stats */}
-      {activeTour ? (() => {
-        const totalAdv = activeTour.shows?.length ?? 0;
-        const advancedAdv = (activeTour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]?.hasSchedule) >= TOTAL_ADVANCE).length;
-        const advPct = totalAdv > 0 ? (advancedAdv / totalAdv) * 100 : 0;
-        return (
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <div className="flex items-center gap-2 min-w-0">
-                <h2 className="text-base font-medium truncate">
-                  <Link to={`/tours/${activeTour.id}`} className="hover:underline">
-                    {activeTour.name}
-                  </Link>
-                </h2>
-                <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium shrink-0">
-                  Active Tour
-                </span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Progress value={advPct} className="h-1.5 w-24" />
-                <span className="text-xs text-muted-foreground">
-                  {advancedAdv}/{totalAdv} advanced
-                </span>
-              </div>
-            </div>
-            {activeTour.start_date && activeTour.end_date && (
-              <p className="text-xs text-muted-foreground mb-3">
-                {format(parseISO(activeTour.start_date), "MMM d")} –{" "}
-                {format(parseISO(activeTour.end_date), "MMM d, yyyy")}
-              </p>
-            )}
-            {!(activeTour.start_date && activeTour.end_date) && <div className="mb-3" />}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-              <StatCard label="Shows This Tour" value={tourStats.totalShows} icon={Calendar} />
-              <StatCard
-                label="Shows Settled"
-                value={`${tourStats.settledCount}/${tourStats.totalShows}`}
-                icon={CheckCircle2}
-              />
-              <StatCard
-                label="Actual Income"
-                value={tourStats.actualIncome ? `$${tourStats.actualIncome.toLocaleString()}` : "—"}
-                icon={DollarSign}
-              />
-              <StatCard
-                label="Guaranteed Remaining"
-                value={tourStats.guaranteedRemaining ? `$${tourStats.guaranteedRemaining.toLocaleString()}` : "—"}
-                icon={TrendingUp}
-              />
-            </div>
+      {activeTour ? (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-base font-medium truncate">
+              <Link to={`/tours/${activeTour.id}`} className="hover:underline">
+                {activeTour.name}
+              </Link>
+            </h2>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium shrink-0">
+              Active Tour
+            </span>
           </div>
-        );
-      })() : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            <StatCard label="Shows This Tour" value={tourStats.totalShows} icon={Calendar} />
+            <StatCard
+              label="Shows Settled"
+              value={`${tourStats.settledCount}/${tourStats.totalShows}`}
+              icon={CheckCircle2}
+            />
+            <StatCard
+              label="Actual Income"
+              value={tourStats.actualIncome ? `$${tourStats.actualIncome.toLocaleString()}` : "—"}
+              icon={DollarSign}
+            />
+            <StatCard
+              label="Guaranteed Remaining"
+              value={tourStats.guaranteedRemaining ? `$${tourStats.guaranteedRemaining.toLocaleString()}` : "—"}
+              icon={TrendingUp}
+            />
+          </div>
+        </div>
+      ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
           <StatCard label="Shows This Tour" value="—" icon={Calendar} />
           <StatCard label="Shows Settled" value="—" icon={CheckCircle2} />
@@ -215,56 +195,109 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {!nextShow && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Calendar className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">No upcoming shows</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Upcoming Shows */}
       {upcomingAfter.length > 0 && (
         <div>
           <h2 className="text-base font-medium mb-3">Upcoming Shows</h2>
-          <div className="space-y-2">
-            {upcomingAfter.map((show) => (
-              <UpcomingShowRow key={show.id} show={show} />
-            ))}
-          </div>
-        </div>
-      )}
+          <Card>
+            <CardContent className="pt-4 space-y-1">
+              {upcomingAfter.map((show) => {
+                const daysAway = differenceInCalendarDays(parseISO(show.date), today);
+                const info = scheduleMap[show.id];
+                const hasLoadIn = !!info?.hasLoadIn;
+                const hasDosContact = !!show.dos_contact_name;
+                const advancedCount = (hasLoadIn ? 1 : 0) + (hasDosContact ? 1 : 0);
+                const isWithin7 = daysAway >= 0 && daysAway < 7;
 
-      {/* Other Tours Progress (excluding active tour) */}
-      {(() => {
-        const otherTours = toursWithUpcoming.filter((t) => t.id !== activeTour?.id);
-        if (otherTours.length === 0) return null;
-        return (
-          <div>
-            <h2 className="text-base font-medium mb-3">Other Tours</h2>
-            <div className={cn("grid w-full gap-3", otherTours.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}>
-              {otherTours.map((tour) => {
-                const total = tour.shows?.length ?? 0;
-                const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]?.hasSchedule) >= TOTAL_ADVANCE).length;
-                const pct = total > 0 ? (advanced / total) * 100 : 0;
+                let dotColor: string | null = null;
+                if (advancedCount === 2) {
+                  dotColor = "bg-green-500";
+                } else if (advancedCount === 1) {
+                  dotColor = isWithin7 ? "bg-red-500" : "bg-amber-400";
+                } else {
+                  dotColor = isWithin7 ? "bg-red-500" : "bg-amber-400";
+                }
+
                 return (
-                  <Link key={tour.id} to={`/tours/${tour.id}`} className="w-full block">
-                    <div className="rounded-lg border bg-card text-card-foreground shadow-sm w-full hover:border-foreground/20 transition-colors">
-                      <div className="pt-5 pb-4 px-6">
-                        <p className="text-sm font-medium text-foreground truncate">{tour.name}</p>
-                        {tour.start_date && tour.end_date && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {format(parseISO(tour.start_date), "MMM d")} –{" "}
-                            {format(parseISO(tour.end_date), "MMM d, yyyy")}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 mt-3">
-                          <Progress value={pct} className="h-1.5 flex-1" />
-                          <span className="text-xs text-muted-foreground shrink-0">
-                            {advanced}/{total}
-                          </span>
-                        </div>
-                      </div>
+                  <Link
+                    key={show.id}
+                    to={`/shows/${show.id}`}
+                    className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-accent group"
+                  >
+                    <span
+                      className={cn(
+                        "text-xs w-16 shrink-0 font-medium",
+                        isWithin7 && advancedCount < 2 ? "text-red-600 dark:text-red-400" : "text-muted-foreground",
+                      )}
+                    >
+                      {format(parseISO(show.date), "MMM d")}
+                    </span>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-sm font-medium text-foreground truncate">{show.venue_name}</span>
+                      <span className="text-xs text-muted-foreground truncate">{formatCityState(show.city)}</span>
                     </div>
+                    {advancedCount < 2 && <span className={cn("h-2 w-2 rounded-full shrink-0", dotColor)} />}
+                    {advancedCount === 2 && <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" />}
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </Link>
                 );
               })}
-            </div>
+              <Link
+                to="/shows"
+                className="block text-xs text-muted-foreground hover:text-foreground pt-2 text-center transition-colors"
+              >
+                View all shows →
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Tour Progress */}
+      {toursWithUpcoming.length > 0 && (
+        <div>
+          <h2 className="text-base font-medium mb-3">Tour Progress</h2>
+          <div
+            className={cn("grid w-full gap-3", toursWithUpcoming.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}
+          >
+            {toursWithUpcoming.map((tour) => {
+              const total = tour.shows?.length ?? 0;
+              const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]?.hasSchedule) >= TOTAL_ADVANCE).length;
+              const pct = total > 0 ? (advanced / total) * 100 : 0;
+              return (
+                <Link key={tour.id} to={`/tours/${tour.id}`} className="w-full block">
+                  <div className="rounded-lg border bg-card text-card-foreground shadow-sm w-full hover:border-foreground/20 transition-colors">
+                    <div className="pt-5 pb-4 px-6">
+                      <p className="text-sm font-medium text-foreground truncate">{tour.name}</p>
+                      {tour.start_date && tour.end_date && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {format(parseISO(tour.start_date), "MMM d")} –{" "}
+                          {format(parseISO(tour.end_date), "MMM d, yyyy")}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-3">
+                        <Progress value={pct} className="h-1.5 flex-1" />
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {advanced}/{total}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
-        );
-      })()}
+        </div>
+      )}
     </div>
   );
 }
@@ -282,21 +315,6 @@ function StatCard({ label, value, icon: Icon }: { label: string; value: string |
         <p className="text-xl font-display text-foreground">{value}</p>
       </CardContent>
     </Card>
-  );
-}
-
-function UpcomingShowRow({ show }: { show: Show }) {
-  const date = parseISO(show.date);
-  return (
-    <Link to={`/shows/${show.id}`} className="block group">
-      <div className="flex items-center justify-between gap-4 rounded-lg border bg-card px-4 py-3 hover:border-foreground/20 transition-colors">
-        <div className="min-w-0">
-          <p className="text-sm font-medium truncate">{show.venue_name}</p>
-          <p className="text-xs text-muted-foreground truncate">{formatCityState(show.city)}</p>
-        </div>
-        <p className="text-sm text-muted-foreground shrink-0">{format(date, "MMM d")}</p>
-      </div>
-    </Link>
   );
 }
 
