@@ -207,6 +207,26 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Next Show */}
+      {nextShow && (
+        <div>
+          <h2 className="text-base font-medium mb-3">Next Show</h2>
+          <NextShowCard show={nextShow} hasSchedule={!!scheduleMap[nextShow.id]?.hasSchedule} />
+        </div>
+      )}
+
+      {/* Upcoming Shows */}
+      {upcomingAfter.length > 0 && (
+        <div>
+          <h2 className="text-base font-medium mb-3">Upcoming Shows</h2>
+          <div className="space-y-2">
+            {upcomingAfter.map((show) => (
+              <UpcomingShowRow key={show.id} show={show} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Other Tours Progress (excluding active tour) */}
       {(() => {
         const otherTours = toursWithUpcoming.filter((t) => t.id !== activeTour?.id);
@@ -262,6 +282,21 @@ function StatCard({ label, value, icon: Icon }: { label: string; value: string |
         <p className="text-xl font-display text-foreground">{value}</p>
       </CardContent>
     </Card>
+  );
+}
+
+function UpcomingShowRow({ show }: { show: Show }) {
+  const date = parseISO(show.date);
+  return (
+    <Link to={`/shows/${show.id}`} className="block group">
+      <div className="flex items-center justify-between gap-4 rounded-lg border bg-card px-4 py-3 hover:border-foreground/20 transition-colors">
+        <div className="min-w-0">
+          <p className="text-sm font-medium truncate">{show.venue_name}</p>
+          <p className="text-xs text-muted-foreground truncate">{formatCityState(show.city)}</p>
+        </div>
+        <p className="text-sm text-muted-foreground shrink-0">{format(date, "MMM d")}</p>
+      </div>
+    </Link>
   );
 }
 
