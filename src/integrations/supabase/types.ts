@@ -19,6 +19,8 @@ export type Database = {
           created_at: string
           home_base_city: string | null
           id: string
+          slack_channel_name: string | null
+          slack_team_name: string | null
           slack_webhook_url: string | null
           team_id: string | null
           updated_at: string
@@ -27,6 +29,8 @@ export type Database = {
           created_at?: string
           home_base_city?: string | null
           id?: string
+          slack_channel_name?: string | null
+          slack_team_name?: string | null
           slack_webhook_url?: string | null
           team_id?: string | null
           updated_at?: string
@@ -35,6 +39,8 @@ export type Database = {
           created_at?: string
           home_base_city?: string | null
           id?: string
+          slack_channel_name?: string | null
+          slack_team_name?: string | null
           slack_webhook_url?: string | null
           team_id?: string | null
           updated_at?: string
