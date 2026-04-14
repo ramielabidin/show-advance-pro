@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
     // Use Places Autocomplete API restricted to geocodes (cities, regions, addresses)
     const url = new URL("https://maps.googleapis.com/maps/api/place/autocomplete/json");
     url.searchParams.set("input", input.trim());
-    url.searchParams.set("types", "(cities)");
+    url.searchParams.set("types", "geocode");
     url.searchParams.set("components", "country:us");
     url.searchParams.set("key", apiKey);
 
