@@ -26,6 +26,15 @@ function countAdvanced(show: Show, hasSchedule: boolean): number {
   return count;
 }
 
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <div className="w-0.5 h-3.5 rounded-full bg-foreground/25" />
+      <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">{children}</span>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { data: shows = [], isLoading: showsLoading } = useQuery({
     queryKey: ["shows"],
@@ -64,13 +73,14 @@ export default function DashboardPage() {
   });
 
   const today = new Date();
+  const hour = today.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   const upcoming = useMemo(() => shows.filter((s) => !isPast(parseISO(s.date)) || isToday(parseISO(s.date))), [shows]);
 
   const nextShow = upcoming[0] ?? null;
   const upcomingAfter = upcoming.slice(1, 8);
 
-  // The "active" tour is the one whose soonest upcoming show comes first.
   const activeTour = useMemo(() => {
     let best: (Tour & { shows: Show[] }) | null = null;
     let bestDate: Date | null = null;
@@ -92,7 +102,6 @@ export default function DashboardPage() {
     return best;
   }, [tours]);
 
-  // Tour-scoped stats for the active tour.
   const tourStats = useMemo(() => {
     if (!activeTour || !activeTour.shows) {
       return { totalShows: 0, settledCount: 0, actualIncome: 0, guaranteedRemaining: 0 };
@@ -137,65 +146,81 @@ export default function DashboardPage() {
     );
   }
 
+  const statCards = [
+    {
+      label: "Shows This Tour",
+      value: activeTour ? tourStats.totalShows : "—",
+      icon: Calendar,
+      iconClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+      borderClass: "border-l-blue-500/50",
+    },
+    {
+      label: "Shows Settled",
+      value: activeTour ? `${tourStats.settledCount}/${tourStats.totalShows}` : "—",
+      icon: CheckCircle2,
+      iconClass: "bg-green-500/10 text-green-600 dark:text-green-400",
+      borderClass: "border-l-green-500/50",
+    },
+    {
+      label: "Actual Income",
+      value: activeTour && tourStats.actualIncome ? `$${tourStats.actualIncome.toLocaleString()}` : "—",
+      icon: DollarSign,
+      iconClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+      borderClass: "border-l-emerald-500/50",
+    },
+    {
+      label: "Guaranteed Remaining",
+      value: activeTour && tourStats.guaranteedRemaining ? `$${tourStats.guaranteedRemaining.toLocaleString()}` : "—",
+      icon: TrendingUp,
+      iconClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+      borderClass: "border-l-amber-500/50",
+    },
+  ];
+
   return (
     <div className="animate-fade-in space-y-6 sm:space-y-8 overflow-x-hidden">
+      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-0.5">{greeting}</p>
           <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
+          {activeTour && (
+            <Link
+              to={`/tours/${activeTour.id}`}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors mt-0.5 inline-block"
+            >
+              {activeTour.name}
+            </Link>
+          )}
         </div>
         <CreateShowDialog />
       </div>
 
       {/* Active Tour Stats */}
-      {activeTour ? (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-base font-medium truncate">
-              <Link to={`/tours/${activeTour.id}`} className="hover:underline">
-                {activeTour.name}
-              </Link>
-            </h2>
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium shrink-0">
-              Active Tour
-            </span>
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-            <StatCard label="Shows This Tour" value={tourStats.totalShows} icon={Calendar} />
-            <StatCard
-              label="Shows Settled"
-              value={`${tourStats.settledCount}/${tourStats.totalShows}`}
-              icon={CheckCircle2}
-            />
-            <StatCard
-              label="Actual Income"
-              value={tourStats.actualIncome ? `$${tourStats.actualIncome.toLocaleString()}` : "—"}
-              icon={DollarSign}
-            />
-            <StatCard
-              label="Guaranteed Remaining"
-              value={tourStats.guaranteedRemaining ? `$${tourStats.guaranteedRemaining.toLocaleString()}` : "—"}
-              icon={TrendingUp}
-            />
-          </div>
-        </div>
-      ) : (
+      <div>
+        <SectionLabel>{activeTour ? "Active Tour" : "Tour Stats"}</SectionLabel>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-          <StatCard label="Shows This Tour" value="—" icon={Calendar} />
-          <StatCard label="Shows Settled" value="—" icon={CheckCircle2} />
-          <StatCard label="Actual Income" value="—" icon={DollarSign} />
-          <StatCard label="Guaranteed Remaining" value="—" icon={TrendingUp} />
+          {statCards.map((card, i) => (
+            <StatCard
+              key={card.label}
+              label={card.label}
+              value={card.value}
+              icon={card.icon}
+              iconClass={card.iconClass}
+              borderClass={card.borderClass}
+              index={i}
+            />
+          ))}
         </div>
-      )}
+      </div>
 
       {/* Next Show */}
-      {nextShow && (
+      {nextShow ? (
         <div>
-          <h2 className="text-base font-medium mb-3">Next Show</h2>
+          <SectionLabel>Next Show</SectionLabel>
           <NextShowCard show={nextShow} hasSchedule={!!scheduleMap[nextShow.id]?.hasSchedule} />
         </div>
-      )}
-
-      {!nextShow && (
+      ) : (
         <Card>
           <CardContent className="py-12 text-center">
             <Calendar className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
@@ -207,10 +232,10 @@ export default function DashboardPage() {
       {/* Upcoming Shows */}
       {upcomingAfter.length > 0 && (
         <div>
-          <h2 className="text-base font-medium mb-3">Upcoming Shows</h2>
+          <SectionLabel>Upcoming Shows</SectionLabel>
           <Card>
             <CardContent className="pt-4 space-y-1">
-              {upcomingAfter.map((show) => {
+              {upcomingAfter.map((show, i) => {
                 const daysAway = differenceInCalendarDays(parseISO(show.date), today);
                 const info = scheduleMap[show.id];
                 const hasLoadIn = !!info?.hasLoadIn;
@@ -218,25 +243,26 @@ export default function DashboardPage() {
                 const advancedCount = (hasLoadIn ? 1 : 0) + (hasDosContact ? 1 : 0);
                 const isWithin7 = daysAway >= 0 && daysAway < 7;
 
-                let dotColor: string | null = null;
-                if (advancedCount === 2) {
-                  dotColor = "bg-green-500";
-                } else if (advancedCount === 1) {
-                  dotColor = isWithin7 ? "bg-red-500" : "bg-amber-400";
-                } else {
-                  dotColor = isWithin7 ? "bg-red-500" : "bg-amber-400";
-                }
+                const dotColor =
+                  advancedCount === 2
+                    ? "bg-green-500"
+                    : isWithin7
+                      ? "bg-red-500"
+                      : "bg-amber-400";
 
                 return (
                   <Link
                     key={show.id}
                     to={`/shows/${show.id}`}
-                    className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-accent group"
+                    className="stagger-item flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-accent group"
+                    style={{ animationDelay: `${i * 40}ms` }}
                   >
                     <span
                       className={cn(
-                        "text-xs w-16 shrink-0 font-medium",
-                        isWithin7 && advancedCount < 2 ? "text-red-600 dark:text-red-400" : "text-muted-foreground",
+                        "text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 w-14 text-center",
+                        isWithin7 && advancedCount < 2
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          : "bg-muted text-muted-foreground",
                       )}
                     >
                       {format(parseISO(show.date), "MMM d")}
@@ -245,8 +271,7 @@ export default function DashboardPage() {
                       <span className="text-sm font-medium text-foreground truncate">{show.venue_name}</span>
                       <span className="text-xs text-muted-foreground truncate">{formatCityState(show.city)}</span>
                     </div>
-                    {advancedCount < 2 && <span className={cn("h-2 w-2 rounded-full shrink-0", dotColor)} />}
-                    {advancedCount === 2 && <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" />}
+                    <span className={cn("h-2 w-2 rounded-full shrink-0", dotColor)} />
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </Link>
                 );
@@ -265,7 +290,7 @@ export default function DashboardPage() {
       {/* Tour Progress */}
       {toursWithUpcoming.length > 0 && (
         <div>
-          <h2 className="text-base font-medium mb-3">Tour Progress</h2>
+          <SectionLabel>Tour Progress</SectionLabel>
           <div
             className={cn("grid w-full gap-3", toursWithUpcoming.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}
           >
@@ -274,8 +299,8 @@ export default function DashboardPage() {
               const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]?.hasSchedule) >= TOTAL_ADVANCE).length;
               const pct = total > 0 ? (advanced / total) * 100 : 0;
               return (
-                <Link key={tour.id} to={`/tours/${tour.id}`} className="w-full block">
-                  <div className="rounded-lg border bg-card text-card-foreground shadow-sm w-full hover:border-foreground/20 transition-colors">
+                <Link key={tour.id} to={`/tours/${tour.id}`} className="w-full block card-pressable">
+                  <div className="rounded-lg border bg-card text-card-foreground shadow-sm w-full hover:border-foreground/20 hover:shadow-md transition-all duration-150">
                     <div className="pt-5 pb-4 px-6">
                       <p className="text-sm font-medium text-foreground truncate">{tour.name}</p>
                       {tour.start_date && tour.end_date && (
@@ -287,7 +312,7 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-2 mt-3">
                         <Progress value={pct} className="h-1.5 flex-1" />
                         <span className="text-xs text-muted-foreground shrink-0">
-                          {advanced}/{total}
+                          {advanced}/{total} · {Math.round(pct)}%
                         </span>
                       </div>
                     </div>
@@ -304,15 +329,31 @@ export default function DashboardPage() {
 
 /* --- Sub-components --- */
 
-function StatCard({ label, value, icon: Icon }: { label: string; value: string | number; icon: React.ElementType }) {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  iconClass,
+  borderClass,
+  index,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ElementType;
+  iconClass: string;
+  borderClass: string;
+  index: number;
+}) {
   return (
-    <Card>
+    <Card className={cn("border-l-2 overflow-hidden", borderClass)}>
       <CardContent className="pt-4 pb-3 px-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">{label}</span>
+        <div className="flex items-center gap-2 mb-2">
+          <div className={cn("h-6 w-6 rounded-md flex items-center justify-center shrink-0", iconClass)}>
+            <Icon className="h-3.5 w-3.5" />
+          </div>
+          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium leading-tight">{label}</span>
         </div>
-        <p className="text-xl font-display text-foreground">{value}</p>
+        <p className="text-2xl font-display text-foreground">{value}</p>
       </CardContent>
     </Card>
   );
@@ -338,17 +379,26 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
   const isUrgent = daysAway >= 0 && daysAway < 7;
 
   return (
-    <Link to={`/shows/${show.id}`} className="block group">
-      <Card className="overflow-hidden hover:border-foreground/20 transition-colors">
+    <Link to={`/shows/${show.id}`} className="block group card-pressable">
+      <Card className="overflow-hidden hover:border-foreground/20 hover:shadow-md transition-all duration-150">
         <CardContent className="p-5 sm:p-6">
-          <div className="flex items-start justify-between gap-2 sm:gap-4">
+          <div className="flex items-start gap-4 sm:gap-5">
+            {/* Calendar stub */}
+            <div className="shrink-0 flex flex-col items-center justify-center rounded-xl border-2 border-border bg-muted/50 w-14 h-[4.5rem] select-none">
+              <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold leading-none mb-0.5">
+                {format(date, "MMM")}
+              </span>
+              <span className="text-3xl font-display text-foreground leading-none">{format(date, "d")}</span>
+              <span className="text-[9px] text-muted-foreground mt-0.5">{format(date, "EEE")}</span>
+            </div>
+
+            {/* Info */}
             <div className="min-w-0 flex-1">
               <h2 className="text-xl sm:text-2xl font-display text-foreground truncate">{show.venue_name}</h2>
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{formatCityState(show.city)}</span>
               </div>
-              <p className="text-sm text-foreground mt-1">{format(date, "EEEE, MMMM d, yyyy")}</p>
               <span
                 className={cn(
                   "inline-block mt-2 text-xs font-medium px-2 py-0.5 rounded-full",
@@ -361,6 +411,7 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
               </span>
             </div>
 
+            {/* Advance progress */}
             <div className="text-right shrink-0">
               <p
                 className="text-sm font-medium text-foreground"
