@@ -156,31 +156,77 @@ export default function SettingsPage() {
   const handleConnectSlack = async () => {
     setConnectingSlack(true);
     try {
-      // Explicitly get the session so we always send a user JWT, not the anon key.
-      // supabase.functions.invoke() can fall back to the anon key when the session
-      // isn't fully loaded, which causes the edge function to return 401.
+      // Fetch a fresh session so we always send a user JWT (not the cached
+      // anon key). getSession() also transparently refreshes an expired token.
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session?.access_token) {
-        throw new Error("Session expired — please sign in again.");
+        throw new Error("Your session has expired. Please sign in again.");
       }
 
-      const { data, error } = await supabase.functions.invoke("slack-oauth-initiate", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      // Call the edge function with a direct fetch instead of
+      // supabase.functions.invoke(). The SDK's invoke() wraps the Response in a
+      // FunctionsHttpError and — on some infrastructure error paths — returns
+      // an HTML body (auth gateway, 502 from upstream, unpublished function).
+      // Parsing HTML as JSON surfaces the confusing
+      //   "Unauthorized: Unexpected token '<', \"<html>...\" is not valid JSON"
+      // toast. Reading the body as text once here lets us show an actionable
+      // error regardless of what the gateway returned.
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+      const endpoint = `${supabaseUrl}/functions/v1/slack-oauth-initiate`;
 
-      if (error) {
-        // Extract the actual error message returned by the edge function instead
-        // of showing the generic "Edge Function returned a non-2xx status code".
-        let message = "Failed to start Slack connection";
-        try {
-          const body = await (error as any).context?.json?.();
-          if (body?.error) message = body.error;
-        } catch { /* fall through to generic message */ }
-        throw new Error(message);
+      let response: Response;
+      try {
+        response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+        });
+      } catch (networkErr) {
+        const message = networkErr instanceof Error ? networkErr.message : "network error";
+        throw new Error(`Could not reach Slack OAuth service: ${message}`);
       }
 
-      if (!data?.authorizationUrl) throw new Error("No authorization URL returned");
-      window.location.href = data.authorizationUrl;
+      const rawBody = await response.text();
+      let parsed: { authorizationUrl?: string; error?: string } | null = null;
+      try {
+        parsed = rawBody ? JSON.parse(rawBody) : null;
+      } catch {
+        // Non-JSON response (typically an HTML error page from the gateway).
+        parsed = null;
+      }
+
+      if (!response.ok) {
+        // Log the raw body so the root cause is visible in devtools without
+        // leaking HTML into the user-facing toast.
+        console.error("slack-oauth-initiate failed", {
+          status: response.status,
+          statusText: response.statusText,
+          body: rawBody.slice(0, 500),
+        });
+        if (parsed?.error) throw new Error(parsed.error);
+        if (response.status === 401) {
+          throw new Error(
+            "Slack connection is not authorized. Sign out and back in, then try again.",
+          );
+        }
+        if (response.status === 404) {
+          throw new Error(
+            "Slack OAuth function is not deployed. Ask an admin to deploy slack-oauth-initiate.",
+          );
+        }
+        throw new Error(
+          `Failed to start Slack connection (HTTP ${response.status} ${response.statusText}).`,
+        );
+      }
+
+      if (!parsed?.authorizationUrl) {
+        throw new Error("Slack OAuth service returned no authorization URL.");
+      }
+      window.location.href = parsed.authorizationUrl;
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to start Slack connection");
       setConnectingSlack(false);
