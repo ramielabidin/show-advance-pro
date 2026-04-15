@@ -58,9 +58,9 @@ function CreateTeamScreen({ userId }: { userId: string }) {
       }
 
       queryClient.invalidateQueries({ queryKey: ["user-teams"] });
-      toast.success("Team created!");
+      toast.success("Artist profile created!");
     } catch (err: any) {
-      toast.error(err.message || "Failed to create team");
+      toast.error(err.message || "Failed to create artist profile");
     } finally {
       setLoading(false);
     }
@@ -72,12 +72,12 @@ function CreateTeamScreen({ userId }: { userId: string }) {
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome to Advance</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Create a team to get started. You'll be able to invite your crew later.
+            Set up your artist profile to get started. You'll be able to invite your crew later.
           </p>
         </div>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="team-name">Team Name</Label>
+            <Label htmlFor="team-name">Artist Name</Label>
             <Input
               id="team-name"
               value={name}
@@ -87,11 +87,11 @@ function CreateTeamScreen({ userId }: { userId: string }) {
             />
           </div>
           <Button onClick={handleCreate} disabled={!name.trim() || loading} className="w-full">
-            {loading ? "Creating…" : "Create Team"}
+            {loading ? "Creating…" : "Create Artist Profile"}
           </Button>
         </div>
         <p className="text-center text-xs text-muted-foreground">
-          If you've been invited to a team, it will appear automatically.
+          If you've been invited to an artist account, it will appear automatically.
         </p>
         <div className="text-center">
           <button
