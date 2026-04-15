@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Save, X } from "lucide-react";
-import { normalizeTime } from "@/lib/timeFormat";
+import TimeInput from "@/components/TimeInput";
 
 export interface ScheduleRow {
   time: string;
@@ -38,17 +38,13 @@ export default function ScheduleEditor({ initial, onSave, onCancel, saving }: Sc
     <div className="space-y-2">
       {rows.map((row, i) => (
         <div key={i} className="flex items-center gap-2">
-          <Input
-            value={row.time}
-            onChange={(e) => update(i, { time: e.target.value })}
-            onBlur={() => {
-              const normalized = normalizeTime(row.time);
-              if (normalized !== row.time) update(i, { time: normalized });
-            }}
-            placeholder="e.g. 9:00 AM"
-            className="text-sm h-9 w-24 font-mono shrink-0"
-            autoFocus={i === 0 && rows.length === 1 && !row.time}
-          />
+          <div className="shrink-0">
+            <TimeInput
+              value={row.time}
+              onChange={(val) => update(i, { time: val })}
+              autoFocus={i === 0 && rows.length === 1 && !row.time}
+            />
+          </div>
           <Input
             value={row.label}
             onChange={(e) => update(i, { label: e.target.value })}

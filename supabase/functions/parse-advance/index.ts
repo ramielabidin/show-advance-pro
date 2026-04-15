@@ -102,7 +102,7 @@ Key rules:
                 parking_notes: { type: "string", description: "Parking instructions" },
                 load_in_details: { type: "string", description: "Load-in logistics details" },
                 green_room_info: { type: "string", description: "Green room / dressing room details" },
-                guest_list_details: { type: "string", description: "Guest list info and policies" },
+                guest_list_details: { type: "string", description: "Actual guest names only (e.g. 'John Smith +1, Jane Doe'). Leave null if the text only describes a guest list policy, deadline, or request — not real names." },
                 wifi_network: { type: "string", description: "WiFi network name" },
                 wifi_password: { type: "string", description: "WiFi password" },
                 hotel_name: { type: "string", description: "Hotel / accommodations name" },
