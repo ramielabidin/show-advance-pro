@@ -55,7 +55,7 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Tour Advance</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Advance</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {isLogin ? "Sign in to your account" : "Create a new account"}
           </p>
