@@ -35,7 +35,7 @@ export default function ShowCard({ show, hasLoadIn, hasDosContact, onDelete }: S
     <Link
       to={`/shows/${show.id}`}
       className={cn(
-        "group flex items-center justify-between rounded-lg border bg-card p-3 sm:p-4 transition-all hover:border-foreground/20 hover:shadow-sm animate-fade-in active:bg-accent/50",
+        "group flex items-center justify-between rounded-lg border bg-card p-3 sm:p-4 card-pressable transition-colors hover:border-foreground/20 hover:shadow-sm active:bg-accent/50",
         past && "opacity-60"
       )}
     >
@@ -86,7 +86,7 @@ export default function ShowCard({ show, hasLoadIn, hasDosContact, onDelete }: S
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         )}
-        <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 md:transition-opacity hidden sm:block" />
+        <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
       </div>
     </Link>
   );

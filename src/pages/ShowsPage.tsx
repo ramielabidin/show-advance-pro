@@ -128,7 +128,7 @@ export default function ShowsPage() {
           action={tab === "upcoming" ? <CreateShowDialog /> : undefined}
         />
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 stagger-list">
           {displayed.map((show) => (
             <ShowCard
               key={show.id}
