@@ -29,7 +29,7 @@ import SlackPushDialog from "@/components/SlackPushDialog";
 import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
 import ExportPdfDialog from "@/components/ExportPdfDialog";
-import GuestListEditor, { GuestListView, parseGuestList, guestTotal } from "@/components/GuestListEditor";
+import GuestListEditor, { GuestListView, parseGuestList, guestTotal, parseComps } from "@/components/GuestListEditor";
 import ScheduleEditor, { type ScheduleRow } from "@/components/ScheduleEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
 import { toast } from "sonner";
@@ -509,7 +509,15 @@ export default function ShowDetailPage() {
       );
     }
 
-    return <EmptyFieldPrompt label="guest list" onClick={() => startInlineEdit("guest_list_details")} />;
+    const comps = parseComps(show.artist_comps);
+    return (
+      <div className="space-y-1.5">
+        {comps !== null && (
+          <p className="text-xs text-muted-foreground">{comps} comps available</p>
+        )}
+        <EmptyFieldPrompt label="guest list" onClick={() => startInlineEdit("guest_list_details")} />
+      </div>
+    );
   };
 
   return (
@@ -959,6 +967,12 @@ export default function ShowDetailPage() {
           {editField("hospitality", "Hospitality", { multiline: true })}
           {editField("wifi_network", "WiFi Network", { mono: true, alwaysShow: true })}
           {editField("wifi_password", "WiFi Password", { mono: true, alwaysShow: true })}
+        </FieldGroup>
+
+        <Separator />
+
+        {/* Guest List */}
+        <FieldGroup title="Guest List" incomplete={!!show.artist_comps && !show.guest_list_details && inlineField !== "guest_list_details"}>
           {renderGuestList()}
         </FieldGroup>
 
@@ -1153,7 +1167,7 @@ export default function ShowDetailPage() {
               }
               return <EmptyFieldPrompt label="backend deal" onClick={startBackendDealEdit} />;
             })()}
-            {editField("artist_comps", "Artist Comps")}
+            {editField("artist_comps", "Artist Comps", { alwaysShow: true })}
           </FieldGroup>
         </>
 
