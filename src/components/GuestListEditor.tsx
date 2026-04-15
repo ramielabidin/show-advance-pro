@@ -38,7 +38,7 @@ export function guestTotal(entries: GuestEntry[]): number {
   return entries.reduce((sum, e) => sum + 1 + e.plusOnes, 0);
 }
 
-function parseComps(comps: string | null | undefined): number | null {
+export function parseComps(comps: string | null | undefined): number | null {
   if (!comps) return null;
   const n = parseInt(comps.replace(/[^0-9]/g, ""), 10);
   return isNaN(n) ? null : n;
@@ -136,6 +136,8 @@ export default function GuestListEditor({ value, compsAllotment, onChange, isInl
   };
 
   const total = guestTotal(entries.filter((e) => e.name.trim()));
+  const cap = parseComps(compsAllotment);
+  const atCapacity = cap !== null && total >= cap;
 
   return (
     <div className="space-y-2">
@@ -167,7 +169,7 @@ export default function GuestListEditor({ value, compsAllotment, onChange, isInl
         </div>
       ))}
       <div className="flex items-center justify-between pt-1">
-        <Button variant="ghost" size="sm" onClick={addRow} className="h-7 text-xs gap-1">
+        <Button variant="ghost" size="sm" onClick={addRow} className="h-7 text-xs gap-1" disabled={atCapacity}>
           <Plus className="h-3 w-3" /> Add Guest
         </Button>
         <GuestCount total={total} compsAllotment={compsAllotment} />
