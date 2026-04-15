@@ -397,7 +397,7 @@ export default function ShowDetailPage() {
   );
 
   // Renders a field with inline edit support only
-  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; structuredTime?: boolean; phoneFormat?: boolean; placeholder?: string; currency?: boolean }) => {
+  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; structuredTime?: boolean; hideTbd?: boolean; phoneFormat?: boolean; placeholder?: string; currency?: boolean }) => {
     // Inline editing for this specific field
     if (inlineField === key) {
       const handleBlurSave = () => {
@@ -417,6 +417,7 @@ export default function ShowDetailPage() {
               value={inlineValue}
               onChange={(val) => setInlineValue(val)}
               autoFocus
+              hideTbd={opts?.hideTbd}
             />
             <InlineActions onSave={saveInline} onCancel={cancelInline} />
           </div>
@@ -880,7 +881,7 @@ export default function ShowDetailPage() {
             }} />
           )}
           {editField("set_length", "Set Length", { alwaysShow: true })}
-          {(inlineField === "curfew" || show.curfew) ? editField("curfew", "Curfew", { structuredTime: true }) : null}
+          {(inlineField === "curfew" || show.curfew) ? editField("curfew", "Curfew", { structuredTime: true, hideTbd: true }) : null}
           {(inlineField === "changeover_time" || show.changeover_time) ? editField("changeover_time", "Changeover Time", { structuredTime: true }) : null}
         </FieldGroup>
         </div>

@@ -51,9 +51,10 @@ interface TimeInputProps {
   value: string; // "H:MM AM/PM", "TBD", or ""
   onChange: (value: string) => void;
   autoFocus?: boolean;
+  hideTbd?: boolean;
 }
 
-export default function TimeInput({ value, onChange, autoFocus }: TimeInputProps) {
+export default function TimeInput({ value, onChange, autoFocus, hideTbd }: TimeInputProps) {
   const isTbd = value === "TBD";
   const parsed = parseTime(value);
 
@@ -130,18 +131,20 @@ export default function TimeInput({ value, onChange, autoFocus }: TimeInputProps
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => onChange(isTbd ? "" : "TBD")}
-        className={cn(
-          "text-xs px-2.5 py-1.5 rounded-md border font-medium transition-colors",
-          isTbd
-            ? "bg-muted text-foreground border-input"
-            : "text-muted-foreground border-transparent hover:border-input hover:text-foreground"
-        )}
-      >
-        TBD
-      </button>
+      {!hideTbd && (
+        <button
+          type="button"
+          onClick={() => onChange(isTbd ? "" : "TBD")}
+          className={cn(
+            "text-xs px-2.5 py-1.5 rounded-md border font-medium transition-colors",
+            isTbd
+              ? "bg-muted text-foreground border-input"
+              : "text-muted-foreground border-transparent hover:border-input hover:text-foreground"
+          )}
+        >
+          TBD
+        </button>
+      )}
     </div>
   );
 }
