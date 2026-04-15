@@ -156,8 +156,30 @@ export default function SettingsPage() {
   const handleConnectSlack = async () => {
     setConnectingSlack(true);
     try {
-      const { data, error } = await supabase.functions.invoke("slack-oauth-initiate");
-      if (error || !data?.authorizationUrl) throw error ?? new Error("No authorization URL returned");
+      // Explicitly get the session so we always send a user JWT, not the anon key.
+      // supabase.functions.invoke() can fall back to the anon key when the session
+      // isn't fully loaded, which causes the edge function to return 401.
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        throw new Error("Session expired — please sign in again.");
+      }
+
+      const { data, error } = await supabase.functions.invoke("slack-oauth-initiate", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error) {
+        // Extract the actual error message returned by the edge function instead
+        // of showing the generic "Edge Function returned a non-2xx status code".
+        let message = "Failed to start Slack connection";
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) message = body.error;
+        } catch { /* fall through to generic message */ }
+        throw new Error(message);
+      }
+
+      if (!data?.authorizationUrl) throw new Error("No authorization URL returned");
       window.location.href = data.authorizationUrl;
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to start Slack connection");
