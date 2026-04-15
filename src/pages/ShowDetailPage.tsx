@@ -915,7 +915,7 @@ export default function ShowDetailPage() {
             </div>
           )}
           {editField("departure_time", "Departure Time", { alwaysShow: true, structuredTime: true })}
-          {recommendedDeparture && inlineField !== "departure_time" && show.departure_time !== recommendedDeparture && (
+          {recommendedDeparture && inlineField !== "departure_time" && show.departure_time !== recommendedDeparture && !driveCardDismissed && (
             <div className="-mt-2">
               <Button
                 variant="outline"
