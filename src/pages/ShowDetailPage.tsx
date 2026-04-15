@@ -33,8 +33,9 @@ import GuestListEditor, { GuestListView, parseGuestList, guestTotal } from "@/co
 import ScheduleEditor, { type ScheduleRow } from "@/components/ScheduleEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
 import { toast } from "sonner";
-import { cn, formatCityState } from "@/lib/utils";
+import { cn, formatCityState, normalizePhone } from "@/lib/utils";
 import { normalizeTime } from "@/lib/timeFormat";
+import TimeInput from "@/components/TimeInput";
 import type { Show } from "@/lib/types";
 import RevenueSimulator, { parseDollar } from "@/components/RevenueSimulator";
 
@@ -309,7 +310,7 @@ export default function ShowDetailPage() {
   }
 
   // --- Inline edit helpers ---
-  const startInlineEdit = (key: string, opts?: { timeFormat?: boolean }) => {
+  const startInlineEdit = (key: string, opts?: { timeFormat?: boolean; structuredTime?: boolean }) => {
     inlineTimeFormat.current = !!opts?.timeFormat;
     setInlineField(key);
     setInlineValue((show as any)[key] ?? "");
@@ -396,15 +397,31 @@ export default function ShowDetailPage() {
   );
 
   // Renders a field with inline edit support only
-  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; placeholder?: string; currency?: boolean }) => {
+  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; structuredTime?: boolean; phoneFormat?: boolean; placeholder?: string; currency?: boolean }) => {
     // Inline editing for this specific field
     if (inlineField === key) {
       const handleBlurSave = () => {
         if (!inlineField) return;
         let val = inlineTimeFormat.current ? normalizeTime(inlineValue) : inlineValue;
         if (opts?.currency && val) val = formatCurrency(val);
+        if (opts?.phoneFormat && val) val = normalizePhone(val);
         updateMutation.mutate({ [inlineField]: val || null } as any);
       };
+
+      // Structured time picker (departure, curfew, changeover)
+      if (opts?.structuredTime) {
+        return (
+          <div ref={inlineRef} className="space-y-2">
+            <Label className="text-xs text-muted-foreground">{label}</Label>
+            <TimeInput
+              value={inlineValue}
+              onChange={(val) => setInlineValue(val)}
+              autoFocus
+            />
+            <InlineActions onSave={saveInline} onCancel={cancelInline} />
+          </div>
+        );
+      }
 
       return (
         <div ref={inlineRef} className="space-y-1">
@@ -442,7 +459,7 @@ export default function ShowDetailPage() {
     // View mode
     const value = (show as any)[key];
     if (!value && opts?.alwaysShow) {
-      return <EmptyFieldPrompt label={label} onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat })} />;
+      return <EmptyFieldPrompt label={label} onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat, structuredTime: opts?.structuredTime })} />;
     }
     if (!value) return null;
 
@@ -451,7 +468,7 @@ export default function ShowDetailPage() {
     // Clickable value to enter inline edit
     return (
       <button
-        onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat })}
+        onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat, structuredTime: opts?.structuredTime })}
         className="w-full text-left group"
       >
         <FieldRow label={label} value={displayValue} mono={opts?.mono} />
@@ -841,7 +858,7 @@ export default function ShowDetailPage() {
               saving={false}
             />
           ) : scheduleEntries.length > 0 ? (
-            <button onClick={() => setEditingSchedule(true)} className="w-full text-left">
+            <button onClick={() => setEditingSchedule(true)} className="w-full text-left card-pressable">
               <div className="space-y-1">
                 {scheduleEntries.map((entry) => (
                   <div
@@ -863,8 +880,8 @@ export default function ShowDetailPage() {
             }} />
           )}
           {editField("set_length", "Set Length", { alwaysShow: true })}
-          {(inlineField === "curfew" || show.curfew) ? editField("curfew", "Curfew") : null}
-          {(inlineField === "changeover_time" || show.changeover_time) ? editField("changeover_time", "Changeover Time") : null}
+          {(inlineField === "curfew" || show.curfew) ? editField("curfew", "Curfew", { structuredTime: true }) : null}
+          {(inlineField === "changeover_time" || show.changeover_time) ? editField("changeover_time", "Changeover Time", { structuredTime: true }) : null}
         </FieldGroup>
         </div>
 
@@ -890,14 +907,14 @@ export default function ShowDetailPage() {
                   if (id) localStorage.setItem(`drive-card-dismissed-${id}`, "true");
                   setDriveCardDismissed(true);
                 }}
-                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                 aria-label="Dismiss drive time suggestion"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
           )}
-          {editField("departure_time", "Departure Time", { mono: true, alwaysShow: true, timeFormat: true })}
+          {editField("departure_time", "Departure Time", { alwaysShow: true, structuredTime: true })}
           {recommendedDeparture && inlineField !== "departure_time" && show.departure_time !== recommendedDeparture && (
             <div className="-mt-2">
               <Button
@@ -921,7 +938,7 @@ export default function ShowDetailPage() {
         {/* Day of Show Contact */}
         <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone}>
           {editField("dos_contact_name", "Name", { alwaysShow: true })}
-          {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true })}
+          {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true, phoneFormat: true })}
         </FieldGroup>
 
         <Separator />
@@ -985,7 +1002,7 @@ export default function ShowDetailPage() {
             }
 
             return (
-              <button onClick={startHotelEdit} className="w-full text-left space-y-3">
+              <button onClick={startHotelEdit} className="w-full text-left space-y-3 card-pressable">
                 <FieldRow label="Name" value={show.hotel_name} />
                 <FieldRow label="Address" value={show.hotel_address} />
                 <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
