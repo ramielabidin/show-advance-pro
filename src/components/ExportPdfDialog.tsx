@@ -16,7 +16,6 @@ import jsPDF from "jspdf";
 import type { Show, ScheduleEntry } from "@/lib/types";
 import { formatCityState } from "@/lib/utils";
 import {
-  SECTIONS,
   ALL_SECTION_KEYS,
   BAND_VIEW_KEYS,
   withData,
@@ -75,11 +74,17 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
     try {
       const doc = new jsPDF({ unit: "pt", format: "letter" });
       const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 50;
+      const margin = 56;
       const contentWidth = pageWidth - margin * 2;
       let y = margin;
-      const lineHeight = 16;
-      const sectionGap = 20;
+      const lineHeight = 17;
+      const sectionGap = 22;
+      const labelWidth = 108;
+
+      // Warm color palette matching the UI
+      const C_DARK: [number, number, number] = [30, 24, 20];
+      const C_MUTED: [number, number, number] = [138, 126, 120];
+      const C_BORDER: [number, number, number] = [222, 216, 210];
 
       const has = (key: SectionKey) => selected.has(key);
       const hidden = (sec: SectionKey, field: string) => isBandHidden(sec, field, bandMode);
@@ -96,52 +101,61 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
         checkPage(lineHeight * 2 + sectionGap);
         y += sectionGap;
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.text(title, margin, y);
-        y += 4;
-        doc.setDrawColor(200, 200, 200);
+        doc.setFontSize(8);
+        doc.setTextColor(...C_MUTED);
+        doc.text(title.toUpperCase(), margin, y);
+        y += 5;
+        doc.setDrawColor(...C_BORDER);
+        doc.setLineWidth(0.5);
         doc.line(margin, y, margin + contentWidth, y);
-        y += lineHeight;
+        y += lineHeight - 4;
       };
 
       const drawField = (label: string, value: string | null, opts?: { mono?: boolean }) => {
         if (!value) return;
         checkPage(lineHeight);
+        doc.setFontSize(9.5);
+        doc.setTextColor(...C_MUTED);
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(120, 120, 120);
-        doc.text(label, margin + 8, y);
-        doc.setTextColor(30, 30, 30);
+        if (label) doc.text(label, margin + 6, y);
+        doc.setTextColor(...C_DARK);
         if (opts?.mono) doc.setFont("courier", "normal");
-        const labelWidth = 110;
-        const valX = margin + 8 + labelWidth;
-        const maxValWidth = contentWidth - 8 - labelWidth;
+        else doc.setFont("helvetica", "normal");
+        const valX = margin + 6 + labelWidth;
+        const maxValWidth = contentWidth - 6 - labelWidth;
         const lines = doc.splitTextToSize(value, maxValWidth);
         doc.text(lines, valX, y);
         y += lineHeight * lines.length;
       };
 
-      // Header
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
+      // ── Header ──────────────────────────────────────────────────────────
+      doc.setFont("times", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(...C_DARK);
       doc.text("DAY SHEET", margin, y);
-      y += 24;
-      doc.setFontSize(14);
+      y += 27;
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(15);
+      doc.setTextColor(...C_DARK);
       doc.text(show.venue_name, margin, y);
-      y += 18;
+      y += 20;
+
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(80, 80, 80);
+      doc.setFontSize(9);
+      doc.setTextColor(...C_MUTED);
       const dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
-      doc.text(`${formatCityState(show.city)}  ·  ${dateStr}`, margin, y);
-      doc.setTextColor(30, 30, 30);
-      y += lineHeight + 8;
-      doc.setDrawColor(60, 60, 60);
+      const cityStr = formatCityState(show.city);
+      doc.text(cityStr ? `${cityStr}  ·  ${dateStr}` : dateStr, margin, y);
+      doc.setTextColor(...C_DARK);
+      y += 14;
+
+      doc.setDrawColor(...C_BORDER);
       doc.setLineWidth(1);
       doc.line(margin, y, margin + contentWidth, y);
-      y += 4;
+      y += 6;
 
-      // --- Sections ---
+      // ── Sections ────────────────────────────────────────────────────────
 
       if (has("contact") && (val(show.dos_contact_name) || val(show.dos_contact_phone))) {
         drawSectionTitle("Day of Show Contact");
@@ -160,25 +174,24 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
           drawSectionTitle("Schedule");
           for (const entry of entries) {
             checkPage(lineHeight);
+            doc.setFontSize(9.5);
             doc.setFont("courier", "normal");
-            doc.setFontSize(9);
-            doc.setTextColor(120, 120, 120);
-            doc.text(entry.time, margin + 8, y);
-            doc.setTextColor(30, 30, 30);
+            doc.setTextColor(...C_MUTED);
+            doc.text(entry.time, margin + 6, y);
+            doc.setTextColor(...C_DARK);
             doc.setFont("helvetica", entry.is_band ? "bold" : "normal");
-            const setInline = entry.is_band && val(show.set_length) ? ` (${val(show.set_length)})` : "";
-            doc.text(`${entry.label}${setInline}`, margin + 80, y);
+            doc.text(entry.label, margin + 84, y);
             y += lineHeight;
           }
           if (val(show.curfew)) {
             checkPage(lineHeight);
+            doc.setFontSize(9.5);
             doc.setFont("courier", "normal");
-            doc.setFontSize(9);
-            doc.setTextColor(120, 120, 120);
-            doc.text(val(show.curfew)!, margin + 8, y);
-            doc.setTextColor(30, 30, 30);
+            doc.setTextColor(...C_MUTED);
+            doc.text(val(show.curfew)!, margin + 6, y);
+            doc.setTextColor(...C_DARK);
             doc.setFont("helvetica", "normal");
-            doc.text("Curfew", margin + 80, y);
+            doc.text("Curfew", margin + 84, y);
             y += lineHeight;
           }
         }
