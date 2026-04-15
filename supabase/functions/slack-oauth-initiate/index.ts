@@ -23,26 +23,6 @@ async function hmacSign(data: string, secret: string): Promise<string> {
     .join("");
 }
 
-/**
- * Decode a JWT payload without verification.
- * Safe here because Supabase infrastructure (verify_jwt=true) has already
- * verified the signature before this function runs.
- */
-function decodeJwtPayload(jwt: string): Record<string, unknown> | null {
-  try {
-    const parts = jwt.split(".");
-    if (parts.length !== 3) return null;
-    // base64url → base64 → decode. Add padding so atob never throws on
-    // payloads whose length is not a multiple of 4.
-    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, "=");
-    const json = atob(padded);
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -50,6 +30,7 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const stateSecret = Deno.env.get("SLACK_STATE_SECRET");
     const clientId = Deno.env.get("SLACK_CLIENT_ID");
@@ -61,7 +42,6 @@ serve(async (req) => {
       );
     }
 
-    // Read the JWT from the Authorization header
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       console.error("slack-oauth-initiate: missing Authorization header");
@@ -71,38 +51,23 @@ serve(async (req) => {
       });
     }
 
-    const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
-    if (!jwt) {
-      console.error("slack-oauth-initiate: empty JWT after stripping Bearer");
-      return new Response(JSON.stringify({ error: "Unauthorized: empty token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Decode the JWT payload.
-    // Supabase infrastructure already verified the signature (verify_jwt=true),
-    // so we only need to extract the user identity from the claims.
-    const payload = decodeJwtPayload(jwt);
-    const userId = typeof payload?.sub === "string" && payload.sub.length > 0
-      ? payload.sub
-      : null;
-
-    if (!userId) {
-      console.error(
-        "slack-oauth-initiate: JWT has no sub claim — likely received anon key instead of user token",
-        JSON.stringify({
-          role: payload?.role,
-          jwtPrefix: jwt.slice(0, 12),
-          jwtLength: jwt.length,
-        }),
-      );
+    // Validate the user's JWT by asking Supabase Auth to resolve it to a
+    // user. This works regardless of the project's JWT signing algorithm
+    // (HS256 *or* ES256 / RS256 — the asymmetric keys new Supabase projects
+    // use), which lets us run behind verify_jwt=false on the edge-function
+    // gateway without dropping auth checks. The gateway's built-in
+    // verify_jwt only speaks HS256 and 401s ES256 tokens with
+    // `UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM`, so we have to handle this
+    // here instead.
+    const supabaseAuth = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+    if (userError || !user) {
+      console.error("slack-oauth-initiate: auth.getUser failed", userError?.message);
       return new Response(
-        JSON.stringify({ error: "Unauthorized: no user identity in token" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+        JSON.stringify({ error: `Unauthorized: ${userError?.message ?? "no user"}` }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -112,12 +77,12 @@ serve(async (req) => {
     const { data: membership, error: memberError } = await supabase
       .from("team_members")
       .select("team_id")
-      .eq("user_id", userId)
+      .eq("user_id", user.id)
       .limit(1)
       .single();
 
     if (memberError || !membership?.team_id) {
-      console.error("slack-oauth-initiate: no team found for user", userId, memberError?.message);
+      console.error("slack-oauth-initiate: no team found for user", user.id, memberError?.message);
       return new Response(JSON.stringify({ error: "No team found for user" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

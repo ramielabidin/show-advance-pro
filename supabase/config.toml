@@ -1,1 +1,15 @@
 project_id = "knwdjeicyisqsfiisaic"
+
+# slack-oauth-initiate validates the user's JWT itself via
+# supabase.auth.getUser(), so we skip the edge-function gateway's built-in
+# verify_jwt. The gateway only speaks HS256 and 401s ES256 tokens (new
+# asymmetric signing keys) with UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM.
+[functions.slack-oauth-initiate]
+verify_jwt = false
+
+# slack-oauth-callback is the URL Slack redirects the user's browser to
+# after authorization. That request carries no Supabase JWT — just the
+# Slack `code` and our HMAC-signed `state` — so gateway JWT verification
+# must be disabled or every OAuth redirect 401s.
+[functions.slack-oauth-callback]
+verify_jwt = false
