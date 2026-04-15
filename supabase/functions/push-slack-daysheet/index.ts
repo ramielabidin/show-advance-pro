@@ -45,46 +45,32 @@ function formatDate(dateStr: string): string {
   });
 }
 
-/** Band-mode field hiding — mirrors src/lib/daysheetSections.ts */
-const BAND_HIDDEN_FIELDS: Record<string, string[]> = {
-  venueDetails: ["ticket_price"],
-  band: ["support_pay"],
-};
-
-function isBandHidden(sectionKey: string, fieldName: string, bandMode: boolean): boolean {
-  if (!bandMode) return false;
-  return BAND_HIDDEN_FIELDS[sectionKey]?.includes(fieldName) ?? false;
-}
-
-function formatDaySheet(show: any, sections: Set<string>, bandMode: boolean, note?: string): string {
+/**
+ * Render the band day sheet — band-relevant sections only, populated fields only.
+ * Mirrors the layout produced by ExportPdfDialog / EmailBandDialog.
+ */
+function formatDaySheet(show: any): string {
   const blocks: string[] = [];
-  const has = (key: string) => sections.has(key);
-  const hidden = (sec: string, field: string) => isBandHidden(sec, field, bandMode);
-
-  if (note) {
-    blocks.push(`💬 ${note}`);
-    blocks.push("");
-  }
 
   blocks.push(`📋 *DAY SHEET*`);
   blocks.push(`*${show.venue_name}* — ${show.city}`);
   blocks.push(`📅 ${formatDate(show.date)}`);
   blocks.push("");
 
-  if (has("contact") && (val(show.dos_contact_name) || val(show.dos_contact_phone))) {
+  if (val(show.dos_contact_name) || val(show.dos_contact_phone)) {
     blocks.push(`📞 *Day of Show Contact*`);
     if (val(show.dos_contact_name)) blocks.push(`    ${val(show.dos_contact_name)}`);
     if (val(show.dos_contact_phone)) blocks.push(`    ${val(show.dos_contact_phone)}`);
     blocks.push("");
   }
 
-  if (has("venue") && val(show.venue_address)) {
+  if (val(show.venue_address)) {
     blocks.push(`📍 *Venue*`);
     blocks.push(`    ${stripCountry(val(show.venue_address)!)}`);
     blocks.push("");
   }
 
-  if (has("schedule") && show.schedule_entries?.length > 0) {
+  if (show.schedule_entries?.length > 0) {
     const sorted = [...show.schedule_entries].sort((a: any, b: any) => a.sort_order - b.sort_order);
     blocks.push(`🕐 *Schedule*`);
     for (const entry of sorted) {
@@ -95,36 +81,34 @@ function formatDaySheet(show: any, sections: Set<string>, bandMode: boolean, not
     blocks.push("");
   }
 
-  if (has("departure") && (val(show.departure_time) || val(show.departure_location))) {
+  if (val(show.departure_time) || val(show.departure_location)) {
     blocks.push(`🚐 *Departure*`);
     if (val(show.departure_time)) blocks.push(`    ⏰ ${val(show.departure_time)}`);
     if (val(show.departure_location)) blocks.push(`    Notes: ${val(show.departure_location)}`);
     blocks.push("");
   }
 
-  if (has("parking") && val(show.parking_notes)) {
+  if (val(show.parking_notes)) {
     blocks.push(`🅿️ *Parking*`);
     blocks.push(`    ${val(show.parking_notes)}`);
     blocks.push("");
   }
 
-  if (has("loadIn") && val(show.load_in_details)) {
+  if (val(show.load_in_details)) {
     blocks.push(`📦 *Load In*`);
     blocks.push(`    ${val(show.load_in_details)}`);
     blocks.push("");
   }
 
-  if (has("greenRoom") && val(show.green_room_info)) {
+  if (val(show.green_room_info)) {
     blocks.push(`🛋️ *Green Room*`);
     blocks.push(`    ${val(show.green_room_info)}`);
     blocks.push("");
   }
 
-  if (has("venueDetails")) {
+  {
     const lines: string[] = [];
     if (val(show.venue_capacity)) lines.push(`    Capacity: ${val(show.venue_capacity)}`);
-    if (!hidden("venueDetails", "ticket_price") && val(show.ticket_price))
-      lines.push(`    Ticket Price: ${val(show.ticket_price)}`);
     if (val(show.age_restriction)) lines.push(`    Age Restriction: ${val(show.age_restriction)}`);
     if (lines.length) {
       blocks.push(`🏟️ *Venue Details*`);
@@ -133,13 +117,11 @@ function formatDaySheet(show: any, sections: Set<string>, bandMode: boolean, not
     }
   }
 
-  if (has("band")) {
+  {
     const lines: string[] = [];
     if (val(show.set_length)) lines.push(`    Set Length: ${val(show.set_length)}`);
     if (val(show.curfew)) lines.push(`    Curfew: ${val(show.curfew)}`);
     if (val(show.support_act)) lines.push(`    Support Act: ${val(show.support_act)}`);
-    if (!hidden("band", "support_pay") && val(show.support_pay))
-      lines.push(`    Support Pay: ${val(show.support_pay)}`);
     if (lines.length) {
       blocks.push(`🎸 *Band & Performance*`);
       blocks.push(...lines);
@@ -147,24 +129,7 @@ function formatDaySheet(show: any, sections: Set<string>, bandMode: boolean, not
     }
   }
 
-  if (has("dealTerms")) {
-    const lines: string[] = [];
-    if (val(show.guarantee)) lines.push(`    Guarantee: ${val(show.guarantee)}`);
-    if (val(show.backend_deal)) lines.push(`    Backend: ${val(show.backend_deal)}`);
-    if (lines.length) {
-      blocks.push(`💵 *Deal Terms*`);
-      blocks.push(...lines);
-      blocks.push("");
-    }
-  }
-
-  if (has("hospitality") && val(show.hospitality)) {
-    blocks.push(`🍽️ *Hospitality*`);
-    blocks.push(`    ${val(show.hospitality)}`);
-    blocks.push("");
-  }
-
-  if (has("guestList") && val(show.guest_list_details)) {
+  if (val(show.guest_list_details)) {
     const formatted = formatGuestList(val(show.guest_list_details)!);
     if (formatted) {
       blocks.push(`📋 *Guest List*`);
@@ -173,25 +138,14 @@ function formatDaySheet(show: any, sections: Set<string>, bandMode: boolean, not
     }
   }
 
-  if (has("projections")) {
-    const lines: string[] = [];
-    if (val(show.walkout_potential)) lines.push(`    Walkout Potential: ${val(show.walkout_potential)}`);
-    if (val(show.net_gross)) lines.push(`    Net/Gross: ${val(show.net_gross)}`);
-    if (lines.length) {
-      blocks.push(`📊 *Projections*`);
-      blocks.push(...lines);
-      blocks.push("");
-    }
-  }
-
-  if (has("wifi") && (val(show.wifi_network) || val(show.wifi_password))) {
+  if (val(show.wifi_network) || val(show.wifi_password)) {
     blocks.push(`📶 *WiFi*`);
     if (val(show.wifi_network)) blocks.push(`    Network: \`${val(show.wifi_network)}\``);
     if (val(show.wifi_password)) blocks.push(`    Password: \`${val(show.wifi_password)}\``);
     blocks.push("");
   }
 
-  if (has("hotel") && (val(show.hotel_name) || val(show.hotel_address))) {
+  if (val(show.hotel_name) || val(show.hotel_address) || val(show.hotel_confirmation)) {
     blocks.push(`🏨 *Accommodations*`);
     if (val(show.hotel_name)) blocks.push(`    ${val(show.hotel_name)}`);
     if (val(show.hotel_address)) blocks.push(`    ${val(show.hotel_address)}`);
@@ -199,23 +153,6 @@ function formatDaySheet(show: any, sections: Set<string>, bandMode: boolean, not
     if (val(show.hotel_checkin)) blocks.push(`    Check-in: ${val(show.hotel_checkin)}`);
     if (val(show.hotel_checkout)) blocks.push(`    Check-out: ${val(show.hotel_checkout)}`);
     blocks.push("");
-  }
-
-  if (has("travel") && val(show.travel_notes)) {
-    blocks.push(`🗺️ *Travel*`);
-    blocks.push(`    ${val(show.travel_notes)}`);
-    blocks.push("");
-  }
-
-  if (has("additional")) {
-    const lines: string[] = [];
-    if (val(show.additional_info)) lines.push(`    ${val(show.additional_info)}`);
-    if (val(show.merch_split)) lines.push(`    Merch Split: ${val(show.merch_split)}`);
-    if (lines.length) {
-      blocks.push(`ℹ️ *Additional Info*`);
-      blocks.push(...lines);
-      blocks.push("");
-    }
   }
 
   return blocks.join("\n");
@@ -248,7 +185,7 @@ serve(async (req) => {
       });
     }
 
-    const { showId, sections: sectionsArr, bandMode: rawBandMode, note } = await req.json();
+    const { showId } = await req.json();
     if (!showId || typeof showId !== "string") {
       return new Response(JSON.stringify({ error: "showId is required" }), {
         status: 400,
@@ -287,10 +224,7 @@ serve(async (req) => {
       );
     }
 
-    const allSections = ["contact","venue","schedule","departure","parking","loadIn","greenRoom","venueDetails","band","dealTerms","hospitality","guestList","projections","wifi","hotel","travel","additional"];
-    const sections = new Set<string>(Array.isArray(sectionsArr) ? sectionsArr : allSections);
-    const bandMode = rawBandMode === true;
-    const message = formatDaySheet(show, sections, bandMode, typeof note === "string" ? note.trim() : undefined);
+    const message = formatDaySheet(show);
 
     const slackRes = await fetch(webhookUrl, {
       method: "POST",
