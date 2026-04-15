@@ -348,7 +348,7 @@ export default function SettingsPage() {
   });
 
   return (
-    <div className="animate-fade-in max-w-5xl space-y-6 sm:space-y-8">
+    <div className="stagger-list max-w-5xl space-y-6 sm:space-y-8">
       <div>
         <h1 className="text-2xl sm:text-3xl tracking-tight">Settings</h1>
         <p className="text-muted-foreground text-sm mt-1">Manage your artist profile and integrations</p>
@@ -574,7 +574,7 @@ export default function SettingsPage() {
             <p className="text-sm">No members yet. Add people to your touring party.</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 stagger-list">
             {partyMembers.map((m) => (
               <div
                 key={m.id}

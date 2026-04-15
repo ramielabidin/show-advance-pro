@@ -122,7 +122,7 @@ export default function ToursPage() {
           description="Create a tour to group a run of shows together. Shows can also exist standalone."
         />
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 stagger-list">
           {tours.map((tour) => {
             const shows = (tour.shows as any[]) ?? [];
             const sortedShows = [...shows].sort((a, b) => a.date.localeCompare(b.date));
@@ -139,7 +139,7 @@ export default function ToursPage() {
               <Link
                 key={tour.id}
                 to={`/tours/${tour.id}`}
-                className="group flex items-center justify-between rounded-lg border bg-card p-4 sm:p-5 transition-all hover:border-foreground/20 hover:shadow-sm animate-fade-in active:bg-accent/50"
+                className="group flex items-center justify-between rounded-lg border bg-card p-4 sm:p-5 card-pressable transition-colors hover:border-foreground/20 hover:shadow-sm active:bg-accent/50"
               >
                 <div className="min-w-0">
                   <h3 className="font-medium text-foreground text-sm sm:text-base">{tour.name}</h3>
