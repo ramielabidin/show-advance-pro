@@ -13,3 +13,15 @@ verify_jwt = false
 # must be disabled or every OAuth redirect 401s.
 [functions.slack-oauth-callback]
 verify_jwt = false
+
+# parse-advance validates the caller's JWT itself via supabase.auth.getUser(),
+# so we bypass the gateway's built-in verify_jwt for the same ES256 reason as
+# slack-oauth-initiate above — otherwise every call 401s at the gateway.
+[functions.parse-advance]
+verify_jwt = false
+
+# calculate-drive-time takes no user-scoped data and is only called from
+# authenticated app sessions; disable gateway verify_jwt to avoid ES256
+# token rejection.
+[functions.calculate-drive-time]
+verify_jwt = false
