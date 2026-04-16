@@ -400,7 +400,7 @@ export default function ShowDetailPage() {
   );
 
   // Renders a field with inline edit support only
-  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; structuredTime?: boolean; hideTbd?: boolean; phoneFormat?: boolean; placeholder?: string; currency?: boolean; compact?: boolean }) => {
+  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; structuredTime?: boolean; hideTbd?: boolean; phoneFormat?: boolean; placeholder?: string; currency?: boolean; compact?: boolean; labelHidden?: boolean }) => {
     // Inline editing for this specific field
     if (inlineField === key) {
       const handleBlurSave = () => {
@@ -475,7 +475,7 @@ export default function ShowDetailPage() {
         onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat, structuredTime: opts?.structuredTime })}
         className="w-full text-left group"
       >
-        <FieldRow label={label} value={displayValue} mono={opts?.mono} compact={opts?.compact} />
+        <FieldRow label={label} value={displayValue} mono={opts?.mono} compact={opts?.compact} noLabel={opts?.labelHidden} />
       </button>
     );
   };
@@ -884,9 +884,9 @@ export default function ShowDetailPage() {
 
             <Separator />
 
-            {/* Schedule + Day of Show Contact — two-column layout */}
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_minmax(0,240px)] gap-x-6 gap-y-6">
-              {/* Schedule — wider column, most important section */}
+            {/* Schedule + Day-of Logistics — two-column layout */}
+            <div className="grid grid-cols-1 md:grid-cols-[3fr_auto_2fr] gap-x-6 gap-y-6">
+              {/* Schedule — dominant left column */}
               <div ref={scheduleRef}>
               <FieldGroup title="Schedule" incomplete={!editingSchedule && scheduleEntries.length === 0}>
                 {editingSchedule ? (
@@ -949,22 +949,28 @@ export default function ShowDetailPage() {
               {/* Vertical divider (desktop only) */}
               <Separator orientation="vertical" className="hidden md:block h-auto" />
 
-              {/* Day of Show Contact — right column */}
-              <div>
+              {/* Right column: Day of Show Contact + Load In + Parking */}
+              <div className="space-y-6">
                 <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone} contentClassName="space-y-2">
                   {editField("dos_contact_name", "Name", { alwaysShow: true, compact: true })}
                   {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true, phoneFormat: true, compact: true })}
+                </FieldGroup>
+
+                <FieldGroup title="Load In" incomplete={!show.load_in_details}>
+                  {editField("load_in_details", "Load In", { multiline: true, alwaysShow: true, labelHidden: true })}
+                </FieldGroup>
+
+                <FieldGroup title="Parking" incomplete={!show.parking_notes}>
+                  {editField("parking_notes", "Parking", { multiline: true, alwaysShow: true, labelHidden: true })}
                 </FieldGroup>
               </div>
             </div>
 
             <Separator />
 
-            {/* Venue Details */}
-            <FieldGroup title="Venue Details" contentClassName="space-y-5" incomplete={!show.load_in_details && !show.parking_notes && !show.backline_provided}>
-              {editField("load_in_details", "Load In", { multiline: true, alwaysShow: true })}
-              {editField("parking_notes", "Parking", { multiline: true, alwaysShow: true })}
-              {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true })}
+            {/* Backline */}
+            <FieldGroup title="Backline" incomplete={!show.backline_provided}>
+              {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true, labelHidden: true })}
             </FieldGroup>
 
             <Separator />
