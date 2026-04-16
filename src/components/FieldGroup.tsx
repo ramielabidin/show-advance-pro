@@ -1,11 +1,14 @@
+import { cn } from "@/lib/utils";
+
 interface FieldGroupProps {
   title: string;
   children: React.ReactNode;
   className?: string;
+  contentClassName?: string;
   incomplete?: boolean;
 }
 
-export default function FieldGroup({ title, children, className, incomplete }: FieldGroupProps) {
+export default function FieldGroup({ title, children, className, contentClassName, incomplete }: FieldGroupProps) {
   return (
     <div className={className}>
       <div className="flex items-center gap-2 mb-3">
@@ -15,7 +18,7 @@ export default function FieldGroup({ title, children, className, incomplete }: F
           {incomplete && <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />}
         </h3>
       </div>
-      <div className="space-y-3">{children}</div>
+      <div className={cn("space-y-3", contentClassName)}>{children}</div>
     </div>
   );
 }

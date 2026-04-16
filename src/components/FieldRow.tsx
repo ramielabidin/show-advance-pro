@@ -5,6 +5,7 @@ interface FieldRowProps {
   label: string;
   value: string | null | undefined;
   mono?: boolean;
+  compact?: boolean;
 }
 
 /** Detect patterns like "1. foo 2. bar" or "1) foo 2) bar" and split into list items */
@@ -25,14 +26,14 @@ function parseNumberedList(text: string): string[] | null {
   return items.length >= 2 ? items : null;
 }
 
-export default function FieldRow({ label, value, mono }: FieldRowProps) {
+export default function FieldRow({ label, value, mono, compact }: FieldRowProps) {
   const listItems = useMemo(() => value ? parseNumberedList(value) : null, [value]);
 
   if (!value) return null;
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-      <span className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">{label}</span>
+    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+      <span className={cn("text-sm text-muted-foreground sm:shrink-0", compact ? "sm:w-16" : "sm:w-32")}>{label}</span>
       {listItems ? (
         <ol className="text-sm text-foreground list-decimal list-outside pl-4 space-y-1">
           {listItems.map((item, i) => (
