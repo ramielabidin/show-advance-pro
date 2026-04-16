@@ -23,6 +23,16 @@ import CreateShowDialog from "@/components/CreateShowDialog";
 import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState";
 import TourRevenueSimulator from "@/components/TourRevenueSimulator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function TourDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +42,8 @@ export default function TourDetailPage() {
   const [form, setForm] = useState<any>({});
   const [addingShow, setAddingShow] = useState(false);
   const [selectedShowId, setSelectedShowId] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [pendingRemoveShowId, setPendingRemoveShowId] = useState<string | null>(null);
 
   const { data: tour, isLoading } = useQuery({
     queryKey: ["tour", id],
@@ -182,9 +194,7 @@ export default function TourDetailPage() {
                 variant="ghost"
                 size="sm"
                 className="text-destructive hover:text-destructive h-9"
-                onClick={() => {
-                  if (confirm("Delete this tour? Shows will become standalone.")) deleteMutation.mutate();
-                }}
+                onClick={() => setDeleteConfirmOpen(true)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -269,9 +279,9 @@ export default function TourDetailPage() {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  removeShowMutation.mutate(show.id);
+                  setPendingRemoveShowId(show.id);
                 }}
-                className="absolute right-2 sm:right-12 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-muted-foreground hover:text-destructive bg-card/80 px-2 py-1 rounded"
+                className="absolute right-2 sm:right-12 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 [transition:opacity_160ms_var(--ease-out),color_150ms_var(--ease-out)] text-xs text-muted-foreground hover:text-destructive bg-card/80 px-2 py-1 rounded"
               >
                 Remove
               </button>
@@ -279,6 +289,54 @@ export default function TourDetailPage() {
           ))}
         </div>
       )}
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this tour?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Shows in this tour will become standalone. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                deleteMutation.mutate();
+                setDeleteConfirmOpen(false);
+              }}
+            >
+              Delete tour
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!pendingRemoveShowId}
+        onOpenChange={(open) => { if (!open) setPendingRemoveShowId(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove show from tour?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The show will become standalone but won't be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingRemoveShowId) removeShowMutation.mutate(pendingRemoveShowId);
+                setPendingRemoveShowId(null);
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

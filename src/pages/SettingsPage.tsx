@@ -25,6 +25,16 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import BandDocuments from "@/components/BandDocuments";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const PARTY_ROLES = ["Artist", "Manager", "Crew", "Photographer", "Driver", "Other"] as const;
 
@@ -54,6 +64,11 @@ export default function SettingsPage() {
   const [partyDialogOpen, setPartyDialogOpen] = useState(false);
   const [partyEditingId, setPartyEditingId] = useState<string | null>(null);
   const [partyForm, setPartyForm] = useState<PartyMemberForm>(emptyPartyForm);
+
+  // Confirmation state
+  const [slackDisconnectOpen, setSlackDisconnectOpen] = useState(false);
+  const [pendingRemovePartyId, setPendingRemovePartyId] = useState<string | null>(null);
+  const [pendingRemoveMemberId, setPendingRemoveMemberId] = useState<string | null>(null);
 
   // ── App Settings ──
   const { isLoading: settingsLoading, data: appSettings } = useQuery({
@@ -418,7 +433,7 @@ export default function SettingsPage() {
   return (
     <div className="stagger-list max-w-5xl space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-2xl sm:text-3xl tracking-tight">Settings</h1>
+        <h1 className="text-2xl sm:text-3xl tracking-[-0.02em]">Settings</h1>
         <p className="text-muted-foreground text-sm mt-1">Manage your artist profile and integrations</p>
       </div>
 
@@ -449,11 +464,11 @@ export default function SettingsPage() {
           {settingsLoading ? (
             <div className="h-10 rounded-md bg-muted animate-pulse" />
           ) : appSettings?.slack_webhook_url ? (
-            <div className="flex items-center justify-between rounded-md border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20 px-3 py-2.5">
+            <div className="flex items-center justify-between rounded-md border border-pastel-green/60 bg-pastel-green px-3 py-2.5">
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
+                <span className="h-2 w-2 rounded-full bg-[hsl(var(--success))] shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground leading-tight">
+                  <p className="text-sm font-medium text-pastel-green-foreground leading-tight">
                     {appSettings.slack_channel_name ?? "Slack"} connected
                   </p>
                   {appSettings.slack_team_name && (
@@ -466,11 +481,7 @@ export default function SettingsPage() {
                 size="sm"
                 className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
                 disabled={disconnectSlackMutation.isPending}
-                onClick={() => {
-                  if (confirm("Disconnect Slack? Day sheets can no longer be pushed until you reconnect.")) {
-                    disconnectSlackMutation.mutate();
-                  }
-                }}
+                onClick={() => setSlackDisconnectOpen(true)}
               >
                 {disconnectSlackMutation.isPending ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -539,7 +550,7 @@ export default function SettingsPage() {
                       <li key={p.place_id}>
                         <button
                           type="button"
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground [transition:background-color_150ms_var(--ease-out),color_150ms_var(--ease-out)]"
                           onMouseDown={(e) => {
                             e.preventDefault(); // prevent blur before click
                             selectCityPrediction(p.description);
@@ -699,9 +710,7 @@ export default function SettingsPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => {
-                          if (confirm("Remove this member?")) deletePartyMutation.mutate(m.id);
-                        }}
+                        onClick={() => setPendingRemovePartyId(m.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -746,9 +755,7 @@ export default function SettingsPage() {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
-                  onClick={() => {
-                    if (confirm("Remove this member?")) removeMemberMutation.mutate(m.id);
-                  }}
+                  onClick={() => setPendingRemoveMemberId(m.id)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
@@ -806,6 +813,81 @@ export default function SettingsPage() {
       </div>
 
       </div>{/* end 2-column grid */}
+
+      <AlertDialog open={slackDisconnectOpen} onOpenChange={setSlackDisconnectOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect Slack?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Day sheets can no longer be pushed to Slack until you reconnect.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                disconnectSlackMutation.mutate();
+                setSlackDisconnectOpen(false);
+              }}
+            >
+              Disconnect
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!pendingRemovePartyId}
+        onOpenChange={(open) => { if (!open) setPendingRemovePartyId(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove party member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes them from your touring party. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingRemovePartyId) deletePartyMutation.mutate(pendingRemovePartyId);
+                setPendingRemovePartyId(null);
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!pendingRemoveMemberId}
+        onOpenChange={(open) => { if (!open) setPendingRemoveMemberId(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove team member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              They will lose access to this team. You can re-invite them later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingRemoveMemberId) removeMemberMutation.mutate(pendingRemoveMemberId);
+                setPendingRemoveMemberId(null);
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

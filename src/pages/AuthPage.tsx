@@ -53,10 +53,13 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Advance</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+      <div className="w-full max-w-sm space-y-8 animate-fade-in">
+        <div className="text-center space-y-2">
+          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            {isLogin ? "Welcome back" : "Get started"}
+          </p>
+          <h1 className="font-display text-4xl tracking-[-0.02em] text-foreground">Advance</h1>
+          <p className="text-sm text-muted-foreground">
             {isLogin ? "Sign in to your account" : "Create a new account"}
           </p>
         </div>
@@ -131,7 +134,7 @@ export default function AuthPage() {
           <button
             type="button"
             onClick={() => setIsLogin(!isLogin)}
-            className="underline text-foreground hover:text-primary"
+            className="underline underline-offset-2 text-foreground [transition:color_150ms_var(--ease-out)] hover:text-foreground/70"
           >
             {isLogin ? "Sign Up" : "Sign In"}
           </button>

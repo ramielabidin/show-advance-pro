@@ -139,7 +139,7 @@ export default function ToursPage() {
               <Link
                 key={tour.id}
                 to={`/tours/${tour.id}`}
-                className="group flex items-center justify-between rounded-lg border bg-card p-4 sm:p-5 card-pressable transition-colors hover:border-foreground/20 hover:shadow-sm active:bg-accent/50"
+                className="group flex items-center justify-between rounded-lg border bg-card p-4 sm:p-5 card-pressable [transition:border-color_160ms_var(--ease-out),background-color_160ms_var(--ease-out),box-shadow_200ms_var(--ease-out),transform_160ms_var(--ease-out)] hover:border-foreground/20 active:bg-accent/50"
               >
                 <div className="min-w-0">
                   <h3 className="font-medium text-foreground text-sm sm:text-base">{tour.name}</h3>
@@ -169,7 +169,7 @@ export default function ToursPage() {
                     </div>
                   )}
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2 hidden sm:block" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 [transition:opacity_160ms_var(--ease-out)] shrink-0 ml-2 hidden sm:block" />
               </Link>
             );
           })}
