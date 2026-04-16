@@ -25,3 +25,18 @@ verify_jwt = false
 # token rejection.
 [functions.calculate-drive-time]
 verify_jwt = false
+
+# push-slack-daysheet validates the caller via supabase.auth.getUser() and
+# looks up their Slack tokens; disable gateway verify_jwt to avoid ES256
+# token rejection (same reason as slack-oauth-initiate above).
+[functions.push-slack-daysheet]
+verify_jwt = false
+
+# autocomplete-place and lookup-venue-address are called from authenticated
+# app sessions but only proxy Google Places requests; disable gateway
+# verify_jwt to avoid ES256 token rejection.
+[functions.autocomplete-place]
+verify_jwt = false
+
+[functions.lookup-venue-address]
+verify_jwt = false
