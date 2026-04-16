@@ -92,9 +92,15 @@ export default function BandDocuments() {
     onError: () => toast.error("Failed to remove document"),
   });
 
-  const getPublicUrl = (filePath: string) => {
-    const { data } = supabase.storage.from("band-documents").getPublicUrl(filePath);
-    return data.publicUrl;
+  const openDocument = async (filePath: string) => {
+    const { data, error } = await supabase.storage
+      .from("band-documents")
+      .createSignedUrl(filePath, 60);
+    if (error || !data?.signedUrl) {
+      toast.error("Could not open document");
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
   };
 
   const formatSize = (bytes: number | null) => {
@@ -156,7 +162,7 @@ export default function BandDocuments() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => window.open(getPublicUrl(doc.file_path), "_blank")}
+                        onClick={() => openDocument(doc.file_path)}
                         title="View / Download"
                       >
                         <ExternalLink className="h-3.5 w-3.5" />
