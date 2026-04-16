@@ -400,7 +400,7 @@ export default function ShowDetailPage() {
   );
 
   // Renders a field with inline edit support only
-  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; structuredTime?: boolean; hideTbd?: boolean; phoneFormat?: boolean; placeholder?: string; currency?: boolean }) => {
+  const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; structuredTime?: boolean; hideTbd?: boolean; phoneFormat?: boolean; placeholder?: string; currency?: boolean; compact?: boolean; labelHidden?: boolean }) => {
     // Inline editing for this specific field
     if (inlineField === key) {
       const handleBlurSave = () => {
@@ -475,7 +475,7 @@ export default function ShowDetailPage() {
         onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat, structuredTime: opts?.structuredTime })}
         className="w-full text-left group"
       >
-        <FieldRow label={label} value={displayValue} mono={opts?.mono} />
+        <FieldRow label={label} value={displayValue} mono={opts?.mono} compact={opts?.compact} noLabel={opts?.labelHidden} />
       </button>
     );
   };
@@ -525,29 +525,30 @@ export default function ShowDetailPage() {
 
   return (
     <div className="animate-fade-in max-w-3xl">
+      <Tabs value={viewTab} onValueChange={v => setViewTab(v as "show" | "deal")}>
       {/* Header */}
       <div className="mb-5 space-y-1.5 sm:space-y-2">
-        {/* Back arrow */}
-        <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 -ml-1" onClick={() => navigate("/")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-
-        {/* Tour badge */}
-        {(show as any).tours?.name && (
-          <Link to={`/tours/${(show as any).tours.id}`}>
-            <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 hover:bg-secondary/80 transition-colors">
-              {(show as any).tours.name}
-            </Badge>
-          </Link>
-        )}
-
-        {/* Settled badge */}
-        {(show as any).is_settled && (
-          <Badge className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 bg-[hsl(var(--primary))] text-primary-foreground gap-1 ml-1">
-            <CheckCircle2 className="h-2.5 w-2.5" />
-            Settled
-          </Badge>
-        )}
+        {/* Back arrow + badges row */}
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 -ml-1" onClick={() => navigate("/")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center gap-1.5">
+            {(show as any).is_settled && (
+              <Badge className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 bg-[hsl(var(--primary))] text-primary-foreground gap-1">
+                <CheckCircle2 className="h-2.5 w-2.5" />
+                Settled
+              </Badge>
+            )}
+            {(show as any).tours?.name && (
+              <Link to={`/tours/${(show as any).tours.id}`}>
+                <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 hover:bg-secondary/80 transition-colors">
+                  {(show as any).tours.name}
+                </Badge>
+              </Link>
+            )}
+          </div>
+        </div>
 
         {/* Venue name — inline editable */}
         {inlineField === "venue_name" ? (
@@ -570,12 +571,12 @@ export default function ShowDetailPage() {
                   setInlineField(null);
                 }
               }}
-              className="text-xl sm:text-2xl font-display font-bold tracking-tight h-auto py-0.5 px-1 -ml-1"
+              className="text-2xl sm:text-3xl font-display font-bold tracking-tight h-auto py-0.5 px-1 -ml-1"
             />
           </div>
         ) : (
           <h1
-            className="text-xl sm:text-2xl font-display font-bold tracking-tight leading-tight cursor-pointer hover:text-primary/80 transition-colors"
+            className="text-2xl sm:text-3xl font-display font-bold tracking-tight leading-tight cursor-pointer hover:text-primary/80 transition-colors"
             onClick={() => { setInlineField("venue_name"); setInlineValue(show.venue_name); }}
           >
             {show.venue_name}
@@ -668,7 +669,8 @@ export default function ShowDetailPage() {
         {/* Action buttons */}
         <div className="pt-1">
           {/* Desktop */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden md:flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
             {/* Primary CTA: Settle Show */}
             {(show as any).is_settled ? (
               <Button
@@ -734,6 +736,11 @@ export default function ShowDetailPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </div>
+            <TabsList>
+              <TabsTrigger value="show">Show Info</TabsTrigger>
+              <TabsTrigger value="deal">Deal Info</TabsTrigger>
+            </TabsList>
           </div>
 
           {/* Mobile */}
@@ -803,6 +810,10 @@ export default function ShowDetailPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+            <TabsList className="w-full">
+              <TabsTrigger value="show" className="flex-1">Show Info</TabsTrigger>
+              <TabsTrigger value="deal" className="flex-1">Deal Info</TabsTrigger>
+            </TabsList>
           </div>
         </div>
       </div>
@@ -823,13 +834,7 @@ export default function ShowDetailPage() {
         </div>
       )}
 
-      <Tabs value={viewTab} onValueChange={v => setViewTab(v as "show" | "deal")}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="show">Show Info</TabsTrigger>
-          <TabsTrigger value="deal">Deal Info</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="show">
+      <TabsContent value="show">
           <div className="space-y-6 sm:space-y-8">
             {/* Departure — first chronologically */}
             <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_location}>
@@ -879,9 +884,9 @@ export default function ShowDetailPage() {
 
             <Separator />
 
-            {/* Schedule + Day of Show Contact — two-column layout */}
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_minmax(0,240px)] gap-x-6 gap-y-6">
-              {/* Schedule — wider column, most important section */}
+            {/* Schedule + Day-of Logistics — two-column layout */}
+            <div className="grid grid-cols-1 md:grid-cols-[3fr_auto_2fr] gap-x-6 gap-y-6">
+              {/* Schedule — dominant left column */}
               <div ref={scheduleRef}>
               <FieldGroup title="Schedule" incomplete={!editingSchedule && scheduleEntries.length === 0}>
                 {editingSchedule ? (
@@ -919,12 +924,12 @@ export default function ShowDetailPage() {
                       {scheduleEntries.map((entry) => (
                         <div
                           key={entry.id}
-                          className="flex items-baseline gap-3 sm:gap-4 rounded px-2 sm:px-3 py-1.5"
+                          className="flex items-baseline gap-3 sm:gap-4 rounded px-2 sm:px-3 py-2"
                         >
-                          <span className="font-mono text-sm shrink-0 whitespace-nowrap text-muted-foreground">
+                          <span className="font-mono text-base shrink-0 whitespace-nowrap text-muted-foreground">
                             {entry.time}
                           </span>
-                          <span className="text-sm text-foreground">{entry.label}</span>
+                          <span className="text-base text-foreground">{entry.label}</span>
                         </div>
                       ))}
                     </div>
@@ -944,22 +949,28 @@ export default function ShowDetailPage() {
               {/* Vertical divider (desktop only) */}
               <Separator orientation="vertical" className="hidden md:block h-auto" />
 
-              {/* Day of Show Contact — right column */}
-              <div>
-                <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone}>
-                  {editField("dos_contact_name", "Name", { alwaysShow: true })}
-                  {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true, phoneFormat: true })}
+              {/* Right column: Day of Show Contact + Load In + Parking */}
+              <div className="space-y-6">
+                <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone} contentClassName="space-y-2">
+                  {editField("dos_contact_name", "Name", { alwaysShow: true, compact: true })}
+                  {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true, phoneFormat: true, compact: true })}
+                </FieldGroup>
+
+                <FieldGroup title="Load In" incomplete={!show.load_in_details}>
+                  {editField("load_in_details", "Load In", { multiline: true, alwaysShow: true, labelHidden: true })}
+                </FieldGroup>
+
+                <FieldGroup title="Parking" incomplete={!show.parking_notes}>
+                  {editField("parking_notes", "Parking", { multiline: true, alwaysShow: true, labelHidden: true })}
                 </FieldGroup>
               </div>
             </div>
 
             <Separator />
 
-            {/* Venue Details */}
-            <FieldGroup title="Venue Details" className="[&>div]:space-y-5" incomplete={!show.load_in_details && !show.parking_notes && !show.backline_provided}>
-              {editField("load_in_details", "Load In", { multiline: true, alwaysShow: true })}
-              {editField("parking_notes", "Parking", { multiline: true, alwaysShow: true })}
-              {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true })}
+            {/* Backline */}
+            <FieldGroup title="Backline" incomplete={!show.backline_provided}>
+              {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true, labelHidden: true })}
             </FieldGroup>
 
             <Separator />
