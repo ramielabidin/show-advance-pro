@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
 import SlackPushDialog from "@/components/SlackPushDialog";
@@ -62,6 +63,8 @@ export default function ShowDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { teamId } = useTeam();
+
+  const [viewTab, setViewTab] = useState<"show" | "deal">("show");
 
   // Inline edit: which field key is currently being edited (null = none)
   const [inlineField, setInlineField] = useState<string | null>(null);
@@ -834,427 +837,437 @@ export default function ShowDetailPage() {
         </div>
       )}
 
-      <div className="space-y-6 sm:space-y-8">
-        <div ref={scheduleRef}>
-        <FieldGroup title="Schedule" incomplete={!editingSchedule && scheduleEntries.length === 0}>
-          {editingSchedule ? (
-            <ScheduleEditor
-              initial={scheduleEntries.map((e) => ({ time: e.time, label: e.label, is_band: e.is_band }))}
-              onSave={async (rows) => {
-                try {
-                  await supabase.from("schedule_entries").delete().eq("show_id", id!);
-                  if (rows.length > 0) {
-                    const inserts = rows.map((r, i) => ({
-                      show_id: id!,
-                      time: r.time,
-                      label: r.label,
-                      is_band: r.is_band,
-                      sort_order: i,
-                    }));
-                    const { error } = await supabase.from("schedule_entries").insert(inserts);
-                    if (error) throw error;
-                  }
-                  queryClient.invalidateQueries({ queryKey: ["show", id] });
-                  queryClient.invalidateQueries({ queryKey: ["shows"] });
-                  queryClient.invalidateQueries({ queryKey: ["schedule-counts"] });
-                  setEditingSchedule(false);
-                  toast.success("Schedule updated");
-                } catch {
-                  toast.error("Failed to save schedule");
-                }
-              }}
-              onCancel={() => setEditingSchedule(false)}
-              saving={false}
-            />
-          ) : scheduleEntries.length > 0 ? (
-            <button onClick={() => setEditingSchedule(true)} className="w-full text-left card-pressable">
-              <div className="space-y-1">
-                {scheduleEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-baseline gap-3 sm:gap-4 rounded px-2 sm:px-3 py-1.5"
-                  >
-                    <span className="font-mono text-sm shrink-0 whitespace-nowrap text-muted-foreground">
-                      {entry.time}
-                    </span>
-                    <span className="text-sm text-foreground">{entry.label}</span>
-                  </div>
-                ))}
-              </div>
-            </button>
-          ) : (
-            <EmptyFieldPrompt label="schedule" onClick={() => {
-              scheduleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-              setEditingSchedule(true);
-            }} />
-          )}
-          {editField("set_length", "Set Length", { alwaysShow: true })}
-          {(inlineField === "curfew" || show.curfew) ? editField("curfew", "Curfew", { structuredTime: true, hideTbd: true }) : null}
-          {(inlineField === "changeover_time" || show.changeover_time) ? editField("changeover_time", "Changeover Time", { structuredTime: true }) : null}
-        </FieldGroup>
-        </div>
+      <Tabs value={viewTab} onValueChange={v => setViewTab(v as "show" | "deal")}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="show">Show Info</TabsTrigger>
+          <TabsTrigger value="deal">Deal Info</TabsTrigger>
+        </TabsList>
 
-        <Separator />
-
-        {/* Departure */}
-        <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_location}>
-          {driveTimeLabel && departureOrigin && !driveCardDismissed && (
-            <div className="flex items-start gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
-              <Clock className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
-              <div className="flex-1 min-w-0">
-                <div className="text-foreground">
-                  <span className="font-medium">{driveTimeLabel}</span>
-                  <span className="text-muted-foreground"> from {departureOrigin.label}</span>
-                </div>
-                {driveTime?.distance_text && (
-                  <div className="text-xs text-muted-foreground">{driveTime.distance_text}</div>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (id) localStorage.setItem(`drive-card-dismissed-${id}`, "true");
-                  setDriveCardDismissed(true);
-                }}
-                className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                aria-label="Dismiss drive time suggestion"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
-          {editField("departure_time", "Departure Time", { alwaysShow: true, structuredTime: true })}
-          {recommendedDeparture && inlineField !== "departure_time" && show.departure_time !== recommendedDeparture && !driveCardDismissed && (
-            <div className="-mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs gap-1.5"
-                onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture } as any)}
-                disabled={updateMutation.isPending}
-              >
-                <Clock className="h-3 w-3" />
-                Use {recommendedDeparture}
-                <span className="text-muted-foreground">· load-in − drive − 45 min</span>
-              </Button>
-            </div>
-          )}
-          {editField("departure_location", "Departure Notes", { multiline: true, alwaysShow: true, placeholder: "e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am" })}
-        </FieldGroup>
-
-        <Separator />
-
-        {/* Day of Show Contact */}
-        <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone}>
-          {editField("dos_contact_name", "Name", { alwaysShow: true })}
-          {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true, phoneFormat: true })}
-        </FieldGroup>
-
-        <Separator />
-
-        {/* Venue Details */}
-        <FieldGroup title="Venue Details" className="[&>div]:space-y-5" incomplete={!show.load_in_details && !show.parking_notes && !show.backline_provided}>
-          {editField("load_in_details", "Load In", { multiline: true, alwaysShow: true })}
-          {editField("parking_notes", "Parking", { multiline: true, alwaysShow: true })}
-          {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true })}
-        </FieldGroup>
-
-        <Separator />
-
-        {/* At The Venue */}
-        <FieldGroup title="At The Venue">
-          {editField("green_room_info", "Green Room", { multiline: true, alwaysShow: true })}
-          {editField("hospitality", "Hospitality", { multiline: true })}
-          {editField("wifi_network", "WiFi Network", { mono: true, alwaysShow: true })}
-          {editField("wifi_password", "WiFi Password", { mono: true, alwaysShow: true })}
-        </FieldGroup>
-
-        <Separator />
-
-        {/* Guest List */}
-        <FieldGroup title="Guest List" incomplete={!!show.artist_comps && !show.guest_list_details && inlineField !== "guest_list_details"}>
-          {renderGuestList()}
-        </FieldGroup>
-
-        <Separator />
-
-        {/* Accommodations (formerly Hotel) */}
-        <FieldGroup title="Accommodations">
-          {(() => {
-            const hotelEmpty = !show.hotel_name && !show.hotel_address && !show.hotel_confirmation && !show.hotel_checkin && !show.hotel_checkout;
-            const isHotelInline = inlineField === "hotel_group";
-
-            if (isHotelInline) {
-              return (
-                <div ref={inlineRef} className="space-y-2">
+        <TabsContent value="show">
+          <div className="space-y-6 sm:space-y-8">
+            <div ref={scheduleRef}>
+            <FieldGroup title="Schedule" incomplete={!editingSchedule && scheduleEntries.length === 0}>
+              {editingSchedule ? (
+                <ScheduleEditor
+                  initial={scheduleEntries.map((e) => ({ time: e.time, label: e.label, is_band: e.is_band }))}
+                  onSave={async (rows) => {
+                    try {
+                      await supabase.from("schedule_entries").delete().eq("show_id", id!);
+                      if (rows.length > 0) {
+                        const inserts = rows.map((r, i) => ({
+                          show_id: id!,
+                          time: r.time,
+                          label: r.label,
+                          is_band: r.is_band,
+                          sort_order: i,
+                        }));
+                        const { error } = await supabase.from("schedule_entries").insert(inserts);
+                        if (error) throw error;
+                      }
+                      queryClient.invalidateQueries({ queryKey: ["show", id] });
+                      queryClient.invalidateQueries({ queryKey: ["shows"] });
+                      queryClient.invalidateQueries({ queryKey: ["schedule-counts"] });
+                      setEditingSchedule(false);
+                      toast.success("Schedule updated");
+                    } catch {
+                      toast.error("Failed to save schedule");
+                    }
+                  }}
+                  onCancel={() => setEditingSchedule(false)}
+                  saving={false}
+                />
+              ) : scheduleEntries.length > 0 ? (
+                <button onClick={() => setEditingSchedule(true)} className="w-full text-left card-pressable">
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Name</Label>
-                    <Input value={hotelForm.hotel_name ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_name: e.target.value }))} className="text-sm h-9" autoFocus />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Address</Label>
-                    <Input value={hotelForm.hotel_address ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_address: e.target.value }))} className="text-sm h-9" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Confirmation #</Label>
-                    <Input value={hotelForm.hotel_confirmation ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_confirmation: e.target.value }))} className="text-sm h-9 font-mono" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Check In</Label>
-                    <Input value={hotelForm.hotel_checkin ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkin: e.target.value }))} className="text-sm h-9 font-mono" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Check Out</Label>
-                    <Input value={hotelForm.hotel_checkout ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkout: e.target.value }))} className="text-sm h-9 font-mono" />
-                  </div>
-                  <InlineActions onSave={saveHotelGroup} onCancel={cancelInline} />
-                </div>
-              );
-            }
-
-            if (hotelEmpty) {
-              return <EmptyFieldPrompt label="accommodations" onClick={startHotelEdit} />;
-            }
-
-            return (
-              <button onClick={startHotelEdit} className="w-full text-left space-y-3 card-pressable">
-                <FieldRow label="Name" value={show.hotel_name} />
-                <FieldRow label="Address" value={show.hotel_address} />
-                <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
-                <FieldRow label="Check In" value={show.hotel_checkin} mono />
-                <FieldRow label="Check Out" value={show.hotel_checkout} mono />
-              </button>
-            );
-          })()}
-        </FieldGroup>
-
-        {/* Travel */}
-        {(inlineField === "travel_notes" || show.travel_notes) && (
-          <>
-            <Separator />
-            <FieldGroup title="Travel">
-              {editField("travel_notes", "Notes", { multiline: true })}
-            </FieldGroup>
-          </>
-        )}
-
-        {/* Deal — two-column grid for financial fields */}
-        <>
-          <Separator />
-          <FieldGroup title="Deal" incomplete={!show.guarantee && !show.backend_deal && !show.ticket_price && !show.venue_capacity && !show.walkout_potential && !show.artist_comps}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-              <div>{editField("guarantee", "Guarantee", { mono: true, alwaysShow: true, currency: true })}</div>
-              <div>{editField("ticket_price", "Ticket Price", { mono: true, alwaysShow: true, currency: true, placeholder: "e.g. $20 or $18/$20/$25" })}</div>
-              <div>{editField("venue_capacity", "Capacity", { alwaysShow: true })}</div>
-              <div>{editField("walkout_potential", "Walkout Potential", { mono: true, alwaysShow: true, currency: true })}</div>
-            </div>
-            {(() => {
-              if (inlineField === "backend_deal") {
-                const hasTier = backendDealForm.showTierRow;
-                return (
-                  <div ref={inlineRef} className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Backend Deal</Label>
-
-                    {/* Row 1: percentage + GBOR/NBOR + vs/plus */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5">
-                        <Input
-                          type="number"
-                          min={1}
-                          max={100}
-                          step={0.5}
-                          value={backendDealForm.pct}
-                          onChange={(e) => setBackendDealForm(p => ({ ...p, pct: e.target.value }))}
-                          className="text-sm h-9 w-20 font-mono text-right ring-2 ring-ring ring-offset-1 ring-offset-background"
-                          placeholder="70"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.preventDefault(); saveBackendDeal(); }
-                            if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
-                          }}
-                        />
-                        <span className="text-sm text-muted-foreground">% of</span>
-                      </div>
-                      <div className="flex rounded-md border border-input overflow-hidden text-sm">
-                        {(["GBOR", "NBOR"] as const).map((opt) => (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => setBackendDealForm(p => ({ ...p, basis: opt }))}
-                            className={cn(
-                              "px-3 py-1.5 font-medium transition-colors",
-                              backendDealForm.basis === opt
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-background text-muted-foreground hover:bg-muted"
-                            )}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="flex rounded-md border border-input overflow-hidden text-sm">
-                        {(["vs", "plus"] as const).map((opt) => (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => setBackendDealForm(p => ({ ...p, dealType: opt }))}
-                            className={cn(
-                              "px-3 py-1.5 font-medium transition-colors",
-                              backendDealForm.dealType === opt
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-background text-muted-foreground hover:bg-muted"
-                            )}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Row 2: optional escalating tier */}
-                    {hasTier ? (
-                      <div className="flex items-center gap-1.5 flex-wrap text-sm text-muted-foreground">
-                        <span>then</span>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={100}
-                          step={0.5}
-                          value={backendDealForm.tier2Pct}
-                          onChange={(e) => setBackendDealForm(p => ({ ...p, tier2Pct: e.target.value }))}
-                          className="text-sm h-8 w-16 font-mono text-right"
-                          placeholder="75"
-                        />
-                        <span>% above</span>
-                        <Input
-                          type="number"
-                          min={1}
-                          step={1}
-                          value={backendDealForm.tier2Threshold}
-                          onChange={(e) => setBackendDealForm(p => ({ ...p, tier2Threshold: e.target.value }))}
-                          className="text-sm h-8 w-24 font-mono text-right"
-                          placeholder="200"
-                        />
-                        <span>tickets</span>
-                        <button
-                          type="button"
-                          onClick={() => setBackendDealForm(p => ({ ...p, tier2Pct: "", tier2Threshold: "", showTierRow: false }))}
-                          className="text-xs text-muted-foreground hover:text-destructive ml-1"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setBackendDealForm(p => ({ ...p, showTierRow: true }))}
-                        className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                    {scheduleEntries.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="flex items-baseline gap-3 sm:gap-4 rounded px-2 sm:px-3 py-1.5"
                       >
-                        + Add escalating tier
-                      </button>
-                    )}
-
-                    <InlineActions onSave={saveBackendDeal} onCancel={cancelInline} />
+                        <span className="font-mono text-sm shrink-0 whitespace-nowrap text-muted-foreground">
+                          {entry.time}
+                        </span>
+                        <span className="text-sm text-foreground">{entry.label}</span>
+                      </div>
+                    ))}
                   </div>
-                );
-              }
-              if (show.backend_deal) {
-                return (
-                  <button onClick={startBackendDealEdit} className="w-full text-left group">
-                    <FieldRow label="Backend Deal" value={show.backend_deal} />
-                  </button>
-                );
-              }
-              return <EmptyFieldPrompt label="backend deal" onClick={startBackendDealEdit} />;
-            })()}
-            {editField("artist_comps", "Artist Comps", { alwaysShow: true })}
-          </FieldGroup>
-        </>
-
-        {/* Revenue Simulator */}
-        {(() => {
-          const wp = parseDollar(show.walkout_potential);
-          const tp = parseDollar(show.ticket_price);
-          const g = parseDollar(show.guarantee) ?? 0;
-          // Strip commas only (not dots), so parseInt naturally truncates at the decimal point
-          // e.g. "430.0" → parseInt → 430, not 4300
-          const cap = show.venue_capacity ? parseInt(show.venue_capacity.replace(/,/g, ""), 10) : null;
-          const validCap = cap != null && !isNaN(cap) ? cap : null;
-          const canSimulate = wp !== null || (tp != null && tp > 0 && validCap != null);
-          if (g === 0 && !canSimulate) return null;
-          return (
-            <>
-              <Separator />
-              <FieldGroup title="Revenue Simulator">
-                {canSimulate ? (
-                  <RevenueSimulator
-                    guarantee={g}
-                    walkoutPotential={wp ?? 0}
-                    venueCapacity={validCap}
-                    ticketPrice={tp}
-                    backendDeal={show.backend_deal}
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Add a <span className="font-medium text-foreground">walkout potential</span> or both <span className="font-medium text-foreground">ticket price</span> and <span className="font-medium text-foreground">capacity</span> to simulate projected revenue.
-                  </p>
-                )}
-              </FieldGroup>
-            </>
-          );
-        })()}
-
-        {/* Additional Info */}
-        {(inlineField === "additional_info" || show.additional_info) && (
-          <>
-            <Separator />
-            <FieldGroup title="Additional Info">
-              {editField("additional_info", "Details", { multiline: true })}
+                </button>
+              ) : (
+                <EmptyFieldPrompt label="schedule" onClick={() => {
+                  scheduleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  setEditingSchedule(true);
+                }} />
+              )}
+              {editField("set_length", "Set Length", { alwaysShow: true })}
+              {(inlineField === "curfew" || show.curfew) ? editField("curfew", "Curfew", { structuredTime: true, hideTbd: true }) : null}
+              {(inlineField === "changeover_time" || show.changeover_time) ? editField("changeover_time", "Changeover Time", { structuredTime: true }) : null}
             </FieldGroup>
-          </>
-        )}
+            </div>
 
-        {/* Settlement Results — shown when settled */}
-        {(show as any).is_settled && (
-          <>
             <Separator />
-            <FieldGroup title="Settlement Results">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Actual Walkout</p>
-                  <p className="text-lg font-semibold font-mono text-[hsl(142,71%,45%)]">
-                    {(show as any).actual_walkout || "—"}
-                  </p>
-                  {show.walkout_potential && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Projected: {show.walkout_potential}
-                    </p>
-                  )}
-                </div>
-                {(show as any).actual_tickets_sold && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Actual Tickets Sold</p>
-                    <p className="text-lg font-semibold font-mono">
-                      {(show as any).actual_tickets_sold}
-                    </p>
-                    {show.venue_capacity && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Capacity: {show.venue_capacity}
-                      </p>
+
+            {/* Departure */}
+            <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_location}>
+              {driveTimeLabel && departureOrigin && !driveCardDismissed && (
+                <div className="flex items-start gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                  <Clock className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-foreground">
+                      <span className="font-medium">{driveTimeLabel}</span>
+                      <span className="text-muted-foreground"> from {departureOrigin.label}</span>
+                    </div>
+                    {driveTime?.distance_text && (
+                      <div className="text-xs text-muted-foreground">{driveTime.distance_text}</div>
                     )}
                   </div>
-                )}
-              </div>
-              {(show as any).settlement_notes && (
-                <div className="mt-3">
-                  <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
-                  <p className="text-sm whitespace-pre-wrap">{(show as any).settlement_notes}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (id) localStorage.setItem(`drive-card-dismissed-${id}`, "true");
+                      setDriveCardDismissed(true);
+                    }}
+                    className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    aria-label="Dismiss drive time suggestion"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               )}
+              {editField("departure_time", "Departure Time", { alwaysShow: true, structuredTime: true })}
+              {recommendedDeparture && inlineField !== "departure_time" && show.departure_time !== recommendedDeparture && !driveCardDismissed && (
+                <div className="-mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1.5"
+                    onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture } as any)}
+                    disabled={updateMutation.isPending}
+                  >
+                    <Clock className="h-3 w-3" />
+                    Use {recommendedDeparture}
+                    <span className="text-muted-foreground">· load-in − drive − 45 min</span>
+                  </Button>
+                </div>
+              )}
+              {editField("departure_location", "Departure Notes", { multiline: true, alwaysShow: true, placeholder: "e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am" })}
             </FieldGroup>
-          </>
-        )}
-      </div>
+
+            <Separator />
+
+            {/* Day of Show Contact */}
+            <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone}>
+              {editField("dos_contact_name", "Name", { alwaysShow: true })}
+              {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true, phoneFormat: true })}
+            </FieldGroup>
+
+            <Separator />
+
+            {/* Venue Details */}
+            <FieldGroup title="Venue Details" className="[&>div]:space-y-5" incomplete={!show.load_in_details && !show.parking_notes && !show.backline_provided}>
+              {editField("load_in_details", "Load In", { multiline: true, alwaysShow: true })}
+              {editField("parking_notes", "Parking", { multiline: true, alwaysShow: true })}
+              {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true })}
+            </FieldGroup>
+
+            <Separator />
+
+            {/* At The Venue */}
+            <FieldGroup title="At The Venue">
+              {editField("green_room_info", "Green Room", { multiline: true, alwaysShow: true })}
+              {editField("hospitality", "Hospitality", { multiline: true })}
+              {editField("wifi_network", "WiFi Network", { mono: true, alwaysShow: true })}
+              {editField("wifi_password", "WiFi Password", { mono: true, alwaysShow: true })}
+            </FieldGroup>
+
+            <Separator />
+
+            {/* Guest List */}
+            <FieldGroup title="Guest List" incomplete={!!show.artist_comps && !show.guest_list_details && inlineField !== "guest_list_details"}>
+              {renderGuestList()}
+            </FieldGroup>
+
+            <Separator />
+
+            {/* Accommodations (formerly Hotel) */}
+            <FieldGroup title="Accommodations">
+              {(() => {
+                const hotelEmpty = !show.hotel_name && !show.hotel_address && !show.hotel_confirmation && !show.hotel_checkin && !show.hotel_checkout;
+                const isHotelInline = inlineField === "hotel_group";
+
+                if (isHotelInline) {
+                  return (
+                    <div ref={inlineRef} className="space-y-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Name</Label>
+                        <Input value={hotelForm.hotel_name ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_name: e.target.value }))} className="text-sm h-9" autoFocus />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Address</Label>
+                        <Input value={hotelForm.hotel_address ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_address: e.target.value }))} className="text-sm h-9" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Confirmation #</Label>
+                        <Input value={hotelForm.hotel_confirmation ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_confirmation: e.target.value }))} className="text-sm h-9 font-mono" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Check In</Label>
+                        <Input value={hotelForm.hotel_checkin ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkin: e.target.value }))} className="text-sm h-9 font-mono" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Check Out</Label>
+                        <Input value={hotelForm.hotel_checkout ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkout: e.target.value }))} className="text-sm h-9 font-mono" />
+                      </div>
+                      <InlineActions onSave={saveHotelGroup} onCancel={cancelInline} />
+                    </div>
+                  );
+                }
+
+                if (hotelEmpty) {
+                  return <EmptyFieldPrompt label="accommodations" onClick={startHotelEdit} />;
+                }
+
+                return (
+                  <button onClick={startHotelEdit} className="w-full text-left space-y-3 card-pressable">
+                    <FieldRow label="Name" value={show.hotel_name} />
+                    <FieldRow label="Address" value={show.hotel_address} />
+                    <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
+                    <FieldRow label="Check In" value={show.hotel_checkin} mono />
+                    <FieldRow label="Check Out" value={show.hotel_checkout} mono />
+                  </button>
+                );
+              })()}
+            </FieldGroup>
+
+            {/* Travel */}
+            {(inlineField === "travel_notes" || show.travel_notes) && (
+              <>
+                <Separator />
+                <FieldGroup title="Travel">
+                  {editField("travel_notes", "Notes", { multiline: true })}
+                </FieldGroup>
+              </>
+            )}
+
+            {/* Additional Info */}
+            {(inlineField === "additional_info" || show.additional_info) && (
+              <>
+                <Separator />
+                <FieldGroup title="Additional Info">
+                  {editField("additional_info", "Details", { multiline: true })}
+                </FieldGroup>
+              </>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="deal">
+          <div className="space-y-6 sm:space-y-8">
+            {/* Deal — two-column grid for financial fields */}
+            <FieldGroup title="Deal" incomplete={!show.guarantee && !show.backend_deal && !show.ticket_price && !show.venue_capacity && !show.walkout_potential && !show.artist_comps}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                <div>{editField("guarantee", "Guarantee", { mono: true, alwaysShow: true, currency: true })}</div>
+                <div>{editField("ticket_price", "Ticket Price", { mono: true, alwaysShow: true, currency: true, placeholder: "e.g. $20 or $18/$20/$25" })}</div>
+                <div>{editField("venue_capacity", "Capacity", { alwaysShow: true })}</div>
+                <div>{editField("walkout_potential", "Walkout Potential", { mono: true, alwaysShow: true, currency: true })}</div>
+              </div>
+              {(() => {
+                if (inlineField === "backend_deal") {
+                  const hasTier = backendDealForm.showTierRow;
+                  return (
+                    <div ref={inlineRef} className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Backend Deal</Label>
+
+                      {/* Row 1: percentage + GBOR/NBOR + vs/plus */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="number"
+                            min={1}
+                            max={100}
+                            step={0.5}
+                            value={backendDealForm.pct}
+                            onChange={(e) => setBackendDealForm(p => ({ ...p, pct: e.target.value }))}
+                            className="text-sm h-9 w-20 font-mono text-right ring-2 ring-ring ring-offset-1 ring-offset-background"
+                            placeholder="70"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") { e.preventDefault(); saveBackendDeal(); }
+                              if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
+                            }}
+                          />
+                          <span className="text-sm text-muted-foreground">% of</span>
+                        </div>
+                        <div className="flex rounded-md border border-input overflow-hidden text-sm">
+                          {(["GBOR", "NBOR"] as const).map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => setBackendDealForm(p => ({ ...p, basis: opt }))}
+                              className={cn(
+                                "px-3 py-1.5 font-medium transition-colors",
+                                backendDealForm.basis === opt
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-background text-muted-foreground hover:bg-muted"
+                              )}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex rounded-md border border-input overflow-hidden text-sm">
+                          {(["vs", "plus"] as const).map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => setBackendDealForm(p => ({ ...p, dealType: opt }))}
+                              className={cn(
+                                "px-3 py-1.5 font-medium transition-colors",
+                                backendDealForm.dealType === opt
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-background text-muted-foreground hover:bg-muted"
+                              )}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Row 2: optional escalating tier */}
+                      {hasTier ? (
+                        <div className="flex items-center gap-1.5 flex-wrap text-sm text-muted-foreground">
+                          <span>then</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={100}
+                            step={0.5}
+                            value={backendDealForm.tier2Pct}
+                            onChange={(e) => setBackendDealForm(p => ({ ...p, tier2Pct: e.target.value }))}
+                            className="text-sm h-8 w-16 font-mono text-right"
+                            placeholder="75"
+                          />
+                          <span>% above</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={backendDealForm.tier2Threshold}
+                            onChange={(e) => setBackendDealForm(p => ({ ...p, tier2Threshold: e.target.value }))}
+                            className="text-sm h-8 w-24 font-mono text-right"
+                            placeholder="200"
+                          />
+                          <span>tickets</span>
+                          <button
+                            type="button"
+                            onClick={() => setBackendDealForm(p => ({ ...p, tier2Pct: "", tier2Threshold: "", showTierRow: false }))}
+                            className="text-xs text-muted-foreground hover:text-destructive ml-1"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setBackendDealForm(p => ({ ...p, showTierRow: true }))}
+                          className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                        >
+                          + Add escalating tier
+                        </button>
+                      )}
+
+                      <InlineActions onSave={saveBackendDeal} onCancel={cancelInline} />
+                    </div>
+                  );
+                }
+                if (show.backend_deal) {
+                  return (
+                    <button onClick={startBackendDealEdit} className="w-full text-left group">
+                      <FieldRow label="Backend Deal" value={show.backend_deal} />
+                    </button>
+                  );
+                }
+                return <EmptyFieldPrompt label="backend deal" onClick={startBackendDealEdit} />;
+              })()}
+              {editField("artist_comps", "Artist Comps", { alwaysShow: true })}
+            </FieldGroup>
+
+            {/* Revenue Simulator */}
+            {(() => {
+              const wp = parseDollar(show.walkout_potential);
+              const tp = parseDollar(show.ticket_price);
+              const g = parseDollar(show.guarantee) ?? 0;
+              // Strip commas only (not dots), so parseInt naturally truncates at the decimal point
+              // e.g. "430.0" → parseInt → 430, not 4300
+              const cap = show.venue_capacity ? parseInt(show.venue_capacity.replace(/,/g, ""), 10) : null;
+              const validCap = cap != null && !isNaN(cap) ? cap : null;
+              const canSimulate = wp !== null || (tp != null && tp > 0 && validCap != null);
+              if (g === 0 && !canSimulate) return null;
+              return (
+                <>
+                  <Separator />
+                  <FieldGroup title="Revenue Simulator">
+                    {canSimulate ? (
+                      <RevenueSimulator
+                        guarantee={g}
+                        walkoutPotential={wp ?? 0}
+                        venueCapacity={validCap}
+                        ticketPrice={tp}
+                        backendDeal={show.backend_deal}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Add a <span className="font-medium text-foreground">walkout potential</span> or both <span className="font-medium text-foreground">ticket price</span> and <span className="font-medium text-foreground">capacity</span> to simulate projected revenue.
+                      </p>
+                    )}
+                  </FieldGroup>
+                </>
+              );
+            })()}
+
+            {/* Settlement Results — shown when settled */}
+            {(show as any).is_settled && (
+              <>
+                <Separator />
+                <FieldGroup title="Settlement Results">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Actual Walkout</p>
+                      <p className="text-lg font-semibold font-mono text-[hsl(142,71%,45%)]">
+                        {(show as any).actual_walkout || "—"}
+                      </p>
+                      {show.walkout_potential && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Projected: {show.walkout_potential}
+                        </p>
+                      )}
+                    </div>
+                    {(show as any).actual_tickets_sold && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Actual Tickets Sold</p>
+                        <p className="text-lg font-semibold font-mono">
+                          {(show as any).actual_tickets_sold}
+                        </p>
+                        {show.venue_capacity && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Capacity: {show.venue_capacity}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {(show as any).settlement_notes && (
+                    <div className="mt-3">
+                      <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
+                      <p className="text-sm whitespace-pre-wrap">{(show as any).settlement_notes}</p>
+                    </div>
+                  )}
+                </FieldGroup>
+              </>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Settle Show Modal */}
       <Dialog open={settleOpen} onOpenChange={setSettleOpen}>
