@@ -73,10 +73,7 @@ function buildPlainTextBody(show: Show & { schedule_entries?: any[] }): string {
 
   if (has("schedule") && show.schedule_entries?.length) {
     const sorted = [...show.schedule_entries].sort((a, b) => a.sort_order - b.sort_order);
-    const lines = sorted.map((e) => {
-      const setInline = e.is_band && val(show.set_length) ? ` (${val(show.set_length)})` : "";
-      return `${e.time}  ${e.label}${setInline}`;
-    });
+    const lines = sorted.map((e) => `${e.time}  ${e.label}`);
     if (val(show.curfew)) lines.push(`${val(show.curfew)}  Curfew`);
     parts.push(sectionBlock("Schedule", lines));
   }
