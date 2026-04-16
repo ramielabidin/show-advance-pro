@@ -28,8 +28,7 @@ function countAdvanced(show: Show, hasSchedule: boolean): number {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 mb-3">
-      <div className="w-0.5 h-3.5 rounded-full bg-foreground/25" />
+    <div className="mb-3 border-b border-border/60 pb-2">
       <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">{children}</span>
     </div>
   );
@@ -151,34 +150,30 @@ export default function DashboardPage() {
       label: "Shows This Tour",
       value: activeTour ? tourStats.totalShows : "—",
       icon: Calendar,
-      iconClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-      borderClass: "border-l-blue-500/50",
+      iconStyle: { backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" },
     },
     {
       label: "Shows Settled",
       value: activeTour ? `${tourStats.settledCount}/${tourStats.totalShows}` : "—",
       icon: CheckCircle2,
-      iconClass: "bg-green-500/10 text-green-600 dark:text-green-400",
-      borderClass: "border-l-green-500/50",
+      iconStyle: { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" },
     },
     {
       label: "Actual Income",
       value: activeTour && tourStats.actualIncome ? `$${tourStats.actualIncome.toLocaleString()}` : "—",
       icon: DollarSign,
-      iconClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-      borderClass: "border-l-emerald-500/50",
+      iconStyle: { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" },
     },
     {
       label: "Guaranteed Remaining",
       value: activeTour && tourStats.guaranteedRemaining ? `$${tourStats.guaranteedRemaining.toLocaleString()}` : "—",
       icon: TrendingUp,
-      iconClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-      borderClass: "border-l-amber-500/50",
+      iconStyle: { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" },
     },
   ];
 
   return (
-    <div className="animate-fade-in space-y-6 sm:space-y-8 overflow-x-hidden">
+    <div className="animate-fade-in space-y-6 sm:space-y-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -187,7 +182,7 @@ export default function DashboardPage() {
           {activeTour && (
             <Link
               to={`/tours/${activeTour.id}`}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors mt-0.5 inline-block"
+              className="text-sm text-muted-foreground hover:text-foreground [transition:color_150ms_var(--ease-out)] mt-0.5 inline-block"
             >
               {activeTour.name}
             </Link>
@@ -199,15 +194,14 @@ export default function DashboardPage() {
       {/* Active Tour Stats */}
       <div>
         <SectionLabel>{activeTour ? "Active Tour" : "Tour Stats"}</SectionLabel>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <div className="stagger-list grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
           {statCards.map((card, i) => (
             <StatCard
               key={card.label}
               label={card.label}
               value={card.value}
               icon={card.icon}
-              iconClass={card.iconClass}
-              borderClass={card.borderClass}
+              iconStyle={card.iconStyle}
               index={i}
             />
           ))}
@@ -243,27 +237,31 @@ export default function DashboardPage() {
                 const advancedCount = (hasLoadIn ? 1 : 0) + (hasDosContact ? 1 : 0);
                 const isWithin7 = daysAway >= 0 && daysAway < 7;
 
-                const dotColor =
+                const dotStyle: React.CSSProperties =
                   advancedCount === 2
-                    ? "bg-green-500"
+                    ? { backgroundColor: "var(--pastel-green-fg)" }
                     : isWithin7
-                      ? "bg-red-500"
-                      : "bg-amber-400";
+                      ? { backgroundColor: "var(--pastel-red-fg)" }
+                      : { backgroundColor: "var(--pastel-yellow-fg)" };
+
+                const dateChipStyle: React.CSSProperties | undefined =
+                  isWithin7 && advancedCount < 2
+                    ? { backgroundColor: "var(--pastel-red-bg)", color: "var(--pastel-red-fg)" }
+                    : undefined;
 
                 return (
                   <Link
                     key={show.id}
                     to={`/shows/${show.id}`}
-                    className="stagger-item flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-accent group"
+                    className="stagger-item flex items-center gap-3 rounded-md px-2 py-2 hover:bg-accent group card-pressable [transition:background-color_150ms_var(--ease-out),transform_160ms_var(--ease-out)]"
                     style={{ animationDelay: `${i * 40}ms` }}
                   >
                     <span
                       className={cn(
                         "text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 w-14 text-center",
-                        isWithin7 && advancedCount < 2
-                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                          : "bg-muted text-muted-foreground",
+                        !dateChipStyle && "bg-muted text-muted-foreground",
                       )}
+                      style={dateChipStyle}
                     >
                       {format(parseISO(show.date), "MMM d")}
                     </span>
@@ -271,8 +269,8 @@ export default function DashboardPage() {
                       <span className="text-sm font-medium text-foreground truncate">{show.venue_name}</span>
                       <span className="text-xs text-muted-foreground truncate">{formatCityState(show.city)}</span>
                     </div>
-                    <span className={cn("h-2 w-2 rounded-full shrink-0", dotColor)} />
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                    <span className="h-2 w-2 rounded-full shrink-0" style={dotStyle} />
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0 [transition:opacity_150ms_var(--ease-out)]" />
                   </Link>
                 );
               })}
@@ -300,7 +298,7 @@ export default function DashboardPage() {
               const pct = total > 0 ? (advanced / total) * 100 : 0;
               return (
                 <Link key={tour.id} to={`/tours/${tour.id}`} className="w-full block card-pressable">
-                  <div className="rounded-lg border bg-card text-card-foreground shadow-sm w-full hover:border-foreground/20 hover:shadow-md transition-all duration-150">
+                  <div className="rounded-lg border bg-card text-card-foreground w-full hover:border-foreground/20 [transition:border-color_160ms_var(--ease-out),box-shadow_200ms_var(--ease-out)]">
                     <div className="pt-5 pb-4 px-6">
                       <p className="text-sm font-medium text-foreground truncate">{tour.name}</p>
                       {tour.start_date && tour.end_date && (
@@ -333,27 +331,27 @@ function StatCard({
   label,
   value,
   icon: Icon,
-  iconClass,
-  borderClass,
-  index,
+  iconStyle,
 }: {
   label: string;
   value: string | number;
   icon: React.ElementType;
-  iconClass: string;
-  borderClass: string;
+  iconStyle: React.CSSProperties;
   index: number;
 }) {
   return (
-    <Card className={cn("border-l-2 overflow-hidden", borderClass)}>
+    <Card className="overflow-hidden shadow-none">
       <CardContent className="pt-4 pb-3 px-4">
         <div className="flex items-center gap-2 mb-2">
-          <div className={cn("h-6 w-6 rounded-md flex items-center justify-center shrink-0", iconClass)}>
+          <div
+            className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
+            style={iconStyle}
+          >
             <Icon className="h-3.5 w-3.5" />
           </div>
           <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium leading-tight">{label}</span>
         </div>
-        <p className="text-2xl font-display text-foreground">{value}</p>
+        <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em]">{value}</p>
       </CardContent>
     </Card>
   );
@@ -380,32 +378,35 @@ function NextShowCard({ show, hasSchedule }: { show: Show; hasSchedule: boolean 
 
   return (
     <Link to={`/shows/${show.id}`} className="block group card-pressable">
-      <Card className="overflow-hidden hover:border-foreground/20 hover:shadow-md transition-all duration-150">
+      <Card className="overflow-hidden hover:border-foreground/20 [transition:border-color_160ms_var(--ease-out),box-shadow_200ms_var(--ease-out)]">
         <CardContent className="p-5 sm:p-6">
           <div className="flex items-start gap-4 sm:gap-5">
             {/* Calendar stub */}
-            <div className="shrink-0 flex flex-col items-center justify-center rounded-xl border-2 border-border bg-muted/50 w-14 h-[4.5rem] select-none">
+            <div className="shrink-0 flex flex-col items-center justify-center rounded-xl border border-border bg-muted/50 w-14 h-[4.5rem] select-none">
               <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold leading-none mb-0.5">
                 {format(date, "MMM")}
               </span>
-              <span className="text-3xl font-display text-foreground leading-none">{format(date, "d")}</span>
+              <span className="text-3xl font-display text-foreground leading-none tracking-[-0.03em]">{format(date, "d")}</span>
               <span className="text-[9px] text-muted-foreground mt-0.5">{format(date, "EEE")}</span>
             </div>
 
             {/* Info */}
             <div className="min-w-0 flex-1">
-              <h2 className="text-xl sm:text-2xl font-display text-foreground truncate">{show.venue_name}</h2>
+              <h2 className="text-xl sm:text-2xl font-display text-foreground truncate tracking-[-0.02em]">{show.venue_name}</h2>
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{formatCityState(show.city)}</span>
               </div>
               <span
                 className={cn(
-                  "inline-block mt-2 text-xs font-medium px-2 py-0.5 rounded-full",
-                  isUrgent
-                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                    : "bg-secondary text-muted-foreground",
+                  "inline-block mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full",
+                  !isUrgent && "bg-secondary text-muted-foreground",
                 )}
+                style={
+                  isUrgent
+                    ? { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
+                    : undefined
+                }
               >
                 {daysLabel}
               </span>

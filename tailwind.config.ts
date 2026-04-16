@@ -76,6 +76,22 @@ export default {
           DEFAULT: "hsl(var(--badge-new))",
           foreground: "hsl(var(--badge-new-foreground))",
         },
+        "pastel-red": {
+          DEFAULT: "var(--pastel-red-bg)",
+          foreground: "var(--pastel-red-fg)",
+        },
+        "pastel-blue": {
+          DEFAULT: "var(--pastel-blue-bg)",
+          foreground: "var(--pastel-blue-fg)",
+        },
+        "pastel-green": {
+          DEFAULT: "var(--pastel-green-bg)",
+          foreground: "var(--pastel-green-fg)",
+        },
+        "pastel-yellow": {
+          DEFAULT: "var(--pastel-yellow-bg)",
+          foreground: "var(--pastel-yellow-fg)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -92,14 +108,14 @@ export default {
           to: { height: "0" },
         },
         "fade-in": {
-          from: { opacity: "0", transform: "translateY(4px)" },
+          from: { opacity: "0", transform: "translateY(12px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.3s ease-out",
+        "accordion-down": "accordion-down 200ms cubic-bezier(0.23, 1, 0.32, 1)",
+        "accordion-up": "accordion-up 200ms cubic-bezier(0.23, 1, 0.32, 1)",
+        "fade-in": "fade-in 600ms cubic-bezier(0.16, 1, 0.3, 1)",
       },
     },
   },
