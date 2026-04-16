@@ -23,6 +23,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
@@ -81,6 +91,8 @@ export default function ShowDetailPage() {
 
   // Settle modal state
   const [settleOpen, setSettleOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [clearSettleOpen, setClearSettleOpen] = useState(false);
   const [settleForm, setSettleForm] = useState({
     actual_tickets_sold: "",
     actual_walkout: "",
@@ -434,7 +446,7 @@ export default function ShowDetailPage() {
             <Textarea
               value={inlineValue}
               onChange={(e) => setInlineValue(e.target.value)}
-              className="text-sm min-h-[44px] ring-2 ring-ring ring-offset-1 ring-offset-background"
+              className="text-sm min-h-[44px] ring-1 ring-ring/40"
               autoFocus
               placeholder={opts?.placeholder}
               onBlur={handleBlurSave}
@@ -446,7 +458,7 @@ export default function ShowDetailPage() {
             <Input
               value={inlineValue}
               onChange={(e) => setInlineValue(e.target.value)}
-              className={cn("text-sm h-11 sm:h-9 ring-2 ring-ring ring-offset-1 ring-offset-background", opts?.mono && "font-mono")}
+              className={cn("text-sm h-11 sm:h-9 ring-1 ring-ring/40", opts?.mono && "font-mono")}
               placeholder={opts?.timeFormat ? "e.g. 9:00 AM or 2:30 PM" : undefined}
               autoFocus
               onKeyDown={(e) => {
@@ -676,15 +688,15 @@ export default function ShowDetailPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 text-xs text-[hsl(142,71%,45%)] hover:text-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,45%,0.1)]"
-                onClick={() => { if (confirm("Clear settlement data?")) unsettleMutation.mutate(); }}
+                className="h-8 text-xs text-[hsl(var(--success))] hover:text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.1)]"
+                onClick={() => setClearSettleOpen(true)}
               >
                 <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Settled
               </Button>
             ) : (
               <Button
                 size="sm"
-                className="h-8 text-xs bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-white"
+                className="h-8 text-xs bg-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.9)] text-[hsl(var(--success-foreground))]"
                 onClick={() => {
                   setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
                   setSettleOpen(true);
@@ -730,7 +742,7 @@ export default function ShowDetailPage() {
                 />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onClick={() => { if (confirm("Delete this show?")) deleteMutation.mutate(); }}
+                  onClick={() => setDeleteOpen(true)}
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Show
                 </DropdownMenuItem>
@@ -749,14 +761,14 @@ export default function ShowDetailPage() {
             {(show as any).is_settled ? (
               <Button
                 variant="outline"
-                className="h-11 w-full text-sm font-medium border-[hsl(142,71%,45%)] text-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,45%,0.1)] hover:text-[hsl(142,71%,35%)]"
-                onClick={() => { if (confirm("Clear settlement data?")) unsettleMutation.mutate(); }}
+                className="h-11 w-full text-sm font-medium border-[hsl(var(--success))] text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.1)] hover:text-[hsl(var(--success))]"
+                onClick={() => setClearSettleOpen(true)}
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" /> Settled — Tap to Clear
               </Button>
             ) : (
               <Button
-                className="h-12 w-full text-base font-semibold bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-white shadow-sm"
+                className="h-11 w-full text-base font-medium bg-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.9)] text-[hsl(var(--success-foreground))]"
                 onClick={() => {
                   setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
                   setSettleOpen(true);
@@ -801,9 +813,7 @@ export default function ShowDetailPage() {
                   />
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive"
-                    onClick={() => {
-                      if (confirm("Delete this show?")) deleteMutation.mutate();
-                    }}
+                    onClick={() => setDeleteOpen(true)}
                   >
                     <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Show
                   </DropdownMenuItem>
@@ -819,9 +829,10 @@ export default function ShowDetailPage() {
       </div>
 
       {!show.is_reviewed && (
-        <div className="rounded-lg border border-badge-new/30 bg-badge-new/5 p-3 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <p className="text-sm text-badge-new font-medium">
-            New show created from advance email — review the details below.
+        <div className="border-l-2 border-badge-new pl-3 pr-1 py-2 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <p className="text-sm text-foreground">
+            <span className="text-badge-new font-medium">New show</span>
+            <span className="text-muted-foreground"> created from advance email — review the details below.</span>
           </p>
           <Button
             size="sm"
@@ -839,16 +850,23 @@ export default function ShowDetailPage() {
             {/* Departure — first chronologically */}
             <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_location}>
               {driveTimeLabel && departureOrigin && !driveCardDismissed && (
-                <div className="flex items-start gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
-                  <Clock className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                <div className="flex items-start gap-4 rounded-md border bg-muted/30 px-4 py-3">
+                  <Clock className="h-4 w-4 mt-1 shrink-0 text-muted-foreground" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-foreground">
-                      <span className="font-medium">{driveTimeLabel}</span>
-                      <span className="text-muted-foreground"> from {departureOrigin.label}</span>
+                    <div className="font-display text-2xl text-foreground leading-none tracking-[-0.02em]">
+                      {driveTimeLabel}
                     </div>
-                    {driveTime?.distance_text && (
-                      <div className="text-xs text-muted-foreground">{driveTime.distance_text}</div>
-                    )}
+                    <div className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
+                      from {departureOrigin.label}
+                      {driveTime?.distance_text && (
+                        <span className="text-border mx-1.5">·</span>
+                      )}
+                      {driveTime?.distance_text && (
+                        <span className="font-mono normal-case tracking-normal">
+                          {driveTime.distance_text}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -856,7 +874,7 @@ export default function ShowDetailPage() {
                       if (id) localStorage.setItem(`drive-card-dismissed-${id}`, "true");
                       setDriveCardDismissed(true);
                     }}
-                    className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
                     aria-label="Dismiss drive time suggestion"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -1089,7 +1107,7 @@ export default function ShowDetailPage() {
                                 step={0.5}
                                 value={backendDealForm.pct}
                                 onChange={(e) => setBackendDealForm(p => ({ ...p, pct: e.target.value }))}
-                                className="text-sm h-9 w-20 font-mono text-right ring-2 ring-ring ring-offset-1 ring-offset-background"
+                                className="text-sm h-9 w-20 font-mono text-right ring-1 ring-ring/40"
                                 placeholder="70"
                                 autoFocus
                                 onKeyDown={(e) => {
@@ -1099,34 +1117,34 @@ export default function ShowDetailPage() {
                               />
                               <span className="text-sm text-muted-foreground">% of</span>
                             </div>
-                            <div className="flex rounded-md border border-input overflow-hidden text-sm">
+                            <div className="flex rounded-md bg-muted p-0.5 text-sm gap-0.5">
                               {(["GBOR", "NBOR"] as const).map((opt) => (
                                 <button
                                   key={opt}
                                   type="button"
                                   onClick={() => setBackendDealForm(p => ({ ...p, basis: opt }))}
                                   className={cn(
-                                    "px-3 py-1.5 font-medium transition-colors",
+                                    "px-3 py-1 rounded-sm font-medium [transition:background-color_150ms_var(--ease-out),color_150ms_var(--ease-out)]",
                                     backendDealForm.basis === opt
-                                      ? "bg-primary text-primary-foreground"
-                                      : "bg-background text-muted-foreground hover:bg-muted"
+                                      ? "bg-background text-foreground shadow-sm"
+                                      : "text-muted-foreground hover:text-foreground"
                                   )}
                                 >
                                   {opt}
                                 </button>
                               ))}
                             </div>
-                            <div className="flex rounded-md border border-input overflow-hidden text-sm">
+                            <div className="flex rounded-md bg-muted p-0.5 text-sm gap-0.5">
                               {(["vs", "plus"] as const).map((opt) => (
                                 <button
                                   key={opt}
                                   type="button"
                                   onClick={() => setBackendDealForm(p => ({ ...p, dealType: opt }))}
                                   className={cn(
-                                    "px-3 py-1.5 font-medium transition-colors",
+                                    "px-3 py-1 rounded-sm font-medium [transition:background-color_150ms_var(--ease-out),color_150ms_var(--ease-out)]",
                                     backendDealForm.dealType === opt
-                                      ? "bg-primary text-primary-foreground"
-                                      : "bg-background text-muted-foreground hover:bg-muted"
+                                      ? "bg-background text-foreground shadow-sm"
+                                      : "text-muted-foreground hover:text-foreground"
                                   )}
                                 >
                                   {opt}
@@ -1237,7 +1255,7 @@ export default function ShowDetailPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Actual Walkout</p>
-                      <p className="text-lg font-semibold font-mono text-[hsl(142,71%,45%)]">
+                      <p className="text-lg font-semibold font-mono text-[hsl(var(--success))]">
                         {(show as any).actual_walkout || "—"}
                       </p>
                       {show.walkout_potential && (
@@ -1315,7 +1333,7 @@ export default function ShowDetailPage() {
                 Cancel
               </Button>
               <Button
-                className="flex-1 h-11 sm:h-9 bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-white"
+                className="flex-1 h-11 sm:h-9 bg-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.9)] text-[hsl(var(--success-foreground))]"
                 onClick={() => settleMutation.mutate(settleForm)}
                 disabled={settleMutation.isPending}
               >
@@ -1326,6 +1344,47 @@ export default function ShowDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Show confirmation */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this show?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove <span className="font-medium text-foreground">{show.venue_name}</span> and
+              its schedule. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteMutation.mutate()}
+            >
+              Delete show
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Clear settlement confirmation */}
+      <AlertDialog open={clearSettleOpen} onOpenChange={setClearSettleOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear settlement data?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the actual walkout, ticket count and settlement notes. You can re-settle the show
+              anytime.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => unsettleMutation.mutate()}>
+              Clear settlement
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

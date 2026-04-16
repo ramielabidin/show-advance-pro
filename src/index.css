@@ -13,11 +13,24 @@
   }
 }
 
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @layer base {
   :root {
     --background: 40 30% 97%;
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-editorial: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
     --foreground: 30 10% 12%;
 
     --card: 40 25% 99%;
@@ -65,6 +78,16 @@
     --warning-foreground: 30 10% 12%;
     --badge-new: 210 80% 52%;
     --badge-new-foreground: 0 0% 100%;
+
+    /* Muted pastel accent system — desaturated, editorial */
+    --pastel-red-bg: #fdebec;
+    --pastel-red-fg: #9f2f2d;
+    --pastel-blue-bg: #e1f3fe;
+    --pastel-blue-fg: #1f6c9f;
+    --pastel-green-bg: #edf3ec;
+    --pastel-green-fg: #346538;
+    --pastel-yellow-bg: #fbf3db;
+    --pastel-yellow-fg: #956400;
   }
 
   .dark {
@@ -103,6 +126,16 @@
     --warning-foreground: 30 10% 12%;
     --badge-new: 210 80% 52%;
     --badge-new-foreground: 0 0% 100%;
+
+    /* Dark mode pastels — deeper tints on warm dark canvas */
+    --pastel-red-bg: hsla(0, 40%, 22%, 0.5);
+    --pastel-red-fg: #f0b4b2;
+    --pastel-blue-bg: hsla(205, 50%, 22%, 0.5);
+    --pastel-blue-fg: #aed4ee;
+    --pastel-green-bg: hsla(125, 25%, 18%, 0.5);
+    --pastel-green-fg: #b5d1b0;
+    --pastel-yellow-bg: hsla(40, 40%, 20%, 0.5);
+    --pastel-yellow-fg: #e8c988;
   }
 }
 
@@ -152,7 +185,7 @@
 
   /* Press + hover feedback for card-like clickable elements */
   .card-pressable {
-    transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+    transition: transform 160ms var(--ease-out), box-shadow 200ms var(--ease-out);
   }
 
   .card-pressable:active {
@@ -162,7 +195,13 @@
   @media (hover: hover) and (pointer: fine) {
     .card-pressable:hover {
       transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
+  }
+
+  /* Override tailwindcss-animate defaults with our stronger curves */
+  [data-state] {
+    animation-timing-function: var(--ease-out);
   }
 
   /* Respect reduced motion — keep opacity transitions, remove movement */
@@ -180,6 +219,16 @@
     .card-pressable:active,
     .card-pressable:hover {
       transform: none;
+      box-shadow: none;
+    }
+
+    /* Neutralize Radix animate-in/out transform motion; keep opacity fade only */
+    [data-state][data-side],
+    [data-state="open"],
+    [data-state="closed"] {
+      animation-duration: 120ms !important;
+      animation-name: none !important;
+      transition-duration: 120ms !important;
     }
   }
 }
