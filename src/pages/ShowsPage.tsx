@@ -99,7 +99,7 @@ export default function ShowsPage() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors capitalize ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 [transition:color_150ms_var(--ease-out),border-color_150ms_var(--ease-out)] capitalize ${
               tab === t
                 ? "border-foreground text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
