@@ -63,7 +63,7 @@ Your job is to extract ALL structured data you can find, regardless of input for
 Key rules:
 - Extract whatever relevant fields you can find. It's fine if most fields are missing — only return what's actually present in the text.
 - If multiple emails are in a thread, synthesize the most up-to-date information.
-- For the schedule, extract ALL timed events (not just the band's). Mark events that are clearly the band's own events (load in, soundcheck, set time) with is_band=true.
+- For the schedule, extract ALL timed events (not just the band's). Mark only the band's actual performance/set slot with is_band=true — do NOT mark logistical events like load in or soundcheck as is_band.
 - For additional_info, include anything relevant that doesn't fit the structured fields — production specs, dressing room codes, misc venue policies, etc.
 - Dates should be in YYYY-MM-DD format.
 - Times should be in simple format like "3:00 PM" or "15:00".
@@ -131,7 +131,7 @@ Key rules:
                     properties: {
                       time: { type: "string", description: "Event time, e.g. '3:00 PM'" },
                       label: { type: "string", description: "Event description, e.g. 'Load In' or 'Doors'" },
-                      is_band: { type: "boolean", description: "True if this is the band's own event (their load in, soundcheck, set, etc.)" },
+                      is_band: { type: "boolean", description: "True only if this is the band's actual performance/set slot. False for load in, soundcheck, doors, opener, curfew, and all other events." },
                     },
                     required: ["time", "label", "is_band"],
                   },

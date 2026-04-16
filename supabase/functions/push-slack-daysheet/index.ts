@@ -74,7 +74,8 @@ function formatDaySheet(show: any): string {
     const sorted = [...show.schedule_entries].sort((a: any, b: any) => a.sort_order - b.sort_order);
     blocks.push(`🕐 *Schedule*`);
     for (const entry of sorted) {
-      blocks.push(`    \`${entry.time}\`  ${entry.label}`);
+      const setInline = entry.is_band && val(show.set_length) ? ` (${val(show.set_length)})` : "";
+      blocks.push(`    \`${entry.time}\`  ${entry.label}${setInline}`);
     }
     if (val(show.curfew)) blocks.push(`    \`${val(show.curfew)}\`  Curfew`);
     blocks.push("");
@@ -111,18 +112,6 @@ function formatDaySheet(show: any): string {
     if (val(show.age_restriction)) lines.push(`    Age Restriction: ${val(show.age_restriction)}`);
     if (lines.length) {
       blocks.push(`🏟️ *Venue Details*`);
-      blocks.push(...lines);
-      blocks.push("");
-    }
-  }
-
-  {
-    const lines: string[] = [];
-    if (val(show.set_length)) lines.push(`    Set Length: ${val(show.set_length)}`);
-    if (val(show.curfew)) lines.push(`    Curfew: ${val(show.curfew)}`);
-    if (val(show.support_act)) lines.push(`    Support Act: ${val(show.support_act)}`);
-    if (lines.length) {
-      blocks.push(`🎸 *Band & Performance*`);
       blocks.push(...lines);
       blocks.push("");
     }
