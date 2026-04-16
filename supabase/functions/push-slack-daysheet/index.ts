@@ -117,18 +117,6 @@ function formatDaySheet(show: any): string {
     }
   }
 
-  {
-    const lines: string[] = [];
-    if (val(show.set_length)) lines.push(`    Set Length: ${val(show.set_length)}`);
-    if (val(show.curfew)) lines.push(`    Curfew: ${val(show.curfew)}`);
-    if (val(show.support_act)) lines.push(`    Support Act: ${val(show.support_act)}`);
-    if (lines.length) {
-      blocks.push(`🎸 *Band & Performance*`);
-      blocks.push(...lines);
-      blocks.push("");
-    }
-  }
-
   if (val(show.guest_list_details)) {
     const formatted = formatGuestList(val(show.guest_list_details)!);
     if (formatted) {

@@ -20,7 +20,6 @@ export const DAYSHEET_SECTION_KEYS = [
   "loadIn",
   "greenRoom",
   "venueDetails",
-  "band",
   "guestList",
   "wifi",
   "hotel",
@@ -57,8 +56,6 @@ export function hasData(
       return v(show.green_room_info);
     case "venueDetails":
       return v(show.venue_capacity) || v(show.age_restriction);
-    case "band":
-      return v(show.set_length) || v(show.curfew) || v(show.support_act);
     case "guestList":
       return v(show.guest_list_details);
     case "wifi":

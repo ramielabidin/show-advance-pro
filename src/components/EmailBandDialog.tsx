@@ -107,14 +107,6 @@ function buildPlainTextBody(show: Show & { schedule_entries?: any[] }): string {
     if (fields.some(Boolean)) parts.push(sectionBlock("Venue Details", fields));
   }
 
-  if (has("band")) {
-    const fields: string[] = [];
-    if (val(show.set_length)) fields.push(fieldLine("Set Length", val(show.set_length)));
-    if (val(show.curfew)) fields.push(fieldLine("Curfew", val(show.curfew)));
-    if (val(show.support_act)) fields.push(fieldLine("Support Act", val(show.support_act)));
-    if (fields.some(Boolean)) parts.push(sectionBlock("Band & Performance", fields));
-  }
-
   if (has("guestList")) {
     parts.push(sectionBlock("Guest List", [formatGuestList(show.guest_list_details)]));
   }

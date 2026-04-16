@@ -152,7 +152,8 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
             doc.text(entry.time, margin + 6, y);
             doc.setTextColor(...C_DARK);
             doc.setFont("helvetica", entry.is_band ? "bold" : "normal");
-            doc.text(entry.label, margin + 84, y);
+            const labelWithSet = entry.is_band && val(show.set_length) ? `${entry.label} (${val(show.set_length)})` : entry.label;
+            doc.text(labelWithSet, margin + 84, y);
             y += lineHeight;
           }
           if (val(show.curfew)) {
@@ -197,18 +198,6 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
         ];
         if (fields.some(([, v]) => v)) {
           drawSectionTitle("Venue Details");
-          for (const [label, v] of fields) drawField(label, v);
-        }
-      }
-
-      if (has("band")) {
-        const fields: [string, string | null][] = [
-          ["Set Length", val(show.set_length)],
-          ["Curfew", val(show.curfew)],
-          ["Support Act", val(show.support_act)],
-        ];
-        if (fields.some(([, v]) => v)) {
-          drawSectionTitle("Band & Performance");
           for (const [label, v] of fields) drawField(label, v);
         }
       }
