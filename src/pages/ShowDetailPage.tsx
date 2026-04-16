@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, FileUp, Upload, Clock } from "lucide-react";
+import { ArrowLeft, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Clock } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -668,33 +668,8 @@ export default function ShowDetailPage() {
         {/* Action buttons */}
         <div className="pt-1">
           {/* Desktop */}
-          <div className="hidden md:flex items-center gap-4">
-            {/* Primary: Send Advance actions */}
-            <div className="flex items-center gap-1.5">
-              <SlackPushDialog showId={id!} show={show as Show} />
-              <EmailBandDialog show={show as Show} />
-              <ExportPdfDialog show={show as Show} />
-            </div>
-
-            {/* Secondary: Import */}
-            <ParseAdvanceForShowDialog
-              showId={id!}
-              currentShow={show as Show}
-              onUpdated={() => {
-                queryClient.invalidateQueries({ queryKey: ["show", id] });
-                queryClient.invalidateQueries({ queryKey: ["shows"] });
-              }}
-              trigger={
-                <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1">
-                  <Upload className="h-3.5 w-3.5" />
-                  Import Advance
-                </Button>
-              }
-            />
-
-            <Separator orientation="vertical" className="h-5" />
-
-            {/* Settle Show — visually distinct */}
+          <div className="hidden md:flex items-center gap-2">
+            {/* Primary CTA: Settle Show */}
             {(show as any).is_settled ? (
               <Button
                 variant="ghost"
@@ -719,7 +694,22 @@ export default function ShowDetailPage() {
 
             <Separator orientation="vertical" className="h-5" />
 
-            {/* Utility: Delete in overflow */}
+            {/* Share dropdown: Slack, Email, PDF */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1.5">
+                  <Send className="h-3.5 w-3.5" />
+                  Share
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <SlackPushDialog showId={id!} show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
+                <EmailBandDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email Band</DropdownMenuItem>} />
+                <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export PDF</DropdownMenuItem>} />
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Overflow: Import, Delete */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
@@ -727,6 +717,15 @@ export default function ShowDetailPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
+                <ParseAdvanceForShowDialog
+                  showId={id!}
+                  currentShow={show as Show}
+                  onUpdated={() => {
+                    queryClient.invalidateQueries({ queryKey: ["show", id] });
+                    queryClient.invalidateQueries({ queryKey: ["shows"] });
+                  }}
+                  trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Import Advance</DropdownMenuItem>}
+                />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={() => { if (confirm("Delete this show?")) deleteMutation.mutate(); }}
@@ -760,35 +759,23 @@ export default function ShowDetailPage() {
               </Button>
             )}
 
-            {/* Secondary send actions — larger tap targets with labels */}
+            {/* Secondary actions: Share + Overflow */}
             <div className="flex items-center gap-2">
-              <SlackPushDialog
-                showId={id!}
-                show={show as Show}
-                trigger={
-                  <Button
-                    variant="outline"
-                    className="h-11 flex-1 text-sm font-medium gap-2"
-                  >
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-11 flex-1 text-sm font-medium gap-2">
                     <Send className="h-4 w-4" />
-                    Slack
+                    Share
                   </Button>
-                }
-              />
-              <EmailBandDialog
-                show={show as Show}
-                trigger={
-                  <Button
-                    variant="outline"
-                    className="h-11 flex-1 text-sm font-medium gap-2"
-                  >
-                    <FileUp className="h-4 w-4" />
-                    Email
-                  </Button>
-                }
-              />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <SlackPushDialog showId={id!} show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
+                  <EmailBandDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email Band</DropdownMenuItem>} />
+                  <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export PDF</DropdownMenuItem>} />
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-              {/* Overflow: PDF, Import, Delete */}
+              {/* Overflow: Import, Delete */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon" className="h-11 w-11 text-muted-foreground hover:text-foreground shrink-0">
@@ -796,7 +783,6 @@ export default function ShowDetailPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export PDF</DropdownMenuItem>} />
                   <ParseAdvanceForShowDialog
                     showId={id!}
                     currentShow={show as Show}
@@ -845,68 +831,7 @@ export default function ShowDetailPage() {
 
         <TabsContent value="show">
           <div className="space-y-6 sm:space-y-8">
-            <div ref={scheduleRef}>
-            <FieldGroup title="Schedule" incomplete={!editingSchedule && scheduleEntries.length === 0}>
-              {editingSchedule ? (
-                <ScheduleEditor
-                  initial={scheduleEntries.map((e) => ({ time: e.time, label: e.label, is_band: e.is_band }))}
-                  onSave={async (rows) => {
-                    try {
-                      await supabase.from("schedule_entries").delete().eq("show_id", id!);
-                      if (rows.length > 0) {
-                        const inserts = rows.map((r, i) => ({
-                          show_id: id!,
-                          time: r.time,
-                          label: r.label,
-                          is_band: r.is_band,
-                          sort_order: i,
-                        }));
-                        const { error } = await supabase.from("schedule_entries").insert(inserts);
-                        if (error) throw error;
-                      }
-                      queryClient.invalidateQueries({ queryKey: ["show", id] });
-                      queryClient.invalidateQueries({ queryKey: ["shows"] });
-                      queryClient.invalidateQueries({ queryKey: ["schedule-counts"] });
-                      setEditingSchedule(false);
-                      toast.success("Schedule updated");
-                    } catch {
-                      toast.error("Failed to save schedule");
-                    }
-                  }}
-                  onCancel={() => setEditingSchedule(false)}
-                  saving={false}
-                />
-              ) : scheduleEntries.length > 0 ? (
-                <button onClick={() => setEditingSchedule(true)} className="w-full text-left card-pressable">
-                  <div className="space-y-1">
-                    {scheduleEntries.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="flex items-baseline gap-3 sm:gap-4 rounded px-2 sm:px-3 py-1.5"
-                      >
-                        <span className="font-mono text-sm shrink-0 whitespace-nowrap text-muted-foreground">
-                          {entry.time}
-                        </span>
-                        <span className="text-sm text-foreground">{entry.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </button>
-              ) : (
-                <EmptyFieldPrompt label="schedule" onClick={() => {
-                  scheduleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  setEditingSchedule(true);
-                }} />
-              )}
-              {editField("set_length", "Set Length", { alwaysShow: true })}
-              {(inlineField === "curfew" || show.curfew) ? editField("curfew", "Curfew", { structuredTime: true, hideTbd: true }) : null}
-              {(inlineField === "changeover_time" || show.changeover_time) ? editField("changeover_time", "Changeover Time", { structuredTime: true }) : null}
-            </FieldGroup>
-            </div>
-
-            <Separator />
-
-            {/* Departure */}
+            {/* Departure — first chronologically */}
             <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_location}>
               {driveTimeLabel && departureOrigin && !driveCardDismissed && (
                 <div className="flex items-start gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
@@ -954,11 +879,79 @@ export default function ShowDetailPage() {
 
             <Separator />
 
-            {/* Day of Show Contact */}
-            <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone}>
-              {editField("dos_contact_name", "Name", { alwaysShow: true })}
-              {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true, phoneFormat: true })}
-            </FieldGroup>
+            {/* Schedule + Day of Show Contact — two-column layout */}
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_minmax(0,240px)] gap-x-6 gap-y-6">
+              {/* Schedule — wider column, most important section */}
+              <div ref={scheduleRef}>
+              <FieldGroup title="Schedule" incomplete={!editingSchedule && scheduleEntries.length === 0}>
+                {editingSchedule ? (
+                  <ScheduleEditor
+                    initial={scheduleEntries.map((e) => ({ time: e.time, label: e.label, is_band: e.is_band }))}
+                    onSave={async (rows) => {
+                      try {
+                        await supabase.from("schedule_entries").delete().eq("show_id", id!);
+                        if (rows.length > 0) {
+                          const inserts = rows.map((r, i) => ({
+                            show_id: id!,
+                            time: r.time,
+                            label: r.label,
+                            is_band: r.is_band,
+                            sort_order: i,
+                          }));
+                          const { error } = await supabase.from("schedule_entries").insert(inserts);
+                          if (error) throw error;
+                        }
+                        queryClient.invalidateQueries({ queryKey: ["show", id] });
+                        queryClient.invalidateQueries({ queryKey: ["shows"] });
+                        queryClient.invalidateQueries({ queryKey: ["schedule-counts"] });
+                        setEditingSchedule(false);
+                        toast.success("Schedule updated");
+                      } catch {
+                        toast.error("Failed to save schedule");
+                      }
+                    }}
+                    onCancel={() => setEditingSchedule(false)}
+                    saving={false}
+                  />
+                ) : scheduleEntries.length > 0 ? (
+                  <button onClick={() => setEditingSchedule(true)} className="w-full text-left card-pressable">
+                    <div className="space-y-1">
+                      {scheduleEntries.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="flex items-baseline gap-3 sm:gap-4 rounded px-2 sm:px-3 py-1.5"
+                        >
+                          <span className="font-mono text-sm shrink-0 whitespace-nowrap text-muted-foreground">
+                            {entry.time}
+                          </span>
+                          <span className="text-sm text-foreground">{entry.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </button>
+                ) : (
+                  <EmptyFieldPrompt label="schedule" onClick={() => {
+                    scheduleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    setEditingSchedule(true);
+                  }} />
+                )}
+                {editField("set_length", "Set Length", { alwaysShow: true })}
+                {(inlineField === "curfew" || show.curfew) ? editField("curfew", "Curfew", { structuredTime: true, hideTbd: true }) : null}
+                {(inlineField === "changeover_time" || show.changeover_time) ? editField("changeover_time", "Changeover Time", { structuredTime: true }) : null}
+              </FieldGroup>
+              </div>
+
+              {/* Vertical divider (desktop only) */}
+              <Separator orientation="vertical" className="hidden md:block h-auto" />
+
+              {/* Day of Show Contact — right column */}
+              <div>
+                <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone}>
+                  {editField("dos_contact_name", "Name", { alwaysShow: true })}
+                  {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true, phoneFormat: true })}
+                </FieldGroup>
+              </div>
+            </div>
 
             <Separator />
 
@@ -1048,148 +1041,148 @@ export default function ShowDetailPage() {
               </>
             )}
 
-            {/* Additional Info */}
-            {(inlineField === "additional_info" || show.additional_info) && (
-              <>
-                <Separator />
-                <FieldGroup title="Additional Info">
-                  {editField("additional_info", "Details", { multiline: true })}
-                </FieldGroup>
-              </>
-            )}
+            <Separator />
+
+            {/* Additional Info — always visible at bottom */}
+            <FieldGroup title="Additional Info">
+              {editField("additional_info", "Details", { multiline: true, alwaysShow: true })}
+            </FieldGroup>
           </div>
         </TabsContent>
 
         <TabsContent value="deal">
           <div className="space-y-6 sm:space-y-8">
-            {/* Deal — two-column grid for financial fields */}
+            {/* Deal — balanced 3×2 grid */}
             <FieldGroup title="Deal" incomplete={!show.guarantee && !show.backend_deal && !show.ticket_price && !show.venue_capacity && !show.walkout_potential && !show.artist_comps}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 <div>{editField("guarantee", "Guarantee", { mono: true, alwaysShow: true, currency: true })}</div>
                 <div>{editField("ticket_price", "Ticket Price", { mono: true, alwaysShow: true, currency: true, placeholder: "e.g. $20 or $18/$20/$25" })}</div>
                 <div>{editField("venue_capacity", "Capacity", { alwaysShow: true })}</div>
                 <div>{editField("walkout_potential", "Walkout Potential", { mono: true, alwaysShow: true, currency: true })}</div>
-              </div>
-              {(() => {
-                if (inlineField === "backend_deal") {
-                  const hasTier = backendDealForm.showTierRow;
-                  return (
-                    <div ref={inlineRef} className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Backend Deal</Label>
+                {/* Backend Deal — spans full width when editing */}
+                <div className={cn(inlineField === "backend_deal" && "sm:col-span-2")}>
+                  {(() => {
+                    if (inlineField === "backend_deal") {
+                      const hasTier = backendDealForm.showTierRow;
+                      return (
+                        <div ref={inlineRef} className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">Backend Deal</Label>
 
-                      {/* Row 1: percentage + GBOR/NBOR + vs/plus */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className="flex items-center gap-1.5">
-                          <Input
-                            type="number"
-                            min={1}
-                            max={100}
-                            step={0.5}
-                            value={backendDealForm.pct}
-                            onChange={(e) => setBackendDealForm(p => ({ ...p, pct: e.target.value }))}
-                            className="text-sm h-9 w-20 font-mono text-right ring-2 ring-ring ring-offset-1 ring-offset-background"
-                            placeholder="70"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") { e.preventDefault(); saveBackendDeal(); }
-                              if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
-                            }}
-                          />
-                          <span className="text-sm text-muted-foreground">% of</span>
-                        </div>
-                        <div className="flex rounded-md border border-input overflow-hidden text-sm">
-                          {(["GBOR", "NBOR"] as const).map((opt) => (
-                            <button
-                              key={opt}
-                              type="button"
-                              onClick={() => setBackendDealForm(p => ({ ...p, basis: opt }))}
-                              className={cn(
-                                "px-3 py-1.5 font-medium transition-colors",
-                                backendDealForm.basis === opt
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-background text-muted-foreground hover:bg-muted"
-                              )}
-                            >
-                              {opt}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex rounded-md border border-input overflow-hidden text-sm">
-                          {(["vs", "plus"] as const).map((opt) => (
-                            <button
-                              key={opt}
-                              type="button"
-                              onClick={() => setBackendDealForm(p => ({ ...p, dealType: opt }))}
-                              className={cn(
-                                "px-3 py-1.5 font-medium transition-colors",
-                                backendDealForm.dealType === opt
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-background text-muted-foreground hover:bg-muted"
-                              )}
-                            >
-                              {opt}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                          {/* Row 1: percentage + GBOR/NBOR + vs/plus */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                              <Input
+                                type="number"
+                                min={1}
+                                max={100}
+                                step={0.5}
+                                value={backendDealForm.pct}
+                                onChange={(e) => setBackendDealForm(p => ({ ...p, pct: e.target.value }))}
+                                className="text-sm h-9 w-20 font-mono text-right ring-2 ring-ring ring-offset-1 ring-offset-background"
+                                placeholder="70"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") { e.preventDefault(); saveBackendDeal(); }
+                                  if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
+                                }}
+                              />
+                              <span className="text-sm text-muted-foreground">% of</span>
+                            </div>
+                            <div className="flex rounded-md border border-input overflow-hidden text-sm">
+                              {(["GBOR", "NBOR"] as const).map((opt) => (
+                                <button
+                                  key={opt}
+                                  type="button"
+                                  onClick={() => setBackendDealForm(p => ({ ...p, basis: opt }))}
+                                  className={cn(
+                                    "px-3 py-1.5 font-medium transition-colors",
+                                    backendDealForm.basis === opt
+                                      ? "bg-primary text-primary-foreground"
+                                      : "bg-background text-muted-foreground hover:bg-muted"
+                                  )}
+                                >
+                                  {opt}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex rounded-md border border-input overflow-hidden text-sm">
+                              {(["vs", "plus"] as const).map((opt) => (
+                                <button
+                                  key={opt}
+                                  type="button"
+                                  onClick={() => setBackendDealForm(p => ({ ...p, dealType: opt }))}
+                                  className={cn(
+                                    "px-3 py-1.5 font-medium transition-colors",
+                                    backendDealForm.dealType === opt
+                                      ? "bg-primary text-primary-foreground"
+                                      : "bg-background text-muted-foreground hover:bg-muted"
+                                  )}
+                                >
+                                  {opt}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
 
-                      {/* Row 2: optional escalating tier */}
-                      {hasTier ? (
-                        <div className="flex items-center gap-1.5 flex-wrap text-sm text-muted-foreground">
-                          <span>then</span>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={100}
-                            step={0.5}
-                            value={backendDealForm.tier2Pct}
-                            onChange={(e) => setBackendDealForm(p => ({ ...p, tier2Pct: e.target.value }))}
-                            className="text-sm h-8 w-16 font-mono text-right"
-                            placeholder="75"
-                          />
-                          <span>% above</span>
-                          <Input
-                            type="number"
-                            min={1}
-                            step={1}
-                            value={backendDealForm.tier2Threshold}
-                            onChange={(e) => setBackendDealForm(p => ({ ...p, tier2Threshold: e.target.value }))}
-                            className="text-sm h-8 w-24 font-mono text-right"
-                            placeholder="200"
-                          />
-                          <span>tickets</span>
-                          <button
-                            type="button"
-                            onClick={() => setBackendDealForm(p => ({ ...p, tier2Pct: "", tier2Threshold: "", showTierRow: false }))}
-                            className="text-xs text-muted-foreground hover:text-destructive ml-1"
-                          >
-                            Remove
-                          </button>
+                          {/* Row 2: optional escalating tier */}
+                          {hasTier ? (
+                            <div className="flex items-center gap-1.5 flex-wrap text-sm text-muted-foreground">
+                              <span>then</span>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={100}
+                                step={0.5}
+                                value={backendDealForm.tier2Pct}
+                                onChange={(e) => setBackendDealForm(p => ({ ...p, tier2Pct: e.target.value }))}
+                                className="text-sm h-8 w-16 font-mono text-right"
+                                placeholder="75"
+                              />
+                              <span>% above</span>
+                              <Input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={backendDealForm.tier2Threshold}
+                                onChange={(e) => setBackendDealForm(p => ({ ...p, tier2Threshold: e.target.value }))}
+                                className="text-sm h-8 w-24 font-mono text-right"
+                                placeholder="200"
+                              />
+                              <span>tickets</span>
+                              <button
+                                type="button"
+                                onClick={() => setBackendDealForm(p => ({ ...p, tier2Pct: "", tier2Threshold: "", showTierRow: false }))}
+                                className="text-xs text-muted-foreground hover:text-destructive ml-1"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setBackendDealForm(p => ({ ...p, showTierRow: true }))}
+                              className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                            >
+                              + Add escalating tier
+                            </button>
+                          )}
+
+                          <InlineActions onSave={saveBackendDeal} onCancel={cancelInline} />
                         </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setBackendDealForm(p => ({ ...p, showTierRow: true }))}
-                          className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-                        >
-                          + Add escalating tier
+                      );
+                    }
+                    if (show.backend_deal) {
+                      return (
+                        <button onClick={startBackendDealEdit} className="w-full text-left group">
+                          <FieldRow label="Backend Deal" value={show.backend_deal} />
                         </button>
-                      )}
-
-                      <InlineActions onSave={saveBackendDeal} onCancel={cancelInline} />
-                    </div>
-                  );
-                }
-                if (show.backend_deal) {
-                  return (
-                    <button onClick={startBackendDealEdit} className="w-full text-left group">
-                      <FieldRow label="Backend Deal" value={show.backend_deal} />
-                    </button>
-                  );
-                }
-                return <EmptyFieldPrompt label="backend deal" onClick={startBackendDealEdit} />;
-              })()}
-              {editField("artist_comps", "Artist Comps", { alwaysShow: true })}
+                      );
+                    }
+                    return <EmptyFieldPrompt label="backend deal" onClick={startBackendDealEdit} />;
+                  })()}
+                </div>
+                <div>{editField("artist_comps", "Artist Comps", { alwaysShow: true })}</div>
+              </div>
             </FieldGroup>
 
             {/* Revenue Simulator */}
