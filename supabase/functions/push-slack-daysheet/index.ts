@@ -74,8 +74,7 @@ function formatDaySheet(show: any): string {
     const sorted = [...show.schedule_entries].sort((a: any, b: any) => a.sort_order - b.sort_order);
     blocks.push(`🕐 *Schedule*`);
     for (const entry of sorted) {
-      const setInline = entry.is_band && val(show.set_length) ? ` (${val(show.set_length)})` : "";
-      blocks.push(`    \`${entry.time}\`  ${entry.label}${setInline}`);
+      blocks.push(`    \`${entry.time}\`  ${entry.label}`);
     }
     if (val(show.curfew)) blocks.push(`    \`${val(show.curfew)}\`  Curfew`);
     blocks.push("");
