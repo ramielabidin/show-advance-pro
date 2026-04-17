@@ -87,7 +87,7 @@ export default function DashboardPage() {
   });
 
   const { data: tours = [] } = useQuery<TourWithShows[]>({
-    queryKey: ["tours"],
+    queryKey: ["tours", "with-shows"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tours")
