@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import Papa from "papaparse";
-import { Upload, Download, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Upload, Download, AlertCircle, CheckCircle2, RefreshCw, HelpCircle } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
@@ -153,13 +153,124 @@ function isJunkRow(row: ParsedRow): boolean {
 
 const REQUIRED = ["date", "venue_name", "city"] as const;
 
+/** Fuzzy match threshold — venue similarity above this is flagged for review */
+const FUZZY_THRESHOLD = 0.85;
+
+/** Show fields never overwritten on update — these are post-show data */
+const PROTECTED_FIELDS = new Set([
+  "is_settled",
+  "actual_walkout",
+  "actual_tickets_sold",
+  "settlement_notes",
+]);
+
 interface ParsedRow {
   [key: string]: string;
 }
 
+interface ExistingShow {
+  id: string;
+  date: string;
+  venue_name: string;
+}
+
+type MatchStatus =
+  | { kind: "insert" }
+  | { kind: "update"; showId: string; existingVenueName: string }
+  | {
+      kind: "review";
+      showId: string;
+      existingVenueName: string;
+      similarity: number;
+    };
+
 interface ValidatedRow {
   data: ParsedRow;
   errors: string[];
+  match: MatchStatus;
+  /** User override for review rows: "confirm" treats as update, "reject" treats as insert */
+  override?: "confirm" | "reject";
+}
+
+/** Levenshtein edit distance, iterative two-row DP */
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  const curr = new Array(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+    }
+    prev = curr.slice();
+  }
+  return prev[b.length];
+}
+
+/** Normalize venue names for comparison: lowercase, collapse non-alphanumerics */
+function normalizeVenueName(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function venueSimilarity(a: string, b: string): number {
+  const na = normalizeVenueName(a);
+  const nb = normalizeVenueName(b);
+  if (!na.length || !nb.length) return 0;
+  if (na === nb) return 1;
+  const maxLen = Math.max(na.length, nb.length);
+  return 1 - levenshtein(na, nb) / maxLen;
+}
+
+/** Coerce various date strings to ISO (YYYY-MM-DD) for matching against DB dates */
+function normalizeDate(s: string): string | null {
+  const trimmed = s?.trim();
+  if (!trimmed) return null;
+  const t = Date.parse(trimmed);
+  if (isNaN(t)) return null;
+  return new Date(t).toISOString().slice(0, 10);
+}
+
+/** Compute match status for a parsed row against the pool of existing team shows */
+function computeMatch(row: ParsedRow, existing: ExistingShow[]): MatchStatus {
+  const isoDate = normalizeDate(row.date);
+  const venue = row.venue_name?.trim();
+  if (!isoDate || !venue) return { kind: "insert" };
+
+  const sameDate = existing.filter((s) => s.date === isoDate);
+  if (sameDate.length === 0) return { kind: "insert" };
+
+  // Exact venue match (case-insensitive, whitespace tolerant)
+  const normIncoming = normalizeVenueName(venue);
+  const exact = sameDate.find(
+    (s) => normalizeVenueName(s.venue_name) === normIncoming
+  );
+  if (exact) {
+    return {
+      kind: "update",
+      showId: exact.id,
+      existingVenueName: exact.venue_name,
+    };
+  }
+
+  // Fuzzy — pick best candidate on the same date
+  let best: { show: ExistingShow; sim: number } | null = null;
+  for (const s of sameDate) {
+    const sim = venueSimilarity(venue, s.venue_name);
+    if (!best || sim > best.sim) best = { show: s, sim };
+  }
+  if (best && best.sim >= FUZZY_THRESHOLD) {
+    return {
+      kind: "review",
+      showId: best.show.id,
+      existingVenueName: best.show.venue_name,
+      similarity: best.sim,
+    };
+  }
+
+  return { kind: "insert" };
 }
 
 function validateRow(row: ParsedRow): string[] {
@@ -205,8 +316,59 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
     enabled: open,
   });
 
+  const { data: existingShows = [] } = useQuery({
+    queryKey: ["shows", "bulk-match", teamId],
+    queryFn: async (): Promise<ExistingShow[]> => {
+      const { data, error } = await supabase
+        .from("shows")
+        .select("id, date, venue_name")
+        .eq("team_id", teamId);
+      if (error) throw error;
+      return data as ExistingShow[];
+    },
+    enabled: open && !!teamId,
+  });
+
+  // Recompute match status whenever existing shows arrive after rows are parsed
+  useEffect(() => {
+    if (!rows.length) return;
+    setRows((prev) =>
+      prev.map((r) => ({
+        ...r,
+        match: r.errors.length > 0 ? { kind: "insert" } : computeMatch(r.data, existingShows),
+        // Drop stale override if the underlying match no longer needs review
+        override: undefined,
+      }))
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingShows]);
+
   const validRows = rows.filter((r) => r.errors.length === 0);
   const invalidCount = rows.length - validRows.length;
+
+  /** Effective action per row, after user overrides on review rows */
+  const resolveAction = (r: ValidatedRow): "insert" | "update" | "review" => {
+    if (r.match.kind === "insert") return "insert";
+    if (r.match.kind === "update") return "update";
+    if (r.override === "confirm") return "update";
+    if (r.override === "reject") return "insert";
+    return "review";
+  };
+
+  const counts = useMemo(() => {
+    let insert = 0, update = 0, review = 0;
+    for (const r of validRows) {
+      const a = resolveAction(r);
+      if (a === "insert") insert++;
+      else if (a === "update") update++;
+      else review++;
+    }
+    return { insert, update, review };
+  }, [validRows]);
+
+  const setRowOverride = (index: number, override: "confirm" | "reject" | undefined) => {
+    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, override } : r)));
+  };
 
   const handleFile = useCallback((file: File) => {
     setFileName(file.name);
@@ -236,10 +398,14 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
           const normalized = results.data
             .map(normalizeRow)
             .filter((d) => !isJunkRow(d));
-          const validated = normalized.map((d) => ({
-            data: d,
-            errors: validateRow(d),
-          }));
+          const validated: ValidatedRow[] = normalized.map((d) => {
+            const errors = validateRow(d);
+            return {
+              data: d,
+              errors,
+              match: errors.length > 0 ? { kind: "insert" } : computeMatch(d, existingShows),
+            };
+          });
           setRows(validated);
         },
       });
@@ -258,9 +424,21 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
 
   const importMutation = useMutation({
     mutationFn: async () => {
+      // Partition rows by effective action — review rows without an override
+      // shouldn't reach here (button is disabled), but treat them as insert defensively.
+      const toInsert: ValidatedRow[] = [];
+      const toUpdate: { row: ValidatedRow; showId: string }[] = [];
+      for (const r of validRows) {
+        const action = resolveAction(r);
+        if (action === "update" && r.match.kind !== "insert") {
+          toUpdate.push({ row: r, showId: r.match.showId });
+        } else {
+          toInsert.push(r);
+        }
+      }
+
       const tourNameMap = new Map(tours.map((t) => [t.name.toLowerCase(), t.id]));
       const newTourNames = new Set<string>();
-
       for (const r of validRows) {
         const name = r.data.tour_name?.trim();
         if (name && !tourNameMap.has(name.toLowerCase())) {
@@ -278,16 +456,29 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
         created?.forEach((t) => tourNameMap.set(t.name.toLowerCase(), t.id));
       }
 
-      const showRows = validRows.map((r) => {
+      const allMappedDbCols = new Set(Object.values(CSV_COLUMN_MAP));
+
+      const buildPayload = (r: ValidatedRow, forUpdate: boolean) => {
         const tourName = r.data.tour_name?.trim();
         const tourFallbackId = selectedTourId !== "none" ? selectedTourId : null;
         const tour_id = tourName ? tourNameMap.get(tourName.toLowerCase()) ?? tourFallbackId : tourFallbackId;
 
-        // Map extra CSV columns to DB columns, cleaning financial fields
-        const extras: Record<string, string | null> = {};
+        // First non-empty raw value per DB column (CSV_COLUMN_MAP has aliases)
+        const rawByDbCol = new Map<string, string>();
         for (const [csvKey, dbCol] of Object.entries(CSV_COLUMN_MAP)) {
           const raw = r.data[csvKey]?.trim();
-          if (!raw) continue;
+          if (raw && !rawByDbCol.has(dbCol)) rawByDbCol.set(dbCol, raw);
+        }
+
+        const extras: Record<string, string | null> = {};
+        for (const dbCol of allMappedDbCols) {
+          if (PROTECTED_FIELDS.has(dbCol)) continue;
+          const raw = rawByDbCol.get(dbCol);
+          if (!raw) {
+            // On update, blank CSV cells clear the field. On insert, null is the default anyway.
+            if (forUpdate) extras[dbCol] = null;
+            continue;
+          }
           if (FINANCIAL_FIELDS.has(dbCol)) {
             extras[dbCol] = cleanFinancialField(raw);
           } else if (dbCol === "backend_deal") {
@@ -297,7 +488,7 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
           }
         }
 
-        return {
+        const base: Record<string, string | null> = {
           date: r.data.date.trim(),
           venue_name: r.data.venue_name.trim(),
           city: r.data.city.trim(),
@@ -307,17 +498,36 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
           hotel_name: r.data.hotel_name?.trim() || null,
           hotel_address: r.data.hotel_address?.trim() || null,
           tour_id,
-          team_id: teamId,
           ...extras,
         };
-      });
 
-      const { error } = await supabase.from("shows").insert(showRows);
-      if (error) throw error;
-      return showRows.length;
+        if (!forUpdate) base.team_id = teamId;
+        return base;
+      };
+
+      if (toInsert.length > 0) {
+        const insertRows = toInsert.map((r) => buildPayload(r, false));
+        const { error } = await supabase.from("shows").insert(insertRows);
+        if (error) throw error;
+      }
+
+      for (const { row, showId } of toUpdate) {
+        const payload = buildPayload(row, true);
+        const { error } = await supabase
+          .from("shows")
+          .update(payload)
+          .eq("id", showId)
+          .eq("team_id", teamId);
+        if (error) throw error;
+      }
+
+      return { inserted: toInsert.length, updated: toUpdate.length };
     },
-    onSuccess: (count) => {
-      toast.success(`Imported ${count} show${count !== 1 ? "s" : ""}`);
+    onSuccess: ({ inserted, updated }) => {
+      const parts: string[] = [];
+      if (inserted > 0) parts.push(`Imported ${inserted} new show${inserted !== 1 ? "s" : ""}`);
+      if (updated > 0) parts.push(`Updated ${updated}`);
+      toast.success(parts.join(" · ") || "Nothing to import");
       queryClient.invalidateQueries({ queryKey: ["shows"] });
       queryClient.invalidateQueries({ queryKey: ["tours"] });
       if (defaultTourId) queryClient.invalidateQueries({ queryKey: ["tour", defaultTourId] });
@@ -409,8 +619,18 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
                     <AlertCircle className="h-3.5 w-3.5" /> {invalidCount} invalid
                   </span>
                 )}
+                {counts.review > 0 && (
+                  <span className="flex items-center gap-1 text-amber-600">
+                    <HelpCircle className="h-3.5 w-3.5" /> {counts.review} review
+                  </span>
+                )}
+                {counts.update > 0 && (
+                  <span className="flex items-center gap-1 text-green-600">
+                    <RefreshCw className="h-3.5 w-3.5" /> {counts.update} update
+                  </span>
+                )}
                 <span className="flex items-center gap-1 text-green-600">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> {validRows.length} ready
+                  <CheckCircle2 className="h-3.5 w-3.5" /> {counts.insert} new
                 </span>
                 <Button variant="ghost" size="sm" onClick={reset}>
                   Clear
@@ -430,29 +650,81 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.map((r, i) => (
-                    <TableRow
-                      key={i}
-                      className={r.errors.length > 0 ? "bg-destructive/5" : ""}
-                    >
-                      <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                      <TableCell>{r.data.date || "—"}</TableCell>
-                      <TableCell>{r.data.venue_name || "—"}</TableCell>
-                      <TableCell>{r.data.city || "—"}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {r.data.tour_name || "—"}
-                      </TableCell>
-                      <TableCell>
-                        {r.errors.length > 0 ? (
-                          <span className="text-xs text-destructive">
-                            Missing: {r.errors.join(", ")}
-                          </span>
-                        ) : (
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {rows.map((r, i) => {
+                    const action = r.errors.length > 0 ? "invalid" : resolveAction(r);
+                    const rowClass =
+                      action === "invalid"
+                        ? "bg-destructive/5"
+                        : action === "review"
+                        ? "bg-amber-500/5"
+                        : "";
+                    return (
+                      <TableRow key={i} className={rowClass}>
+                        <TableCell className="text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell>{r.data.date || "—"}</TableCell>
+                        <TableCell>{r.data.venue_name || "—"}</TableCell>
+                        <TableCell>{r.data.city || "—"}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {r.data.tour_name || "—"}
+                        </TableCell>
+                        <TableCell>
+                          {action === "invalid" ? (
+                            <span className="text-xs text-destructive">
+                              Missing: {r.errors.join(", ")}
+                            </span>
+                          ) : action === "update" ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="flex items-center gap-1 text-xs text-green-600">
+                                <RefreshCw className="h-3.5 w-3.5" /> Update
+                              </span>
+                              {r.match.kind !== "insert" && (
+                                <span className="text-[11px] text-muted-foreground truncate max-w-[180px]">
+                                  matches: {r.match.existingVenueName}
+                                </span>
+                              )}
+                            </div>
+                          ) : action === "review" && r.match.kind === "review" ? (
+                            <div className="flex flex-col gap-1">
+                              <span className="flex items-center gap-1 text-xs text-amber-600">
+                                <HelpCircle className="h-3.5 w-3.5" /> Probable match — review
+                              </span>
+                              <span className="text-[11px] text-muted-foreground">
+                                incoming: <span className="text-foreground">{r.data.venue_name}</span>
+                              </span>
+                              <span className="text-[11px] text-muted-foreground">
+                                existing: <span className="text-foreground">{r.match.existingVenueName}</span>
+                                <span className="ml-1 text-muted-foreground/70">
+                                  ({Math.round(r.match.similarity * 100)}%)
+                                </span>
+                              </span>
+                              <div className="flex gap-1 pt-0.5">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-6 px-2 text-[11px]"
+                                  onClick={() => setRowOverride(i, "confirm")}
+                                >
+                                  Confirm match
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 px-2 text-[11px]"
+                                  onClick={() => setRowOverride(i, "reject")}
+                                >
+                                  Import as new
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -463,11 +735,24 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
           <DialogFooter>
             <Button
               onClick={() => importMutation.mutate()}
-              disabled={validRows.length === 0 || importMutation.isPending}
+              disabled={
+                validRows.length === 0 ||
+                importMutation.isPending ||
+                counts.review > 0
+              }
             >
               {importMutation.isPending
                 ? "Importing..."
-                : `Import ${validRows.length} show${validRows.length !== 1 ? "s" : ""}`}
+                : (() => {
+                    const parts: string[] = [];
+                    if (counts.insert > 0) parts.push(`Import ${counts.insert} new`);
+                    if (counts.update > 0) parts.push(`Update ${counts.update}`);
+                    if (counts.review > 0)
+                      parts.push(
+                        `${counts.review} need${counts.review !== 1 ? "" : "s"} review`
+                      );
+                    return parts.length ? parts.join(" · ") : "Import";
+                  })()}
             </Button>
           </DialogFooter>
         )}
