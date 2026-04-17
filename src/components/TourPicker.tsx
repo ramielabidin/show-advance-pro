@@ -84,7 +84,7 @@ export default function TourPicker({
   const queryClient = useQueryClient();
 
   const { data: tours = [] } = useQuery<TourWithShows[]>({
-    queryKey: ["tours"],
+    queryKey: ["tours", "summary"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tours")

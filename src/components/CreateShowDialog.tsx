@@ -53,7 +53,7 @@ export default function CreateShowDialog({ defaultTourId }: CreateShowDialogProp
   const queryClient = useQueryClient();
 
   const { data: tours = [] } = useQuery({
-    queryKey: ["tours"],
+    queryKey: ["tours", "names"],
     queryFn: async () => {
       const { data, error } = await supabase.from("tours").select("id, name").order("name");
       if (error) throw error;
