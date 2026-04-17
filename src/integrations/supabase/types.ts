@@ -289,6 +289,7 @@ export type Database = {
           actual_tickets_sold: string | null
           actual_walkout: string | null
           additional_info: string | null
+          advanced_at: string | null
           age_restriction: string | null
           artist_comps: string | null
           backend_deal: string | null
@@ -340,6 +341,7 @@ export type Database = {
           actual_tickets_sold?: string | null
           actual_walkout?: string | null
           additional_info?: string | null
+          advanced_at?: string | null
           age_restriction?: string | null
           artist_comps?: string | null
           backend_deal?: string | null
@@ -391,6 +393,7 @@ export type Database = {
           actual_tickets_sold?: string | null
           actual_walkout?: string | null
           additional_info?: string | null
+          advanced_at?: string | null
           age_restriction?: string | null
           artist_comps?: string | null
           backend_deal?: string | null

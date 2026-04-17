@@ -17,6 +17,7 @@ import {
   TrendingUp,
   DollarSign,
   CheckCircle2,
+  Circle,
   Music,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,15 +33,6 @@ import type { Show, Tour } from "@/lib/types";
 type Scope = "tour" | "standalone" | "upcoming";
 type ShowWithTour = Show & { tours?: { id: string; name: string } | null };
 type TourWithShows = Tour & { shows: Show[] };
-
-const TOTAL_ADVANCE = 2; // venue_address + schedule
-
-function countAdvanced(show: Show, hasSchedule: boolean): number {
-  let count = 0;
-  if (show.venue_address) count++;
-  if (hasSchedule) count++;
-  return count;
-}
 
 function isUpcomingDate(date: string): boolean {
   const d = parseISO(date);
@@ -91,21 +83,6 @@ export default function DashboardPage() {
         .order("date", { ascending: true });
       if (error) throw error;
       return data as ShowWithTour[];
-    },
-  });
-
-  const { data: scheduleMap = {} } = useQuery({
-    queryKey: ["schedule-info"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("schedule_entries").select("show_id, label");
-      if (error) throw error;
-      const map: Record<string, { hasSchedule: boolean; hasLoadIn: boolean }> = {};
-      data.forEach((e) => {
-        if (!map[e.show_id]) map[e.show_id] = { hasSchedule: false, hasLoadIn: false };
-        map[e.show_id].hasSchedule = true;
-        if (e.label.toLowerCase().includes("load")) map[e.show_id].hasLoadIn = true;
-      });
-      return map;
     },
   });
 
@@ -524,7 +501,6 @@ export default function DashboardPage() {
           <FeaturedShowCard
             show={featured.show}
             mode={featured.mode}
-            hasSchedule={!!scheduleMap[featured.show.id]?.hasSchedule}
           />
         </div>
       )}
@@ -537,23 +513,20 @@ export default function DashboardPage() {
             <CardContent className="pt-4 space-y-1">
               {listShows.map((show, i) => {
                 const daysAway = differenceInCalendarDays(parseISO(show.date), today);
-                const info = scheduleMap[show.id];
-                const hasLoadIn = !!info?.hasLoadIn;
-                const hasDosContact = !!show.dos_contact_name;
-                const advancedCount = (hasLoadIn ? 1 : 0) + (hasDosContact ? 1 : 0);
+                const isAdvanced = !!(show as any).advanced_at;
                 const isPastShow = daysAway < 0;
                 const isWithin7 = daysAway >= 0 && daysAway < 7;
 
                 const dotStyle: React.CSSProperties = isPastShow
                   ? { backgroundColor: "var(--pastel-green-fg)" }
-                  : advancedCount === 2
+                  : isAdvanced
                     ? { backgroundColor: "var(--pastel-green-fg)" }
                     : isWithin7
                       ? { backgroundColor: "var(--pastel-red-fg)" }
                       : { backgroundColor: "var(--pastel-yellow-fg)" };
 
                 const dateChipStyle: React.CSSProperties | undefined =
-                  isWithin7 && advancedCount < 2 && !isPastShow
+                  isWithin7 && !isAdvanced && !isPastShow
                     ? { backgroundColor: "var(--pastel-red-bg)", color: "var(--pastel-red-fg)" }
                     : undefined;
 
@@ -617,7 +590,7 @@ export default function DashboardPage() {
           >
             {toursWithUpcoming.map((tour) => {
               const total = tour.shows?.length ?? 0;
-              const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]?.hasSchedule) >= TOTAL_ADVANCE).length;
+              const advanced = (tour.shows ?? []).filter((s) => !!(s as any).advanced_at).length;
               const pct = total > 0 ? (advanced / total) * 100 : 0;
               return (
                 <Link key={tour.id} to={`/shows?view=tour&tourId=${tour.id}`} className="w-full block card-pressable">
@@ -713,16 +686,13 @@ function ScopePill({
 function FeaturedShowCard({
   show,
   mode,
-  hasSchedule,
 }: {
   show: Show;
   mode: "next" | "final";
-  hasSchedule: boolean;
 }) {
   const date = parseISO(show.date);
   const daysAway = differenceInCalendarDays(date, new Date());
-  const advanced = countAdvanced(show, hasSchedule);
-  const pct = (advanced / TOTAL_ADVANCE) * 100;
+  const isAdvanced = !!(show as any).advanced_at;
 
   const daysLabel =
     daysAway <= 0
@@ -780,15 +750,23 @@ function FeaturedShowCard({
               )}
             </div>
 
-            {/* Advance progress */}
+            {/* Advance status */}
             <div className="text-right shrink-0">
-              <p
-                className="text-sm font-medium text-foreground"
-                title="Tracked fields: Venue Address, Schedule"
+              <span
+                className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-medium px-2 py-1 rounded-full"
+                style={
+                  isAdvanced
+                    ? { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }
+                    : { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
+                }
               >
-                {advanced}/{TOTAL_ADVANCE} advanced
-              </p>
-              <Progress value={pct} className="h-1.5 w-24 mt-1.5" />
+                {isAdvanced ? (
+                  <CheckCircle2 className="h-3 w-3" />
+                ) : (
+                  <Circle className="h-3 w-3" />
+                )}
+                {isAdvanced ? "Advanced" : "Not Advanced"}
+              </span>
             </div>
           </div>
         </CardContent>

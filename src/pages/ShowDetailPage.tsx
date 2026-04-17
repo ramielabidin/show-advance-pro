@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Clock } from "lucide-react";
+import { ArrowLeft, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -296,6 +296,22 @@ export default function ShowDetailPage() {
       toast.success("Show settled");
     },
     onError: () => toast.error("Failed to settle show"),
+  });
+
+  const toggleAdvancedMutation = useMutation({
+    mutationFn: async (nextAdvanced: boolean) => {
+      const { error } = await supabase.from("shows").update({
+        advanced_at: nextAdvanced ? new Date().toISOString() : null,
+      } as any).eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: (_data, nextAdvanced) => {
+      queryClient.invalidateQueries({ queryKey: ["show", id] });
+      queryClient.invalidateQueries({ queryKey: ["shows"] });
+      queryClient.invalidateQueries({ queryKey: ["tours"] });
+      toast.success(nextAdvanced ? "Show marked as advanced" : "Marked as not advanced");
+    },
+    onError: () => toast.error("Failed to update advance status"),
   });
 
   const unsettleMutation = useMutation({
@@ -707,6 +723,33 @@ export default function ShowDetailPage() {
               </Button>
             )}
 
+            {/* Advance toggle — secondary, yellow when needed / green when done */}
+            {(show as any).advanced_at ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs text-[hsl(var(--success))] hover:text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.1)]"
+                onClick={() => toggleAdvancedMutation.mutate(false)}
+                disabled={toggleAdvancedMutation.isPending}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Advanced
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1"
+                style={{
+                  color: "var(--pastel-yellow-fg)",
+                  borderColor: "var(--pastel-yellow-fg)",
+                }}
+                onClick={() => toggleAdvancedMutation.mutate(true)}
+                disabled={toggleAdvancedMutation.isPending}
+              >
+                <Circle className="h-3.5 w-3.5" /> Mark as advanced
+              </Button>
+            )}
+
             <Separator orientation="vertical" className="h-5" />
 
             {/* Share dropdown: Slack, Email, PDF */}
@@ -776,6 +819,31 @@ export default function ShowDetailPage() {
                 }}
               >
                 <CheckCircle2 className="h-5 w-5 mr-2" /> Settle Show
+              </Button>
+            )}
+
+            {/* Advance toggle — secondary */}
+            {(show as any).advanced_at ? (
+              <Button
+                variant="outline"
+                className="h-11 w-full text-sm font-medium border-[hsl(var(--success))] text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.1)] hover:text-[hsl(var(--success))]"
+                onClick={() => toggleAdvancedMutation.mutate(false)}
+                disabled={toggleAdvancedMutation.isPending}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" /> Advanced — Tap to Undo
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                className="h-11 w-full text-sm font-medium gap-2"
+                style={{
+                  color: "var(--pastel-yellow-fg)",
+                  borderColor: "var(--pastel-yellow-fg)",
+                }}
+                onClick={() => toggleAdvancedMutation.mutate(true)}
+                disabled={toggleAdvancedMutation.isPending}
+              >
+                <Circle className="h-4 w-4" /> Mark as advanced
               </Button>
             )}
 
