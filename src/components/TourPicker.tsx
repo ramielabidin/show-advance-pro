@@ -23,6 +23,9 @@ interface TourPickerProps {
   onSelect: (tourId: string | null) => void;
   onClear: () => void;
   onOpen?: () => void;
+  disabled?: boolean;
+  emptyLabel?: string;
+  showClear?: boolean;
 }
 
 interface TourWithShows {
@@ -64,7 +67,16 @@ function latestEnd(shows: { date: string }[]): number {
   return Math.max(...shows.map((s) => parseISO(s.date).getTime()));
 }
 
-export default function TourPicker({ selectedTourId, selectedTourName, onSelect, onClear, onOpen }: TourPickerProps) {
+export default function TourPicker({
+  selectedTourId,
+  selectedTourName,
+  onSelect,
+  onClear,
+  onOpen,
+  disabled = false,
+  emptyLabel = "No tours",
+  showClear = true,
+}: TourPickerProps) {
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
@@ -83,17 +95,26 @@ export default function TourPicker({ selectedTourId, selectedTourName, onSelect,
     },
   });
 
-  const { active, past } = useMemo(() => {
+  const { active, upcoming, past } = useMemo(() => {
     const active: TourWithShows[] = [];
+    const upcoming: TourWithShows[] = [];
     const past: TourWithShows[] = [];
     for (const t of tours) {
       const shows = t.shows ?? [];
-      if (hasUpcomingShow(shows)) active.push(t);
-      else past.push(t);
+      const hasUp = hasUpcomingShow(shows);
+      const hasPast = shows.some((s) => {
+        const d = parseISO(s.date);
+        return isPast(d) && !isToday(d);
+      });
+      if (hasUp && hasPast) active.push(t);
+      else if (hasUp) upcoming.push(t);
+      else if (hasPast) past.push(t);
+      else upcoming.push(t);
     }
     active.sort((a, b) => earliestUpcoming(a.shows ?? []) - earliestUpcoming(b.shows ?? []));
+    upcoming.sort((a, b) => earliestUpcoming(a.shows ?? []) - earliestUpcoming(b.shows ?? []));
     past.sort((a, b) => latestEnd(b.shows ?? []) - latestEnd(a.shows ?? []));
-    return { active, past };
+    return { active, upcoming, past };
   }, [tours]);
 
   const createMutation = useMutation({
@@ -120,6 +141,19 @@ export default function TourPicker({ selectedTourId, selectedTourName, onSelect,
 
   const triggerLabel = selectedTourName ?? "Tour";
 
+  if (disabled) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-input bg-background text-sm font-medium text-muted-foreground opacity-60 cursor-not-allowed"
+      >
+        <span className="truncate max-w-[180px]">{emptyLabel}</span>
+        <ChevronDown className="h-3.5 w-3.5 opacity-50" />
+      </button>
+    );
+  }
+
   return (
     <>
       <Popover
@@ -143,7 +177,7 @@ export default function TourPicker({ selectedTourId, selectedTourName, onSelect,
               <ChevronDown className="h-3.5 w-3.5 opacity-70" />
             </button>
           </PopoverTrigger>
-          {selectedTourId && (
+          {selectedTourId && showClear && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -165,6 +199,24 @@ export default function TourPicker({ selectedTourId, selectedTourName, onSelect,
                   Active
                 </div>
                 {active.map((t) => (
+                  <TourRow
+                    key={t.id}
+                    tour={t}
+                    selected={t.id === selectedTourId}
+                    onClick={() => {
+                      onSelect(t.id);
+                      setOpen(false);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+            {upcoming.length > 0 && (
+              <div className="mb-1">
+                <div className="px-2 pt-2 pb-1.5 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                  Upcoming
+                </div>
+                {upcoming.map((t) => (
                   <TourRow
                     key={t.id}
                     tour={t}
