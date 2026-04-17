@@ -4,6 +4,11 @@
 
 **Advance** is a tour management app for independent musicians. Core features: dashboard, shows (create/edit/advance), tours, settings (team, documents, contacts), PDF/email advance parsing, and show PDF export.
 
+## Project context
+
+For product direction, pricing model, roles/permissions, and phase priorities,
+see ROADMAP.md. Consult it before proposing significant feature work.
+
 ## Tech Stack
 
 - **React 18 + TypeScript** (Vite, path alias `@/` → `src/`)
