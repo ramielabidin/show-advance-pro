@@ -4,14 +4,18 @@ import { Link } from "react-router-dom";
 import { cn, formatCityState } from "@/lib/utils";
 import type { Show } from "@/lib/types";
 
+type ShowWithTour = Show & { tours?: { id: string; name: string } | null };
+
 interface ShowCardProps {
-  show: Show;
+  show: ShowWithTour;
   hasLoadIn?: boolean;
   hasDosContact?: boolean;
   onDelete?: () => void;
+  onRemoveFromTour?: () => void;
+  chip?: "tour" | "standalone" | "none";
 }
 
-export default function ShowCard({ show, hasLoadIn, hasDosContact, onDelete }: ShowCardProps) {
+export default function ShowCard({ show, hasLoadIn, hasDosContact, onDelete, onRemoveFromTour, chip = "none" }: ShowCardProps) {
   const date = parseISO(show.date);
   const past = isPast(date) && !isToday(date);
   const daysAway = differenceInCalendarDays(date, new Date());
@@ -50,8 +54,21 @@ export default function ShowCard({ show, hasLoadIn, hasDosContact, onDelete }: S
           <div className="text-[10px] sm:text-xs text-muted-foreground">{format(date, "EEE")}</div>
         </div>
         <div className="border-l pl-3 sm:pl-5 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-medium text-foreground text-sm sm:text-base truncate min-w-0">{show.venue_name}</h3>
+            {chip === "tour" && show.tours?.name && (
+              <span
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0"
+                style={{ backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" }}
+              >
+                {show.tours.name}
+              </span>
+            )}
+            {chip === "standalone" && (
+              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground shrink-0">
+                Standalone
+              </span>
+            )}
             {!show.is_reviewed && (
               <span className="inline-flex items-center gap-1 rounded-full bg-badge-new/10 px-2 py-0.5 text-[11px] font-medium text-badge-new shrink-0">
                 <Sparkles className="h-3 w-3" />
@@ -73,6 +90,18 @@ export default function ShowCard({ show, hasLoadIn, hasDosContact, onDelete }: S
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
         {dotColor && <span className={cn("h-2 w-2 rounded-full", dotColor)} />}
+        {onRemoveFromTour && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRemoveFromTour();
+            }}
+            className="px-2 py-1 rounded-md text-xs text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all"
+          >
+            Remove
+          </button>
+        )}
         {onDelete && (
           <button
             onClick={(e) => {

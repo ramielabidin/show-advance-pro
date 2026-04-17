@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { Calendar, FolderOpen, Settings, LogOut, Moon, Sun, FileText } from "lucide-react";
+import { Calendar, Settings, LogOut, Moon, Sun, FileText } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,8 +9,7 @@ import PullToRefresh from "@/components/PullToRefresh";
 
 const navItems = [
   { to: "/", icon: Calendar, label: "Home" },
-  { to: "/shows", icon: FileText, label: "All Shows" },
-  { to: "/tours", icon: FolderOpen, label: "Tours" },
+  { to: "/shows", icon: FileText, label: "Shows" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 

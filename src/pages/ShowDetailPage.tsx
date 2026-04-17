@@ -554,7 +554,7 @@ export default function ShowDetailPage() {
               </Badge>
             )}
             {(show as any).tours?.name && (
-              <Link to={`/tours/${(show as any).tours.id}`}>
+              <Link to={`/shows?view=tour&tourId=${(show as any).tours.id}`}>
                 <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 hover:bg-secondary/80 transition-colors">
                   {(show as any).tours.name}
                 </Badge>

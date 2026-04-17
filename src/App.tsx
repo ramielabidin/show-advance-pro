@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useParams } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -12,12 +13,25 @@ import AuthPage from "@/pages/AuthPage";
 import DashboardPage from "@/pages/DashboardPage";
 import ShowsPage from "@/pages/ShowsPage";
 import ShowDetailPage from "@/pages/ShowDetailPage";
-import ToursPage from "@/pages/ToursPage";
-import TourDetailPage from "@/pages/TourDetailPage";
 
 import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
 import PWAUpdatePrompt from "@/components/PWAUpdatePrompt";
+
+function ToursRedirect() {
+  useEffect(() => {
+    console.info("[deprecation] /tours now redirects to /shows?view=tour");
+  }, []);
+  return <Navigate to="/shows?view=tour" replace />;
+}
+
+function TourDetailRedirect() {
+  const { id } = useParams<{ id: string }>();
+  useEffect(() => {
+    console.info(`[deprecation] /tours/${id} now redirects to /shows?view=tour&tourId=${id}`);
+  }, [id]);
+  return <Navigate to={`/shows?view=tour&tourId=${id}`} replace />;
+}
 
 const queryClient = new QueryClient();
 
@@ -44,8 +58,8 @@ function ProtectedRoutes() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/shows" element={<ShowsPage />} />
             <Route path="/shows/:id" element={<ShowDetailPage />} />
-            <Route path="/tours" element={<ToursPage />} />
-            <Route path="/tours/:id" element={<TourDetailPage />} />
+            <Route path="/tours" element={<ToursRedirect />} />
+            <Route path="/tours/:id" element={<TourDetailRedirect />} />
 
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
