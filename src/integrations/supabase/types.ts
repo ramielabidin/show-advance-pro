@@ -96,7 +96,10 @@ export type Database = {
           created_at: string
           email_subject: string | null
           from_address: string | null
+          gmail_thread_id: string | null
           id: string
+          match_confidence: string | null
+          matched_show_id: string | null
           raw_email_text: string
           reviewed_at: string | null
           reviewed_show_id: string | null
@@ -107,7 +110,10 @@ export type Database = {
           created_at?: string
           email_subject?: string | null
           from_address?: string | null
+          gmail_thread_id?: string | null
           id?: string
+          match_confidence?: string | null
+          matched_show_id?: string | null
           raw_email_text: string
           reviewed_at?: string | null
           reviewed_show_id?: string | null
@@ -118,7 +124,10 @@ export type Database = {
           created_at?: string
           email_subject?: string | null
           from_address?: string | null
+          gmail_thread_id?: string | null
           id?: string
+          match_confidence?: string | null
+          matched_show_id?: string | null
           raw_email_text?: string
           reviewed_at?: string | null
           reviewed_show_id?: string | null
@@ -136,6 +145,13 @@ export type Database = {
           {
             foreignKeyName: "inbound_parse_events_reviewed_show_id_fkey"
             columns: ["reviewed_show_id"]
+            isOneToOne: false
+            referencedRelation: "shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_parse_events_matched_show_id_fkey"
+            columns: ["matched_show_id"]
             isOneToOne: false
             referencedRelation: "shows"
             referencedColumns: ["id"]
