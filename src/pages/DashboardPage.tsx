@@ -80,33 +80,17 @@ export default function DashboardPage() {
   const nextShow = upcoming[0] ?? null;
   const upcomingAfter = upcoming.slice(1, 8);
 
-  const activeTour = useMemo(() => {
-    let best: (Tour & { shows: Show[] }) | null = null;
-    let bestDate: Date | null = null;
-    for (const t of tours) {
-      if (!t.shows || t.shows.length === 0) continue;
-      const upcomingForTour = t.shows
-        .filter((s) => {
-          const d = parseISO(s.date);
-          return isToday(d) || !isPast(d);
-        })
-        .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-      if (upcomingForTour.length === 0) continue;
-      const earliest = parseISO(upcomingForTour[0].date);
-      if (!bestDate || earliest < bestDate) {
-        bestDate = earliest;
-        best = t;
-      }
-    }
-    return best;
-  }, [tours]);
+  const nextTour = useMemo(() => {
+    if (!nextShow || !nextShow.tour_id) return null;
+    return tours.find((t) => t.id === nextShow.tour_id) ?? null;
+  }, [tours, nextShow]);
 
   const tourStats = useMemo(() => {
-    if (!activeTour || !activeTour.shows) {
+    if (!nextTour || !nextTour.shows) {
       return { totalShows: 0, settledCount: 0, actualIncome: 0, guaranteedRemaining: 0 };
     }
 
-    const tourShows = activeTour.shows;
+    const tourShows = nextTour.shows;
     const totalShows = tourShows.length;
     let settledCount = 0;
     let actualIncome = 0;
@@ -128,7 +112,7 @@ export default function DashboardPage() {
     });
 
     return { totalShows, settledCount, actualIncome, guaranteedRemaining };
-  }, [activeTour]);
+  }, [nextTour]);
 
   const toursWithUpcoming = useMemo(
     () => tours.filter((t) => t.shows?.some((s) => { const d = parseISO(s.date); return isToday(d) || !isPast(d); })),
@@ -148,25 +132,25 @@ export default function DashboardPage() {
   const statCards = [
     {
       label: "Shows This Tour",
-      value: activeTour ? tourStats.totalShows : "—",
+      value: tourStats.totalShows,
       icon: Calendar,
       iconStyle: { backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" },
     },
     {
       label: "Shows Settled",
-      value: activeTour ? `${tourStats.settledCount}/${tourStats.totalShows}` : "—",
+      value: `${tourStats.settledCount}/${tourStats.totalShows}`,
       icon: CheckCircle2,
       iconStyle: { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" },
     },
     {
       label: "Actual Income",
-      value: activeTour && tourStats.actualIncome ? `$${tourStats.actualIncome.toLocaleString()}` : "—",
+      value: tourStats.actualIncome ? `$${tourStats.actualIncome.toLocaleString()}` : "—",
       icon: DollarSign,
       iconStyle: { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" },
     },
     {
       label: "Guaranteed Remaining",
-      value: activeTour && tourStats.guaranteedRemaining ? `$${tourStats.guaranteedRemaining.toLocaleString()}` : "—",
+      value: tourStats.guaranteedRemaining ? `$${tourStats.guaranteedRemaining.toLocaleString()}` : "—",
       icon: TrendingUp,
       iconStyle: { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" },
     },
@@ -179,12 +163,12 @@ export default function DashboardPage() {
         <div>
           <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-0.5">{greeting}</p>
           <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
-          {activeTour && (
+          {nextTour && (
             <Link
-              to={`/tours/${activeTour.id}`}
+              to={`/shows?view=tour&tourId=${nextTour.id}`}
               className="text-sm text-muted-foreground hover:text-foreground [transition:color_150ms_var(--ease-out)] mt-0.5 inline-block"
             >
-              {activeTour.name}
+              {nextTour.name}
             </Link>
           )}
         </div>
@@ -192,21 +176,23 @@ export default function DashboardPage() {
       </div>
 
       {/* Active Tour Stats */}
-      <div>
-        <SectionLabel>{activeTour ? "Active Tour" : "Tour Stats"}</SectionLabel>
-        <div className="stagger-list grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-          {statCards.map((card, i) => (
-            <StatCard
-              key={card.label}
-              label={card.label}
-              value={card.value}
-              icon={card.icon}
-              iconStyle={card.iconStyle}
-              index={i}
-            />
-          ))}
+      {nextTour && (
+        <div>
+          <SectionLabel>Active Tour</SectionLabel>
+          <div className="stagger-list grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            {statCards.map((card, i) => (
+              <StatCard
+                key={card.label}
+                label={card.label}
+                value={card.value}
+                icon={card.icon}
+                iconStyle={card.iconStyle}
+                index={i}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Next Show */}
       {nextShow ? (
@@ -297,7 +283,7 @@ export default function DashboardPage() {
               const advanced = (tour.shows ?? []).filter((s) => countAdvanced(s, !!scheduleMap[s.id]?.hasSchedule) >= TOTAL_ADVANCE).length;
               const pct = total > 0 ? (advanced / total) * 100 : 0;
               return (
-                <Link key={tour.id} to={`/tours/${tour.id}`} className="w-full block card-pressable">
+                <Link key={tour.id} to={`/shows?view=tour&tourId=${tour.id}`} className="w-full block card-pressable">
                   <div className="rounded-lg border bg-card text-card-foreground w-full hover:border-foreground/20 [transition:border-color_160ms_var(--ease-out),box-shadow_200ms_var(--ease-out)]">
                     <div className="pt-5 pb-4 px-6">
                       <p className="text-sm font-medium text-foreground truncate">{tour.name}</p>
