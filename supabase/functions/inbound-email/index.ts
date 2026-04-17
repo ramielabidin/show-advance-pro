@@ -59,6 +59,100 @@ function sanitizeFilename(name: string): string {
   return name.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 120) || "file";
 }
 
+// Dedup key: the Gmail thread ID. The forwarding script is the preferred
+// source — it passes `gmail_thread_id` explicitly after calling threads.get
+// to concatenate every message in the thread into one blob. For inbound that
+// arrives straight from SendGrid we fall back to the `Thread-Index` /
+// `References` / `In-Reply-To` headers so retries and forwards of existing
+// threads still dedupe correctly.
+function extractThreadId(form: FormData): string | null {
+  const explicit = String(form.get("gmail_thread_id") ?? "").trim();
+  if (explicit) return explicit;
+  const headers = String(form.get("headers") ?? "");
+  if (!headers) return null;
+  const threadIndex = /^Thread-Index:\s*(\S+)/im.exec(headers);
+  if (threadIndex) return threadIndex[1].trim();
+  const references = /^References:\s*<([^<>\s]+)>/im.exec(headers);
+  if (references) return references[1].trim();
+  const inReplyTo = /^In-Reply-To:\s*<([^<>\s]+)>/im.exec(headers);
+  if (inReplyTo) return inReplyTo[1].trim();
+  const messageId = /^Message-ID:\s*<?([^<>\s]+)>?/im.exec(headers);
+  return messageId ? messageId[1].trim() : null;
+}
+
+// Heuristic match: score upcoming shows against the email's subject + body.
+// Returns the best candidate and a coarse confidence bucket.
+//   high → venue name + date both present in the email
+//   low  → only one signal present, or venue found but no explicit date
+// Runs on substrings, not AI, so a venue like "9:30 Club" matches "9:30 club".
+interface MatchCandidate { id: string; venue_name: string; city: string | null; date: string }
+
+function scoreShow(show: MatchCandidate, haystack: string): { score: number; dateHit: boolean; venueHit: boolean } {
+  const venueHit = show.venue_name.length >= 3 && haystack.includes(show.venue_name.toLowerCase());
+  const datePatterns = buildDatePatterns(show.date);
+  const dateHit = datePatterns.some((p) => haystack.includes(p));
+  let score = 0;
+  if (venueHit) score += 2;
+  if (dateHit) score += 2;
+  if (venueHit && dateHit) score += 1; // combined bonus to break ties
+  return { score, dateHit, venueHit };
+}
+
+function buildDatePatterns(isoDate: string): string[] {
+  // isoDate is YYYY-MM-DD. Generate a handful of common written forms,
+  // lowercase so they align with the normalized haystack.
+  const [y, m, d] = isoDate.split("-").map((n) => parseInt(n, 10));
+  if (!y || !m || !d) return [isoDate];
+  const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+  const monthsLong = ["january","february","march","april","may","june","july","august","september","october","november","december"];
+  const mShort = months[m - 1];
+  const mLong = monthsLong[m - 1];
+  return [
+    isoDate,
+    `${m}/${d}/${y}`,
+    `${m}/${d}/${String(y).slice(2)}`,
+    `${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}/${y}`,
+    `${mShort} ${d}`,
+    `${mShort}. ${d}`,
+    `${mLong} ${d}`,
+    `${d} ${mShort}`,
+    `${d} ${mLong}`,
+  ];
+}
+
+async function findBestMatch(
+  admin: ReturnType<typeof createClient>,
+  teamId: string,
+  subject: string | null,
+  body: string,
+): Promise<{ showId: string; confidence: "high" | "low" } | null> {
+  const haystack = `${subject ?? ""}\n${body}`.toLowerCase();
+  if (!haystack.trim()) return null;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: shows, error } = await admin
+    .from("shows")
+    .select("id, venue_name, city, date")
+    .eq("team_id", teamId)
+    .gte("date", today)
+    .order("date", { ascending: true })
+    .limit(100);
+  if (error || !shows || shows.length === 0) return null;
+
+  let best: { show: MatchCandidate; score: number; venueHit: boolean; dateHit: boolean } | null = null;
+  for (const raw of shows as MatchCandidate[]) {
+    const s = scoreShow(raw, haystack);
+    if (s.score === 0) continue;
+    if (!best || s.score > best.score) {
+      best = { show: raw, ...s };
+    }
+  }
+  if (!best) return null;
+
+  const confidence: "high" | "low" = best.venueHit && best.dateHit ? "high" : "low";
+  return { showId: best.show.id, confidence };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -111,6 +205,36 @@ serve(async (req) => {
 
     const from = String(form.get("from") ?? "").trim() || null;
     const subject = String(form.get("subject") ?? "").trim() || null;
+    const threadId = extractThreadId(form);
+
+    // Thread-based dedupe. If we've seen this thread before:
+    //   - status='pending'       → refresh raw_email_text with the latest blob
+    //                              (so new replies get picked up on next parse)
+    //   - reviewed or dismissed  → leave JT's existing work alone, skip insert
+    if (threadId) {
+      const { data: existing, error: lookupErr } = await admin
+        .from("inbound_parse_events")
+        .select("id, status")
+        .eq("gmail_thread_id", threadId)
+        .maybeSingle();
+      if (lookupErr) {
+        console.error("inbound-email thread lookup failed:", lookupErr.message);
+      } else if (existing) {
+        if (existing.status === "pending") {
+          await admin
+            .from("inbound_parse_events")
+            .update({
+              raw_email_text: rawEmailText,
+              email_subject: subject,
+              from_address: from,
+            })
+            .eq("id", existing.id);
+        }
+        return ok({ ok: true, deduped: true, event_id: existing.id });
+      }
+    }
+
+    const match = await findBestMatch(admin, teamId, subject, rawEmailText);
 
     const { data: event, error: insertErr } = await admin
       .from("inbound_parse_events")
@@ -119,6 +243,9 @@ serve(async (req) => {
         raw_email_text: rawEmailText,
         from_address: from,
         email_subject: subject,
+        gmail_thread_id: threadId,
+        matched_show_id: match?.showId ?? null,
+        match_confidence: match?.confidence ?? null,
       })
       .select("id")
       .single();
