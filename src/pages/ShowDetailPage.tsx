@@ -39,6 +39,7 @@ import FieldRow from "@/components/FieldRow";
 import SlackPushDialog from "@/components/SlackPushDialog";
 import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
+import EmailAttachments from "@/components/EmailAttachments";
 import ExportPdfDialog from "@/components/ExportPdfDialog";
 import GuestListEditor, { GuestListView, parseGuestList, guestTotal, parseComps } from "@/components/GuestListEditor";
 import ScheduleEditor, { type ScheduleRow } from "@/components/ScheduleEditor";
@@ -1062,6 +1063,8 @@ export default function ShowDetailPage() {
 
 
             <Separator />
+
+            <EmailAttachments showId={show.id} />
 
             {/* Additional Info — always visible at bottom */}
             <FieldGroup title="Additional Info">

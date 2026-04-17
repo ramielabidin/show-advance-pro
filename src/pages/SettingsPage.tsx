@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Save, UserPlus, Trash2, Crown, Plus, Pencil, X, Users, Loader2, Music } from "lucide-react";
+import { Save, UserPlus, Trash2, Crown, Plus, Pencil, X, Users, Loader2, Music, Copy, Mail } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
 import { useAuth } from "@/components/AuthProvider";
@@ -37,6 +38,8 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const PARTY_ROLES = ["Artist", "Manager", "Crew", "Photographer", "Driver", "Other"] as const;
+
+const EMAIL_FORWARDING_DOMAIN = "parse.advancetouring.com";
 
 interface PartyMemberForm {
   name: string;
@@ -86,6 +89,35 @@ export default function SettingsPage() {
     },
     enabled: !!teamId,
   });
+
+  const { data: recentInboundEvents = [] } = useQuery({
+    queryKey: ["inbound-events-recent", teamId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inbound_parse_events")
+        .select("id, email_subject, from_address, status, created_at")
+        .eq("team_id", teamId!)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!teamId,
+  });
+
+  const forwardingAddress = appSettings?.inbound_email_token
+    ? `${appSettings.inbound_email_token}@${EMAIL_FORWARDING_DOMAIN}`
+    : null;
+
+  const copyForwardingAddress = async () => {
+    if (!forwardingAddress) return;
+    try {
+      await navigator.clipboard.writeText(forwardingAddress);
+      toast.success("Forwarding address copied");
+    } catch {
+      toast.error("Could not copy to clipboard");
+    }
+  };
 
   // Detect OAuth redirect result (?slack=connected|error|denied)
   useEffect(() => {
@@ -574,6 +606,82 @@ export default function SettingsPage() {
           <Save className="h-4 w-4" />
           {saveMutation.isPending ? "Saving…" : "Save Settings"}
         </Button>
+      </div>
+
+      {/* ── Email Forwarding (full width) ── */}
+      <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
+        <div>
+          <h2 className="font-medium text-foreground mb-1 flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            Email Forwarding
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Forward any venue advance email to this address and Advance will automatically queue it for review.
+          </p>
+        </div>
+
+        {settingsLoading ? (
+          <div className="h-10 rounded-md bg-muted animate-pulse" />
+        ) : forwardingAddress ? (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <code className="flex-1 rounded-md border bg-muted/40 px-3 py-2 font-mono text-sm truncate">
+              {forwardingAddress}
+            </code>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 h-11 sm:h-9 shrink-0"
+              onClick={copyForwardingAddress}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copy
+            </Button>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No forwarding address provisioned yet.</p>
+        )}
+
+        <Separator />
+
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
+            Recent Inbound Emails
+          </p>
+          {recentInboundEvents.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              <Mail className="h-7 w-7 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">Forwarded emails will appear here.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {recentInboundEvents.map((e) => (
+                <div
+                  key={e.id}
+                  className="flex items-center justify-between rounded-md border px-3 py-2 gap-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {e.email_subject || "(no subject)"}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {e.from_address || "unknown sender"} · {formatDistanceToNow(new Date(e.created_at), { addSuffix: true })}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={
+                      e.status === "pending" ? "default"
+                      : e.status === "reviewed" ? "secondary"
+                      : "outline"
+                    }
+                    className="text-[10px] px-1.5 py-0 shrink-0 capitalize"
+                  >
+                    {e.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Band Documents (full width) ── */}

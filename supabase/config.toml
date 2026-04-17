@@ -40,3 +40,10 @@ verify_jwt = false
 
 [functions.lookup-venue-address]
 verify_jwt = false
+
+# inbound-email is SendGrid's Inbound Parse webhook. It's called by SendGrid's
+# servers (not an authenticated app session), carries no Supabase JWT, and
+# must silently 200 on anything it doesn't recognize. Disable gateway
+# verify_jwt so SendGrid can reach it.
+[functions.inbound-email]
+verify_jwt = false

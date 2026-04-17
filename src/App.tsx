@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { TeamProvider } from "@/components/TeamProvider";
+import { PendingEmailsProvider } from "@/components/PendingEmailsProvider";
 import AppLayout from "@/components/AppLayout";
 import AuthPage from "@/pages/AuthPage";
 import DashboardPage from "@/pages/DashboardPage";
@@ -37,18 +38,20 @@ function ProtectedRoutes() {
 
   return (
     <TeamProvider>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/shows" element={<ShowsPage />} />
-          <Route path="/shows/:id" element={<ShowDetailPage />} />
-          <Route path="/tours" element={<ToursPage />} />
-          <Route path="/tours/:id" element={<TourDetailPage />} />
-          
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <PendingEmailsProvider>
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/shows" element={<ShowsPage />} />
+            <Route path="/shows/:id" element={<ShowDetailPage />} />
+            <Route path="/tours" element={<ToursPage />} />
+            <Route path="/tours/:id" element={<TourDetailPage />} />
+
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </PendingEmailsProvider>
     </TeamProvider>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { FileText, Loader2, Check, Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -62,10 +62,32 @@ interface Props {
   currentShow: Show;
   onUpdated: () => void;
   trigger?: React.ReactNode;
+  /** When provided, skip the paste step and jump straight to the confirm UI
+   *  using these already-parsed fields. Used by the inbound-email review flow. */
+  initialParsedResult?: Record<string, unknown> | null;
+  /** Controlled open state (optional). If set, overrides the internal state. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Hide the default trigger button. Useful when the dialog is opened externally. */
+  hideTrigger?: boolean;
 }
 
-export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdated, trigger }: Props) {
-  const [open, setOpen] = useState(false);
+export default function ParseAdvanceForShowDialog({
+  showId,
+  currentShow,
+  onUpdated,
+  trigger,
+  initialParsedResult,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger,
+}: Props) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (next: boolean) => {
+    if (onOpenChange) onOpenChange(next);
+    if (controlledOpen === undefined) setInternalOpen(next);
+  };
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -121,6 +143,50 @@ export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdat
     if (file) handleFileSelect(file);
   };
 
+  const applyParsedResult = (parsed: Record<string, unknown>) => {
+    const fields: PendingField[] = [];
+    for (const [key, newVal] of Object.entries(parsed)) {
+      if (SKIP_FIELDS.has(key)) continue;
+      if (!newVal || (typeof newVal === "string" && !newVal.trim())) continue;
+      const currentVal = (currentShow as any)[key];
+      if (!currentVal || (typeof currentVal === "string" && !currentVal.trim())) {
+        fields.push({
+          key,
+          label: FIELD_LABELS[key] || key,
+          newValue: String(newVal),
+        });
+      }
+    }
+
+    const schedule = (parsed as any).schedule;
+    const hasExistingSchedule = (currentShow as any).schedule_entries?.length > 0;
+    let nextSchedule: any[] | null = null;
+    if (Array.isArray(schedule) && schedule.length > 0 && !hasExistingSchedule) {
+      nextSchedule = schedule;
+    }
+
+    if (fields.length === 0 && !nextSchedule) {
+      toast.info("No new fields found — all parsed data already exists on this show");
+      return false;
+    }
+
+    setParsedSchedule(nextSchedule);
+    setScheduleSelected(!!nextSchedule);
+    setPendingFields(fields);
+    setSelectedKeys(new Set(fields.map((f) => f.key)));
+    setStep("confirm");
+    return true;
+  };
+
+  // When opened with a pre-parsed result (inbound email review flow), skip
+  // the paste step and jump straight to confirm.
+  useEffect(() => {
+    if (open && initialParsedResult && step === "paste") {
+      applyParsedResult(initialParsedResult);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialParsedResult]);
+
   const handleParse = async () => {
     if (!text.trim()) {
       toast.error("Paste text or upload a PDF first");
@@ -137,41 +203,7 @@ export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdat
 
       const parsed = fnData.show;
       if (!parsed) throw new Error("AI could not extract show details");
-
-      // Determine which fields are new (current show has null/empty, parsed has value)
-      const fields: PendingField[] = [];
-      for (const [key, newVal] of Object.entries(parsed)) {
-        if (SKIP_FIELDS.has(key)) continue;
-        if (!newVal || (typeof newVal === "string" && !newVal.trim())) continue;
-        const currentVal = (currentShow as any)[key];
-        if (!currentVal || (typeof currentVal === "string" && !currentVal.trim())) {
-          fields.push({
-            key,
-            label: FIELD_LABELS[key] || key,
-            newValue: String(newVal),
-          });
-        }
-      }
-
-      // Check schedule
-      const schedule = parsed.schedule;
-      const hasExistingSchedule = (currentShow as any).schedule_entries?.length > 0;
-      if (Array.isArray(schedule) && schedule.length > 0 && !hasExistingSchedule) {
-        setParsedSchedule(schedule);
-        setScheduleSelected(true);
-      } else {
-        setParsedSchedule(null);
-        setScheduleSelected(false);
-      }
-
-      if (fields.length === 0 && !parsedSchedule) {
-        toast.info("No new fields found — all parsed data already exists on this show");
-        return;
-      }
-
-      setPendingFields(fields);
-      setSelectedKeys(new Set(fields.map((f) => f.key)));
-      setStep("confirm");
+      applyParsedResult(parsed);
     } catch (err: any) {
       console.error("Parse error:", err);
       toast.error(err.message || "Failed to parse");
@@ -244,13 +276,15 @@ export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdat
         if (!v) reset();
       }}
     >
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <FileText className="h-4 w-4" /> Parse Advance
-          </Button>
-        )}
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          {trigger || (
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <FileText className="h-4 w-4" /> Parse Advance
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
@@ -398,9 +432,11 @@ export default function ParseAdvanceForShowDialog({ showId, currentShow, onUpdat
               </div>
             )}
             <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="ghost" onClick={() => setStep("paste")}>
-                Back
-              </Button>
+              {!initialParsedResult && (
+                <Button variant="ghost" onClick={() => setStep("paste")}>
+                  Back
+                </Button>
+              )}
               <Button
                 onClick={handleSave}
                 disabled={saving || (selectedKeys.size === 0 && !scheduleSelected)}
