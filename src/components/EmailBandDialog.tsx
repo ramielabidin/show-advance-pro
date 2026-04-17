@@ -84,7 +84,7 @@ function buildPlainTextBody(show: Show & { schedule_entries?: any[] }): string {
   if (has("departure")) {
     parts.push(sectionBlock("Departure", [
       fieldLine("Time", val(show.departure_time)),
-      fieldLine("Notes", val(show.departure_location)),
+      fieldLine("Notes", val(show.departure_notes)),
     ]));
   }
 

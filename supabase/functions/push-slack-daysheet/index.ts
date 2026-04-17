@@ -81,10 +81,10 @@ function formatDaySheet(show: any): string {
     blocks.push("");
   }
 
-  if (val(show.departure_time) || val(show.departure_location)) {
+  if (val(show.departure_time) || val(show.departure_notes)) {
     blocks.push(`🚐 *Departure*`);
     if (val(show.departure_time)) blocks.push(`    ⏰ ${val(show.departure_time)}`);
-    if (val(show.departure_location)) blocks.push(`    Notes: ${val(show.departure_location)}`);
+    if (val(show.departure_notes)) blocks.push(`    Notes: ${val(show.departure_notes)}`);
     blocks.push("");
   }
 

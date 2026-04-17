@@ -47,7 +47,7 @@ export function hasData(
     case "schedule":
       return !!(show.schedule_entries?.length);
     case "departure":
-      return v(show.departure_time) || v(show.departure_location);
+      return v(show.departure_time) || v(show.departure_notes);
     case "parking":
       return v(show.parking_notes);
     case "loadIn":
