@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import Papa from "papaparse";
-import { Upload, Download, AlertCircle, CheckCircle2, RefreshCw, HelpCircle } from "lucide-react";
+import { Upload, Download, AlertCircle, CheckCircle2, RefreshCw, HelpCircle, X } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -302,6 +303,8 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
   const [rows, setRows] = useState<ValidatedRow[]>([]);
   const [fileName, setFileName] = useState("");
   const [selectedTourId, setSelectedTourId] = useState(defaultTourId ?? "none");
+  const [creatingTour, setCreatingTour] = useState(false);
+  const [newTourName, setNewTourName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { teamId } = useTeam();
@@ -540,10 +543,34 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
     },
   });
 
+  const createTourMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) throw new Error("Tour name required");
+      const { data, error } = await supabase
+        .from("tours")
+        .insert({ name: trimmed, team_id: teamId })
+        .select("id, name")
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (tour) => {
+      queryClient.invalidateQueries({ queryKey: ["tours"] });
+      setSelectedTourId(tour.id);
+      setCreatingTour(false);
+      setNewTourName("");
+      toast.success("Tour created");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to create tour"),
+  });
+
   const reset = () => {
     setRows([]);
     setFileName("");
     setSelectedTourId(defaultTourId ?? "none");
+    setCreatingTour(false);
+    setNewTourName("");
   };
 
   return (
@@ -567,18 +594,74 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
           <div className="space-y-4">
             {!defaultTourId && (
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Assign to Tour (optional)</Label>
-                <Select value={selectedTourId} onValueChange={setSelectedTourId}>
-                  <SelectTrigger className="text-sm">
-                    <SelectValue placeholder="Standalone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Standalone</SelectItem>
-                    {tours.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="text-xs text-muted-foreground">
+                  {creatingTour ? "New tour name" : "Assign to Tour (optional)"}
+                </Label>
+                {creatingTour ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      autoFocus
+                      value={newTourName}
+                      onChange={(e) => setNewTourName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (newTourName.trim() && !createTourMutation.isPending) {
+                            createTourMutation.mutate(newTourName);
+                          }
+                        } else if (e.key === "Escape") {
+                          e.preventDefault();
+                          setCreatingTour(false);
+                          setNewTourName("");
+                        }
+                      }}
+                      placeholder="e.g. Summer 2026 Tour"
+                      className="text-sm"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => createTourMutation.mutate(newTourName)}
+                      disabled={!newTourName.trim() || createTourMutation.isPending}
+                    >
+                      {createTourMutation.isPending ? "Creating…" : "Create & Import"}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreatingTour(false);
+                        setNewTourName("");
+                      }}
+                      className="inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      aria-label="Cancel new tour"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <Select
+                    value={selectedTourId}
+                    onValueChange={(v) => {
+                      if (v === "__create_new__") {
+                        setCreatingTour(true);
+                        setNewTourName("");
+                      } else {
+                        setSelectedTourId(v);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="text-sm">
+                      <SelectValue placeholder="Standalone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Standalone</SelectItem>
+                      {tours.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                      <SelectItem value="__create_new__">+ Create new tour</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             )}
             <div
