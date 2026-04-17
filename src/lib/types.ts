@@ -24,7 +24,7 @@ export interface Show {
   dos_contact_name: string | null;
   dos_contact_phone: string | null;
   departure_time: string | null;
-  departure_location: string | null;
+  departure_notes: string | null;
   parking_notes: string | null;
   load_in_details: string | null;
   green_room_info: string | null;
@@ -38,7 +38,6 @@ export interface Show {
   hotel_confirmation: string | null;
   hotel_checkin: string | null;
   hotel_checkout: string | null;
-  travel_notes: string | null;
   additional_info: string | null;
   tour_id: string | null;
   venue_capacity: string | null;

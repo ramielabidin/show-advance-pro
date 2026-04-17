@@ -171,7 +171,7 @@ export type Database = {
           created_at: string
           curfew: string | null
           date: string
-          departure_location: string | null
+          departure_notes: string | null
           departure_time: string | null
           dos_contact_name: string | null
           dos_contact_phone: string | null
@@ -200,7 +200,6 @@ export type Database = {
           team_id: string | null
           ticket_price: string | null
           tour_id: string | null
-          travel_notes: string | null
           updated_at: string
           venue_address: string | null
           venue_capacity: string | null
@@ -223,7 +222,7 @@ export type Database = {
           created_at?: string
           curfew?: string | null
           date: string
-          departure_location?: string | null
+          departure_notes?: string | null
           departure_time?: string | null
           dos_contact_name?: string | null
           dos_contact_phone?: string | null
@@ -252,7 +251,6 @@ export type Database = {
           team_id?: string | null
           ticket_price?: string | null
           tour_id?: string | null
-          travel_notes?: string | null
           updated_at?: string
           venue_address?: string | null
           venue_capacity?: string | null
@@ -275,7 +273,7 @@ export type Database = {
           created_at?: string
           curfew?: string | null
           date?: string
-          departure_location?: string | null
+          departure_notes?: string | null
           departure_time?: string | null
           dos_contact_name?: string | null
           dos_contact_phone?: string | null
@@ -304,7 +302,6 @@ export type Database = {
           team_id?: string | null
           ticket_price?: string | null
           tour_id?: string | null
-          travel_notes?: string | null
           updated_at?: string
           venue_address?: string | null
           venue_capacity?: string | null

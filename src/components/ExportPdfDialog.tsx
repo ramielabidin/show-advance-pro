@@ -173,7 +173,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       if (has("departure")) {
         drawSectionTitle("Departure");
         drawField("Time", val(show.departure_time), { mono: true });
-        drawField("Notes", val(show.departure_location));
+        drawField("Notes", val(show.departure_notes));
       }
 
       if (has("parking")) {

@@ -848,7 +848,7 @@ export default function ShowDetailPage() {
       <TabsContent value="show">
           <div className="space-y-6 sm:space-y-8">
             {/* Departure — first chronologically */}
-            <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_location}>
+            <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
               {driveTimeLabel && departureOrigin && !driveCardDismissed && (
                 <div className="flex items-start gap-4 rounded-md border bg-muted/30 px-4 py-3">
                   <Clock className="h-4 w-4 mt-1 shrink-0 text-muted-foreground" />
@@ -897,7 +897,7 @@ export default function ShowDetailPage() {
                   </Button>
                 </div>
               )}
-              {editField("departure_location", "Departure Notes", { multiline: true, alwaysShow: true, placeholder: "e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am" })}
+              {editField("departure_notes", "Departure Notes", { multiline: true, alwaysShow: true, placeholder: "e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am" })}
             </FieldGroup>
 
             <Separator />
@@ -1060,15 +1060,6 @@ export default function ShowDetailPage() {
               })()}
             </FieldGroup>
 
-            {/* Travel */}
-            {(inlineField === "travel_notes" || show.travel_notes) && (
-              <>
-                <Separator />
-                <FieldGroup title="Travel">
-                  {editField("travel_notes", "Notes", { multiline: true })}
-                </FieldGroup>
-              </>
-            )}
 
             <Separator />
 
