@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           home_base_city: string | null
           id: string
+          inbound_email_token: string | null
           slack_channel_name: string | null
           slack_team_name: string | null
           slack_webhook_url: string | null
@@ -29,6 +30,7 @@ export type Database = {
           created_at?: string
           home_base_city?: string | null
           id?: string
+          inbound_email_token?: string | null
           slack_channel_name?: string | null
           slack_team_name?: string | null
           slack_webhook_url?: string | null
@@ -39,6 +41,7 @@ export type Database = {
           created_at?: string
           home_base_city?: string | null
           id?: string
+          inbound_email_token?: string | null
           slack_channel_name?: string | null
           slack_team_name?: string | null
           slack_webhook_url?: string | null
@@ -87,6 +90,115 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      inbound_parse_events: {
+        Row: {
+          created_at: string
+          email_subject: string | null
+          from_address: string | null
+          id: string
+          raw_email_text: string
+          reviewed_at: string | null
+          reviewed_show_id: string | null
+          status: string
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_subject?: string | null
+          from_address?: string | null
+          id?: string
+          raw_email_text: string
+          reviewed_at?: string | null
+          reviewed_show_id?: string | null
+          status?: string
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          email_subject?: string | null
+          from_address?: string | null
+          id?: string
+          raw_email_text?: string
+          reviewed_at?: string | null
+          reviewed_show_id?: string | null
+          status?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_parse_events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_parse_events_reviewed_show_id_fkey"
+            columns: ["reviewed_show_id"]
+            isOneToOne: false
+            referencedRelation: "shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbound_email_attachments: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          event_id: string
+          id: string
+          original_filename: string
+          show_id: string | null
+          size_bytes: number | null
+          storage_path: string
+          team_id: string
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          original_filename: string
+          show_id?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          team_id: string
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          original_filename?: string
+          show_id?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_email_attachments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "inbound_parse_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_email_attachments_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_email_attachments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       schedule_entries: {
         Row: {

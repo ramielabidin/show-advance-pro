@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
 import { toast } from "sonner";
 import { extractTextFromPdf } from "@/lib/pdfExtract";
+import { saveParsedShow } from "@/lib/saveParsedShow";
 
 interface CreateShowDialogProps {
   defaultTourId?: string;
@@ -151,71 +152,14 @@ export default function CreateShowDialog({ defaultTourId }: CreateShowDialogProp
         throw new Error("AI could not extract required fields (venue, city, date)");
       }
 
-      const { data: existingShows } = await supabase
-        .from("shows")
-        .select("id")
-        .eq("venue_name", parsed.venue_name)
-        .eq("date", parsed.date)
-        .limit(1);
-
-      const schedule = parsed.schedule || [];
-      delete parsed.schedule;
-
-      if (existingShows && existingShows.length > 0) {
-        const showId = existingShows[0].id;
-        const { error: updateError } = await supabase
-          .from("shows")
-          .update({ ...parsed, is_reviewed: false })
-          .eq("id", showId);
-        if (updateError) throw updateError;
-
-        await supabase.from("schedule_entries").delete().eq("show_id", showId);
-        if (schedule.length > 0) {
-          await supabase.from("schedule_entries").insert(
-            schedule.map((entry: any, i: number) => ({
-              show_id: showId,
-              time: entry.time,
-              label: entry.label,
-              is_band: entry.is_band ?? false,
-              sort_order: i,
-            }))
-          );
-        }
-
-        queryClient.invalidateQueries({ queryKey: ["shows"] });
-        queryClient.invalidateQueries({ queryKey: ["show", showId] });
-        setOpen(false);
-        resetAll();
-        toast.success("Existing show updated — tap to review", {
-          action: { label: "View", onClick: () => navigate(`/shows/${showId}`) },
-        });
-      } else {
-        const { data: newShow, error: insertError } = await supabase
-          .from("shows")
-          .insert({ ...parsed, is_reviewed: false, team_id: teamId })
-          .select()
-          .single();
-        if (insertError || !newShow) throw insertError || new Error("Failed to create show");
-
-        if (schedule.length > 0) {
-          await supabase.from("schedule_entries").insert(
-            schedule.map((entry: any, i: number) => ({
-              show_id: newShow.id,
-              time: entry.time,
-              label: entry.label,
-              is_band: entry.is_band ?? false,
-              sort_order: i,
-            }))
-          );
-        }
-
-        queryClient.invalidateQueries({ queryKey: ["shows"] });
-        setOpen(false);
-        resetAll();
-        toast.success("New show created — tap to review", {
-          action: { label: "View", onClick: () => navigate(`/shows/${newShow.id}`) },
-        });
-      }
+      const { showId, isNew } = await saveParsedShow(parsed, teamId!);
+      queryClient.invalidateQueries({ queryKey: ["shows"] });
+      if (!isNew) queryClient.invalidateQueries({ queryKey: ["show", showId] });
+      setOpen(false);
+      resetAll();
+      toast.success(isNew ? "New show created — tap to review" : "Existing show updated — tap to review", {
+        action: { label: "View", onClick: () => navigate(`/shows/${showId}`) },
+      });
     } catch (err: any) {
       console.error("Parse error:", err);
       toast.error(err.message || "Failed to parse");
