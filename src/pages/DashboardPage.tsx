@@ -24,6 +24,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn, formatCityState } from "@/lib/utils";
 import CreateShowDialog from "@/components/CreateShowDialog";
+import BulkUploadDialog from "@/components/BulkUploadDialog";
 import TourPicker from "@/components/TourPicker";
 import { parseDollar } from "@/components/RevenueSimulator";
 import type { Show, Tour } from "@/lib/types";
@@ -421,7 +422,10 @@ export default function DashboardPage() {
             <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-0.5">{greeting}</p>
             <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
           </div>
-          <CreateShowDialog />
+          <div className="flex items-center gap-2">
+            <BulkUploadDialog />
+            <CreateShowDialog />
+          </div>
         </div>
         <Card>
           <CardContent className="py-12 text-center">
@@ -460,7 +464,10 @@ export default function DashboardPage() {
           <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
           {subline}
         </div>
-        <CreateShowDialog />
+        <div className="flex items-center gap-2">
+          <BulkUploadDialog />
+          <CreateShowDialog />
+        </div>
       </div>
 
       {/* Scope selector */}
