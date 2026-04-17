@@ -116,12 +116,12 @@ These inform every decision downstream. When in doubt, refer back here.
 - Sign-up CTA hands off to `app.advancetouring.com` for account creation
 
 **Page structure:**
-1. **Hero** — headline, subhead, CTA, hero product screenshot (likely the schedule/routing view as the most visually striking)
+1. **Hero** — Headline: "Modern tour management for independent artists." Subhead: "Everything a tour needs. Nothing it doesn't." CTA button. Hero product screenshot (likely the schedule/routing view as the most visually striking).
 2. **Feature sections** — day sheets & automated distribution, show schedule / routing / calendar, email forwarding / communication hub. Each with a large screenshot or short demo.
 3. **Founder note** — light "built by a touring musician" touch, short paragraph, no photo unless it converts well later
 4. **Pricing** — three tiers (Free / Artist / Manager), monthly/annual toggle, Agency "contact us" link
 5. **FAQ** — addresses churn concerns (what happens after my tour? can I pause? what if I only tour once a year?), feature questions, comparison to Master Tour
-6. **Footer** — links, socials, contact
+6. **Footer** — links, socials, contact, "Everything a tour needs. Nothing it doesn't." as tagline
 
 **Tasks:**
 - [ ] Extract design tokens from app into shared package
@@ -175,10 +175,9 @@ These inform every decision downstream. When in doubt, refer back here.
 
 ## Known open questions
 
-- **Positioning line for the hero.** Candidates: "Tour management for bands who don't need Master Tour" / "The tour management app built by a touring musician" / "Modern tour management for independent artists." Decide before marketing site copy is written.
 - **Per-tour pricing.** Worth offering at launch or wait for churn data? Leaning: wait.
 - **Competitor pricing.** Need to verify current Master Tour, Prism, Muzeek pricing to make sure positioning claims hold up.
-- **Founder story prominence.** Light touch at launch, with room to dial up if it converts.
+- **Founder story prominence.** Light touch at launch — short founder note further down the homepage, fuller story on About page. Room to dial up later if it converts.
 
 ---
 
