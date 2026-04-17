@@ -8,7 +8,6 @@ import {
   isToday,
   differenceInCalendarDays,
   subMonths,
-  addDays,
 } from "date-fns";
 import {
   Calendar,
@@ -298,17 +297,23 @@ export default function DashboardPage() {
 
     // scope === "upcoming"
     const distinctTourIds = new Set<string>();
-    let guaranteedTotal = 0;
-    let next30 = 0;
-    const cutoff30 = addDays(now, 30);
+    const cutoff = subMonths(now, 12);
+    const recentSettled = shows.filter((s) => {
+      if (!s.is_settled) return false;
+      const d = parseISO(s.date);
+      return d >= cutoff;
+    });
+    const actualIncome = recentSettled.reduce((acc, s) => {
+      const v = parseDollar(s.actual_walkout);
+      return acc + (v ?? 0);
+    }, 0);
+    let guaranteedRemaining = 0;
     allUpcoming.forEach((s) => {
       if (s.tour_id) distinctTourIds.add(s.tour_id);
       if (!s.is_settled) {
         const v = parseDollar(s.guarantee);
-        if (v != null) guaranteedTotal += v;
+        if (v != null) guaranteedRemaining += v;
       }
-      const d = parseISO(s.date);
-      if (d <= cutoff30) next30 += 1;
     });
     return [
       {
@@ -324,19 +329,19 @@ export default function DashboardPage() {
         iconStyle: { backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" },
       },
       {
-        label: "Guaranteed Total",
-        value: fmtMoney(guaranteedTotal),
+        label: "Actual Income",
+        value: fmtMoney(actualIncome),
         icon: DollarSign,
         iconStyle: { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" },
       },
       {
-        label: "Next 30 Days",
-        value: next30,
+        label: "Guaranteed Remaining",
+        value: fmtMoney(guaranteedRemaining),
         icon: TrendingUp,
         iconStyle: { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" },
       },
     ];
-  }, [scope, activeTour, isPastTour, tourShows, standaloneShows, standaloneUpcoming, allUpcoming]);
+  }, [scope, activeTour, isPastTour, tourShows, standaloneShows, standaloneUpcoming, allUpcoming, shows]);
 
   // --- Featured show + list per scope ---
   const featured = useMemo(() => {
@@ -551,7 +556,7 @@ export default function DashboardPage() {
                         <span className="text-sm font-medium text-foreground truncate">{show.venue_name}</span>
                         {showTourChip && show.tour_id && show.tours?.name && (
                           <span
-                            className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium shrink-0 max-w-[120px] truncate"
+                            className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium shrink-0 max-w-[200px] truncate"
                             style={{ backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" }}
                           >
                             {show.tours.name}
