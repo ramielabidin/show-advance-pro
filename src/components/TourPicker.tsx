@@ -173,7 +173,7 @@ export default function TourPicker({
         >
           <PopoverTrigger asChild>
             <button className="flex items-center gap-1.5 px-3 h-full">
-              <span className="truncate max-w-[180px]">{triggerLabel}</span>
+              <span className="truncate max-w-[280px]">{triggerLabel}</span>
               <ChevronDown className="h-3.5 w-3.5 opacity-70" />
             </button>
           </PopoverTrigger>
