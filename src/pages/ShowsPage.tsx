@@ -79,7 +79,6 @@ export default function ShowsPage() {
     onSuccess: () => {
       toast.success("Show deleted");
       queryClient.invalidateQueries({ queryKey: ["shows"] });
-      queryClient.invalidateQueries({ queryKey: ["schedule-info"] });
       queryClient.invalidateQueries({ queryKey: ["tours"] });
     },
     onError: (err: Error) => {
@@ -111,21 +110,6 @@ export default function ShowsPage() {
         .order("date", { ascending: true });
       if (error) throw error;
       return data as ShowWithTour[];
-    },
-  });
-
-  const { data: scheduleMap = {} } = useQuery({
-    queryKey: ["schedule-info"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("schedule_entries").select("show_id, label");
-      if (error) throw error;
-      const map: Record<string, { hasSchedule: boolean; hasLoadIn: boolean }> = {};
-      data.forEach((e) => {
-        if (!map[e.show_id]) map[e.show_id] = { hasSchedule: false, hasLoadIn: false };
-        map[e.show_id].hasSchedule = true;
-        if (e.label.toLowerCase().includes("load")) map[e.show_id].hasLoadIn = true;
-      });
-      return map;
     },
   });
 
@@ -309,8 +293,6 @@ export default function ShowsPage() {
                 <ShowCard
                   key={show.id}
                   show={show}
-                  hasLoadIn={!!scheduleMap[show.id]?.hasLoadIn}
-                  hasDosContact={!!show.dos_contact_name}
                   chip={chipFor(show)}
                   onDelete={() => setPendingDeleteId(show.id)}
                   onRemoveFromTour={

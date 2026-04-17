@@ -8,30 +8,27 @@ type ShowWithTour = Show & { tours?: { id: string; name: string } | null };
 
 interface ShowCardProps {
   show: ShowWithTour;
-  hasLoadIn?: boolean;
-  hasDosContact?: boolean;
   onDelete?: () => void;
   onRemoveFromTour?: () => void;
   chip?: "tour" | "standalone" | "none";
 }
 
-export default function ShowCard({ show, hasLoadIn, hasDosContact, onDelete, onRemoveFromTour, chip = "none" }: ShowCardProps) {
+export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "none" }: ShowCardProps) {
   const date = parseISO(show.date);
   const past = isPast(date) && !isToday(date);
   const daysAway = differenceInCalendarDays(date, new Date());
   const isUpcoming = !past;
   const isWithin7 = isUpcoming && daysAway >= 0 && daysAway < 7;
 
-  // Compute dot color only for upcoming shows when advance info is provided
+  // Dot color: green if advanced, red if within 7 days and not advanced, yellow otherwise.
   let dotColor: string | null = null;
-  if (isUpcoming && hasLoadIn !== undefined) {
-    const advancedCount = (hasLoadIn ? 1 : 0) + (hasDosContact ? 1 : 0);
-    if (advancedCount === 2) {
+  if (isUpcoming) {
+    if ((show as any).advanced_at) {
       dotColor = "bg-green-500";
-    } else if (advancedCount === 1) {
-      dotColor = isWithin7 ? "bg-red-500" : "bg-amber-400";
+    } else if (isWithin7) {
+      dotColor = "bg-red-500";
     } else {
-      dotColor = isWithin7 ? "bg-red-500" : "bg-amber-400";
+      dotColor = "bg-amber-400";
     }
   }
 
