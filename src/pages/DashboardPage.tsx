@@ -399,10 +399,13 @@ export default function DashboardPage() {
   if (shows.length === 0) {
     return (
       <div className="animate-fade-in space-y-6 sm:space-y-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-0.5">{greeting}</p>
-            <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
+        <div className="flex items-center md:items-start justify-between gap-3 md:gap-4">
+          <div className="min-w-0">
+            <span className="md:hidden font-display text-xl tracking-tight text-foreground">Advance</span>
+            <div className="hidden md:block">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-0.5">{greeting}</p>
+              <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <BulkUploadDialog />
@@ -440,11 +443,14 @@ export default function DashboardPage() {
   return (
     <div className="animate-fade-in space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center md:items-start justify-between gap-3 md:gap-4">
         <div className="min-w-0">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-0.5">{greeting}</p>
-          <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
-          {subline}
+          <span className="md:hidden font-display text-xl tracking-tight text-foreground">Advance</span>
+          <div className="hidden md:block">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-0.5">{greeting}</p>
+            <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
+            {subline}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <BulkUploadDialog />
@@ -465,6 +471,7 @@ export default function DashboardPage() {
           disabled={tours.length === 0}
           emptyLabel="No tours"
           showClear={false}
+          fixedLabel="Tour"
         />
         <ScopePill
           label="Standalone"

@@ -171,7 +171,7 @@ export default function CreateShowDialog({ defaultTourId }: CreateShowDialogProp
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetAll(); }}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gap-1.5">
+        <Button size="sm" className="gap-1.5 h-11 sm:h-9">
           <Plus className="h-4 w-4" />
           Add Show
         </Button>
