@@ -26,6 +26,7 @@ interface TourPickerProps {
   disabled?: boolean;
   emptyLabel?: string;
   showClear?: boolean;
+  fixedLabel?: string;
 }
 
 interface TourWithShows {
@@ -76,6 +77,7 @@ export default function TourPicker({
   disabled = false,
   emptyLabel = "No tours",
   showClear = true,
+  fixedLabel,
 }: TourPickerProps) {
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -139,7 +141,7 @@ export default function TourPicker({
     onError: (err: Error) => toast.error(err.message || "Failed to create tour"),
   });
 
-  const triggerLabel = selectedTourName ?? "Tour";
+  const triggerLabel = fixedLabel ?? selectedTourName ?? "Tour";
 
   if (disabled) {
     return (
