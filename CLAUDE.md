@@ -48,7 +48,26 @@ What this means for day-to-day work:
 - **PWA**: `vite-plugin-pwa` with custom update prompt (`PWAUpdatePrompt.tsx`)
 - **Analytics**: `@vercel/speed-insights`
 - **Testing**: `vitest` + `@testing-library/jest-dom` (setup in `src/test/setup.ts`)
-- **TypeScript config**: `strict: false`, `noImplicitAny: false` — don't add strict types where the rest of the codebase doesn't use them
+- **TypeScript config**: `strict: true`, `noImplicitAny: true` (in `tsconfig.app.json`, along with `noUnusedLocals`/`noUnusedParameters`). Types are enforced — don't reach for `any` as an escape hatch. Prefix deliberately unused parameters with `_` to satisfy the lint rule.
+
+## Environment & Commands
+
+**Env vars** (only two — don't invent new `VITE_*` flags; feature toggles are not wired in):
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+See `.env.example`. Everything else lives in Supabase Edge Function secrets, not the client.
+
+**Scripts** (from `package.json`):
+
+- `npm run dev` — Vite dev server (port 8080 by default)
+- `npm run build` / `npm run build:dev`
+- `npm run lint` — ESLint (react-hooks + react-refresh plugins; unused vars allowed only when prefixed `_`)
+- `npm test` — Vitest (one-shot) / `npm run test:watch`
+- `npm run check:supabase` — sanity check in `scripts/check-supabase.js`; run before pushing when migrations or env are in play
+
+**Supabase types**: `src/integrations/supabase/types.ts` is **generated** from the live schema. Do not hand-edit — regenerate with the Supabase CLI (`supabase gen types typescript ...`) after migrations land.
 
 ## Project Structure
 
@@ -59,11 +78,12 @@ src/
     ui/            # shadcn primitives — don't edit these directly
     *Provider.tsx  # Context providers (AuthProvider, TeamProvider, PendingEmailsProvider)
     *Dialog.tsx    # Modal workflows (self-contained with state + mutations)
-    *Editor.tsx    # Complex form sections
-  hooks/           # Custom hooks (use*.ts)
+    *Editor.tsx    # Complex form sections (ScheduleEditor, GuestListEditor, RevenueSimulator, TourRevenueSimulator)
+    AppLayout.tsx  # Shell layout wrapping authenticated routes
+  hooks/           # Custom hooks (use-mobile, use-toast, usePullToRefresh)
   integrations/supabase/
     client.ts      # Supabase client (typed with Database type)
-    types.ts       # Auto-generated DB types
+    types.ts       # Auto-generated DB types — regenerate, never hand-edit
   lib/
     types.ts              # Domain types (Show, Tour, ScheduleEntry, etc.)
     utils.ts              # cn, normalizePhone, formatCityState
@@ -71,9 +91,16 @@ src/
     pdfExtract.ts         # extractTextFromPdf (uses pdfjs-dist)
     saveParsedShow.ts     # Canonical "save AI-parsed show" (insert or update by venue+date)
     daysheetSections.ts   # Shared section list + hasData() for PDF/Email/Slack exports
+  test/
+    setup.ts, example.test.ts  # Vitest wiring — suite is sparse today (see Testing below)
 supabase/
-  migrations/      # Numbered SQL migrations
+  migrations/      # Numbered SQL migrations (`YYYYMMDDHHMMSS_short_snake.sql`)
   functions/       # Edge functions (auto-deployed on push to main — see below)
+scripts/
+  check-supabase.js  # Sanity check for env config; wired to `npm run check:supabase`
+docs/
+  design-system.md # Read before any UI change — see "UI & Design" below
+ROADMAP.md         # Source of truth for product direction / phases
 .github/workflows/
   deploy-supabase-functions.yml  # Auto-deploys all edge functions on push to main
 ```
@@ -83,6 +110,18 @@ supabase/
 - Modal workflows → `*Dialog.tsx`
 - Complex form sections → `*Editor.tsx`
 - Custom hooks → `use*.ts`
+- Components use **default exports** (`export default function FooBar() { ... }`), matching the shadcn/Vite-template convention already in the tree. Named exports are reserved for utilities and type modules.
+
+### Key files to read first
+
+When a task touches one of these areas, open the file before making changes — they carry the most product logic and the most in-file conventions:
+
+- **`src/pages/ShowDetailPage.tsx`** (~1.5k lines) — show detail, inline editing, all show-level mutations
+- **`src/pages/SettingsPage.tsx`** (~1k lines) — team, documents, contacts, Slack, email-forwarding setup
+- **`src/components/BulkUploadDialog.tsx`** (~800 lines) — CSV parsing, column mapping, upsert logic
+- **`src/pages/DashboardPage.tsx`** — tour-progress UI, URL-as-state filtering
+- **`src/components/ParseAdvanceForShowDialog.tsx`** — the AI parse → review → save flow (pairs with `saveParsedShow`)
+- **`src/App.tsx`** — route table + auth gating (read when touching routing)
 
 ## Data Fetching
 
@@ -149,8 +188,12 @@ Located in `supabase/functions/`. Called via `supabase.functions.invoke("<name>"
 - **`lookup-venue-address`** — resolves a venue name + city into a full address
 - **`autocomplete-place`** — Google Places autocomplete (used for Home Base City)
 - **`slack-oauth-initiate`** — returns Slack OAuth authorization URL
+- **`slack-oauth-callback`** — completes the Slack OAuth handshake and stores workspace credentials
+- **`inbound-email`** — webhook for forwarded advance emails; parses and drops them into the review queue surfaced by `PendingEmailsProvider` / `PendingEmailsModal`
 
 **Deployment**: all edge functions auto-deploy to `knwdjeicyisqsfiisaic` on push to `main` via `.github/workflows/deploy-supabase-functions.yml`. Manual redeploy is available via the Actions tab. Do **not** assume a function change is live just because it's merged — if the Action failed, the old version is still running.
+
+**Migrations**: new migrations should be named `YYYYMMDDHHMMSS_short_snake_name.sql` (see the most recent files under `supabase/migrations/`). Older entries use a timestamp + UUID suffix — that's legacy; don't copy it. Apply via `supabase db push` against the remote project; regenerate `src/integrations/supabase/types.ts` after.
 
 ## Established patterns
 
@@ -163,6 +206,8 @@ Field-level editing uses a single `inlineField` state variable + `inlineValue`. 
 ### Dialog composition via `trigger` prop
 
 Action dialogs (`EmailBandDialog`, `SlackPushDialog`, `ExportPdfDialog`, `ParseAdvanceForShowDialog`, `BulkUploadDialog`) accept an optional `trigger?: React.ReactNode` prop so they can be embedded inside a `DropdownMenu` without rendering their default button. When adding a new action dialog, support this prop.
+
+Also: gate any queries the dialog owns with `enabled: open` so they don't run until the user opens the dialog, and reset local form state in `onOpenChange(false)` so the next open starts clean. This is how the existing dialogs behave — copy it.
 
 ### AI-parsed show persistence
 
@@ -186,6 +231,12 @@ Email and Slack are full day sheets; the PDF is intentionally not.
 ### CSV bulk import — protected fields
 
 `BulkUploadDialog` explicitly never overwrites: `is_settled`, `actual_walkout`, `actual_tickets_sold`, `settlement_notes`. These are post-show outcomes and must not be clobbered by re-importing a schedule CSV. If you add new post-show fields, add them to `PROTECTED_FIELDS`.
+
+Three other collaborating structures in the same file must stay in sync when adding importable columns:
+
+- **`CSV_COLUMN_MAP`** — maps user-friendly CSV headers (e.g. `venue`, `cap`) to DB columns (e.g. `venue_name`, `venue_capacity`). Add new aliases here.
+- **`TEMPLATE_COLUMNS`** — drives the downloadable CSV template. Keep it aligned with `CSV_COLUMN_MAP`.
+- **`FINANCIAL_FIELDS`** + `normalizeBackendDeal()` — strip `$`, commas, ranges (`"$20/$25"` → first value), and canonicalize backend-deal text. Reuse these; don't reimplement per-field cleaners.
 
 ### Data normalization helpers
 
@@ -212,6 +263,8 @@ For Supabase queries outside mutations, throw the error and let React Query surf
 if (error) throw error;
 ```
 
+For loading UI, use React Query's `isLoading` / `isPending` (and `isFetching` when revalidating) — don't track loading in component state. Buttons that kick off a mutation should disable on `mutation.isPending` rather than a manual `submitting` flag.
+
 ## UI & Design
 
 When making any frontend changes — components, pages, modals, layouts, styling — read and follow `docs/design-system.md` before writing any code.
@@ -228,4 +281,4 @@ Output quality is part of the product — PDFs, emails, and Slack messages must 
 
 ## Testing
 
-Vitest is configured (`src/test/setup.ts`, example test at `src/test/example.test.ts`). For non-trivial logic — parsers, normalizers, matchers like the one in `BulkUploadDialog` — add tests alongside. Run via `npm test` / `npx vitest`.
+Vitest is wired up (`src/test/setup.ts`), but the suite is currently sparse — only `src/test/example.test.ts` exists as a placeholder. Treat test coverage as an open direction, not an established baseline: when you touch non-trivial pure logic (parsers, normalizers, CSV matchers, deal-math helpers), add a test alongside in `src/test/` or next to the module. Run with `npm test` (one-shot) or `npm run test:watch`. Don't gate feature work on backfilling tests for untouched code.
