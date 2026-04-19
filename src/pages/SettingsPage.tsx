@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save, UserPlus, Trash2, Crown, Plus, Pencil, X, Users, Loader2, Music, Copy, Mail } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -108,6 +109,15 @@ export default function SettingsPage() {
   const forwardingAddress = appSettings?.inbound_email_token
     ? `${appSettings.inbound_email_token}@${EMAIL_FORWARDING_DOMAIN}`
     : null;
+
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    if (settingsLoading) return;
+    if (searchParams.get("section") !== "email-forwarding") return;
+    const el = document.getElementById("email-forwarding");
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [searchParams, settingsLoading]);
 
   const copyForwardingAddress = async () => {
     if (!forwardingAddress) return;
@@ -609,7 +619,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ── Email Forwarding (full width) ── */}
-      <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
+      <div id="email-forwarding" className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
         <div>
           <h2 className="font-medium text-foreground mb-1 flex items-center gap-2">
             <Mail className="h-4 w-4" />

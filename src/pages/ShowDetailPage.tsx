@@ -856,7 +856,13 @@ export default function ShowDetailPage() {
                   Parse an advance email
                 </h3>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto mb-5">
-                  Forward or paste the advance from the promoter. We'll pull the schedule, contacts, tech specs, and hospitality into this show.
+                  <Link
+                    to="/settings?section=email-forwarding"
+                    className="underline underline-offset-2 hover:text-foreground transition-colors"
+                  >
+                    Forward
+                  </Link>
+                  {" "}or paste the advance from the promoter. We'll pull the schedule, contacts, tech specs, and hospitality into this show.
                 </p>
                 <ParseAdvanceForShowDialog
                   showId={id!}
