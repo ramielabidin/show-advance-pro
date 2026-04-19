@@ -46,13 +46,6 @@ const T = {
   accentLight: [237, 243, 240] as [number, number, number],
 } as const;
 
-// Heuristic for "this schedule entry is our set" — only the latest entry
-// that doesn't match a generic event pattern. Drives the accent-green color
-// on the headline row. If ScheduleEntry ever gains an `is_band` column,
-// replace this with that flag.
-const GENERIC_EVENT_RE =
-  /^(load|sound|door|opener|support|curfew|merch|dinner|lobby|meet|end of show|load out)/i;
-
 // ─── Main component ─────────────────────────────────────────────────────────
 
 export default function ExportPdfDialog({ show, trigger }: Props) {
@@ -138,8 +131,8 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       //     floor of 13pt. This guarantees one page without ever going
       //     so small the wall poster becomes useless.
       //   - Times left (muted, tabular), events right (ink).
-      //   - Headliner row gets accent green. Set length shown inline as
-      //     muted suffix on the headliner row ("Juice · 75 min").
+      //   - The band's set row (entry.is_band === true) gets accent green.
+      //     Set length shown inline as muted suffix ("Juice · 75 min").
       //   - Curfew gets a separate muted row below the last entry.
       // ════════════════════════════════════════════════════════════════════
 
@@ -157,13 +150,8 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       const curfewVal = val(show.curfew);
       const setLenVal = val(show.set_length);
 
-      // Identify headliner row (latest non-generic entry)
-      const headlinerIdx = (() => {
-        for (let i = entries.length - 1; i >= 0; i--) {
-          if (!GENERIC_EVENT_RE.test(entries[i].label)) return i;
-        }
-        return -1;
-      })();
+      // Band's set row is whichever entry is flagged is_band.
+      const bandIdx = entries.findIndex((e) => e.is_band);
 
       // Total row count (schedule entries + optional curfew row)
       const totalRows = entries.length + (curfewVal ? 1 : 0);
@@ -191,7 +179,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       if (totalRows > 0) {
         for (let i = 0; i < entries.length; i++) {
           const entry = entries[i];
-          const isHeadliner = i === headlinerIdx;
+          const isBand = i === bandIdx;
 
           // Time — muted
           doc.setFont("helvetica", "normal");
@@ -199,13 +187,13 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
           doc.setTextColor(...T.muted);
           doc.text(entry.time, ML, y);
 
-          // Event label — ink normally, accent green + bold for headliner
-          doc.setFont("helvetica", isHeadliner ? "bold" : "normal");
-          doc.setTextColor(...(isHeadliner ? T.accent : T.ink));
+          // Event label — ink normally, accent green + bold for band's set
+          doc.setFont("helvetica", isBand ? "bold" : "normal");
+          doc.setTextColor(...(isBand ? T.accent : T.ink));
           doc.text(entry.label, ML + timeColW, y);
 
-          // Set length suffix on headliner row — muted, smaller inline
-          if (isHeadliner && setLenVal) {
+          // Set length suffix on band's row — muted, smaller inline
+          if (isBand && setLenVal) {
             const labelW = doc.getTextWidth(entry.label);
             const suffixFs = Math.max(fontSize * 0.65, 10);
             doc.setFont("helvetica", "normal");
@@ -348,7 +336,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       ) : (
         <Download className="h-4 w-4" />
       )}
-      PDF
+      Run of Show
     </Button>
   );
 }

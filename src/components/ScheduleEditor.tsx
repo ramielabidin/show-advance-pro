@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Save, X } from "lucide-react";
+import { Plus, Trash2, Save, X, Mic } from "lucide-react";
 import TimeInput from "@/components/TimeInput";
+import { cn } from "@/lib/utils";
 
 export interface ScheduleRow {
   time: string;
@@ -24,6 +25,13 @@ export default function ScheduleEditor({ initial, onSave, onCancel, saving }: Sc
 
   const update = (idx: number, patch: Partial<ScheduleRow>) => {
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  };
+
+  // Only one row can be the band's set — toggling one on clears the rest.
+  const toggleBand = (idx: number) => {
+    setRows((prev) =>
+      prev.map((r, i) => ({ ...r, is_band: i === idx ? !r.is_band : false }))
+    );
   };
 
   const remove = (idx: number) => {
@@ -51,6 +59,22 @@ export default function ScheduleEditor({ initial, onSave, onCancel, saving }: Sc
             placeholder="Activity"
             className="text-sm h-9 flex-1"
           />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "h-8 w-8 shrink-0",
+              row.is_band
+                ? "text-green-700 hover:text-green-700 dark:text-green-400 dark:hover:text-green-400"
+                : "text-muted-foreground/50 hover:text-foreground"
+            )}
+            onClick={() => toggleBand(i)}
+            aria-label={row.is_band ? "Unmark band's set" : "Mark as band's set"}
+            title={row.is_band ? "Band's set" : "Mark as band's set"}
+          >
+            <Mic className="h-3.5 w-3.5" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
