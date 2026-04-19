@@ -104,7 +104,7 @@ export default function PasteAdvanceDialog() {
         const showId = existingShows[0].id;
         const { error: updateError } = await supabase
           .from("shows")
-          .update({ ...parsed, is_reviewed: false })
+          .update({ ...parsed, is_reviewed: false, advance_imported_at: new Date().toISOString() })
           .eq("id", showId);
 
         if (updateError) throw updateError;
@@ -132,7 +132,7 @@ export default function PasteAdvanceDialog() {
       } else {
         const { data: newShow, error: insertError } = await supabase
           .from("shows")
-          .insert({ ...parsed, is_reviewed: false, team_id: teamId })
+          .insert({ ...parsed, is_reviewed: false, team_id: teamId, advance_imported_at: new Date().toISOString() })
           .select()
           .single();
 

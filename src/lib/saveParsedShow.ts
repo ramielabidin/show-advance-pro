@@ -36,6 +36,7 @@ export async function saveParsedShow(
 
   const schedule = parsed.schedule ?? [];
   const { schedule: _schedule, ...showFields } = parsed;
+  const advanceImportedAt = new Date().toISOString();
 
   const { data: existingShows, error: lookupErr } = await supabase
     .from("shows")
@@ -50,7 +51,7 @@ export async function saveParsedShow(
     const showId = existingShows[0].id;
     const { error: updateError } = await supabase
       .from("shows")
-      .update({ ...showFields, is_reviewed: false })
+      .update({ ...showFields, is_reviewed: false, advance_imported_at: advanceImportedAt })
       .eq("id", showId);
     if (updateError) throw updateError;
 
@@ -72,7 +73,7 @@ export async function saveParsedShow(
 
   const { data: newShow, error: insertError } = await supabase
     .from("shows")
-    .insert({ ...showFields, is_reviewed: false, team_id: teamId })
+    .insert({ ...showFields, is_reviewed: false, team_id: teamId, advance_imported_at: advanceImportedAt })
     .select("id")
     .single();
   if (insertError || !newShow) throw insertError ?? new Error("Failed to create show");
