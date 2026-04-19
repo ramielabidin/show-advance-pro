@@ -53,7 +53,6 @@ export interface Show {
   net_gross: string | null;
   artist_comps: string | null;
   set_length: string | null;
-  curfew: string | null;
   backline_provided: string | null;
   catering_details: string | null;
   changeover_time: string | null;

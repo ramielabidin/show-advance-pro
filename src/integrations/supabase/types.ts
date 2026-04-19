@@ -298,7 +298,6 @@ export type Database = {
           changeover_time: string | null
           city: string
           created_at: string
-          curfew: string | null
           date: string
           departure_notes: string | null
           departure_time: string | null
@@ -350,7 +349,6 @@ export type Database = {
           changeover_time?: string | null
           city: string
           created_at?: string
-          curfew?: string | null
           date: string
           departure_notes?: string | null
           departure_time?: string | null
@@ -402,7 +400,6 @@ export type Database = {
           changeover_time?: string | null
           city?: string
           created_at?: string
-          curfew?: string | null
           date?: string
           departure_notes?: string | null
           departure_time?: string | null

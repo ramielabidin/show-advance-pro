@@ -77,7 +77,6 @@ function buildPlainTextBody(show: Show & { schedule_entries?: any[] }): string {
       const setInline = e.is_band && val(show.set_length) ? ` (${val(show.set_length)})` : "";
       return `${e.time}  ${e.label}${setInline}`;
     });
-    if (val(show.curfew)) lines.push(`${val(show.curfew)}  Curfew`);
     parts.push(sectionBlock("Schedule", lines));
   }
 

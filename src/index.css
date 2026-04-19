@@ -183,19 +183,22 @@
   .stagger-list > *:nth-child(8)   { animation-delay: 280ms; }
   .stagger-list > *:nth-child(n+9) { animation-delay: 320ms; }
 
-  /* Press + hover feedback for card-like clickable elements */
+  /* Press + hover feedback for card-like clickable elements.
+     Only applied on hover-capable, fine-pointer devices (desktop) — on touch,
+     the :active scale fires on every tap and interferes with long-press
+     text selection, which makes copy/paste feel awkward. */
   .card-pressable {
     transition: transform 160ms var(--ease-out), box-shadow 200ms var(--ease-out);
-  }
-
-  .card-pressable:active {
-    transform: scale(0.97);
   }
 
   @media (hover: hover) and (pointer: fine) {
     .card-pressable:hover {
       transform: translateY(-1px);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .card-pressable:active {
+      transform: scale(0.97);
     }
   }
 

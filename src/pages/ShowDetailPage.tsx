@@ -440,7 +440,7 @@ export default function ShowDetailPage() {
         updateMutation.mutate({ [inlineField]: val || null } as any);
       };
 
-      // Structured time picker (departure, curfew, changeover)
+      // Structured time picker (departure, changeover)
       if (opts?.structuredTime) {
         return (
           <div ref={inlineRef} className="space-y-2">
@@ -1028,7 +1028,6 @@ export default function ShowDetailPage() {
                   }} />
                 )}
                 {editField("set_length", "Set Length", { alwaysShow: true })}
-                {(inlineField === "curfew" || show.curfew) ? editField("curfew", "Curfew", { structuredTime: true, hideTbd: true }) : null}
                 {(inlineField === "changeover_time" || show.changeover_time) ? editField("changeover_time", "Changeover Time", { structuredTime: true }) : null}
               </FieldGroup>
               </div>
@@ -1118,13 +1117,38 @@ export default function ShowDetailPage() {
                 }
 
                 return (
-                  <button onClick={startHotelEdit} className="w-full text-left space-y-3 card-pressable">
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={startHotelEdit}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        startHotelEdit();
+                      }
+                    }}
+                    className="w-full text-left space-y-3 card-pressable cursor-pointer"
+                  >
                     <FieldRow label="Name" value={show.hotel_name} />
-                    <FieldRow label="Address" value={show.hotel_address} />
+                    {show.hotel_address ? (
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+                        <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Address</span>
+                        <a
+                          href={`https://maps.google.com/?q=${encodeURIComponent(show.hotel_address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-sm text-foreground inline-flex items-start gap-1 hover:underline hover:text-foreground/80 transition-colors"
+                        >
+                          <MapPin className="h-3 w-3 shrink-0 mt-1" />
+                          <span>{show.hotel_address.replace(/,?\s*United States$/i, "")}</span>
+                        </a>
+                      </div>
+                    ) : null}
                     <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
                     <FieldRow label="Check In" value={show.hotel_checkin} mono />
                     <FieldRow label="Check Out" value={show.hotel_checkout} mono />
-                  </button>
+                  </div>
                 );
               })()}
             </FieldGroup>

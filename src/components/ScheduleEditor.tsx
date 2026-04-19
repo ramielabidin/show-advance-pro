@@ -43,46 +43,52 @@ export default function ScheduleEditor({ initial, onSave, onCancel, saving }: Sc
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3 sm:space-y-2">
       {rows.map((row, i) => (
-        <div key={i} className="flex items-center gap-2">
+        <div
+          key={i}
+          className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2"
+        >
           <div className="shrink-0">
             <TimeInput
               value={row.time}
               onChange={(val) => update(i, { time: val })}
               autoFocus={i === 0 && rows.length === 1 && !row.time}
+              hideTbd
             />
           </div>
-          <Input
-            value={row.label}
-            onChange={(e) => update(i, { label: e.target.value })}
-            placeholder="Activity"
-            className="text-sm h-9 flex-1"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "h-8 w-8 shrink-0",
-              row.is_band
-                ? "text-green-700 hover:text-green-700 dark:text-green-400 dark:hover:text-green-400"
-                : "text-muted-foreground/50 hover:text-foreground"
-            )}
-            onClick={() => toggleBand(i)}
-            aria-label={row.is_band ? "Unmark band's set" : "Mark as band's set"}
-            title={row.is_band ? "Band's set" : "Mark as band's set"}
-          >
-            <Mic className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-            onClick={() => remove(i)}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center gap-2 sm:flex-1">
+            <Input
+              value={row.label}
+              onChange={(e) => update(i, { label: e.target.value })}
+              placeholder="Activity"
+              className="text-sm h-9 flex-1"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-8 w-8 shrink-0",
+                row.is_band
+                  ? "text-green-700 hover:text-green-700 dark:text-green-400 dark:hover:text-green-400"
+                  : "text-muted-foreground/50 hover:text-foreground"
+              )}
+              onClick={() => toggleBand(i)}
+              aria-label={row.is_band ? "Unmark band's set" : "Mark as band's set"}
+              title={row.is_band ? "Band's set" : "Mark as band's set"}
+            >
+              <Mic className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+              onClick={() => remove(i)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       ))}
       <Button variant="ghost" size="sm" onClick={addRow} className="h-7 text-xs gap-1">
