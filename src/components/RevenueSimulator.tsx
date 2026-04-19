@@ -36,15 +36,18 @@ function parseBackendPct(deal: string | null | undefined): number | null {
 
 /**
  * Detect whether the deal references NBOR (net) or GBOR/gross.
- * NBOR deals deduct venue expenses before the % applies; since we don't
- * have expense data we apply the % to GBOR and flag it as an approximation.
+ * NBOR deals deduct venue expenses before the % applies; since we don't have
+ * expense data per show, we approximate NBOR as GBOR reduced by NBOR_EXPENSE_RATIO.
  */
-function parseBackendBasis(deal: string | null | undefined): "NBOR" | "GBOR" | "gross" {
+export function parseBackendBasis(deal: string | null | undefined): "NBOR" | "GBOR" | "gross" {
   if (!deal) return "gross";
   if (/NBOR/i.test(deal)) return "NBOR";
   if (/GBOR/i.test(deal)) return "GBOR";
   return "gross";
 }
+
+/** Industry rule-of-thumb puts NBOR at 15–25% below GBOR; midpoint is a reasonable default. */
+export const NBOR_EXPENSE_RATIO = 0.2;
 
 /** Detect vs/plus deal type from stored string */
 export function parseBackendType(deal: string | null | undefined): "vs" | "plus" {
@@ -78,16 +81,20 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
   const hasGborData = ticketPrice != null && ticketPrice > 0 && ticketCount != null;
   const gbor = hasGborData ? ticketCount * ticketPrice : null;
 
-  // When we have GBOR + backend deal percentage, calculate artist take
+  // When we have GBOR + backend deal percentage, calculate artist take.
+  // For NBOR deals, reduce the revenue base by NBOR_EXPENSE_RATIO to approximate
+  // the venue-expense deduction we can't model per show.
+  const borFactor = backendBasis === "NBOR" ? 1 - NBOR_EXPENSE_RATIO : 1;
+  const effectiveBor = gbor != null ? gbor * borFactor : null;
   let backendTake: number | null = null;
   if (hasGborData && backendPct != null) {
     if (tieredDeal) {
       const tier1Count = Math.min(ticketCount!, tieredDeal.tier2Threshold);
       const tier2Count = Math.max(0, ticketCount! - tieredDeal.tier2Threshold);
-      backendTake = (tier1Count * ticketPrice! * (backendPct / 100))
-                  + (tier2Count * ticketPrice! * (tieredDeal.tier2Pct / 100));
+      backendTake = (tier1Count * ticketPrice! * borFactor * (backendPct / 100))
+                  + (tier2Count * ticketPrice! * borFactor * (tieredDeal.tier2Pct / 100));
     } else {
-      backendTake = gbor! * (backendPct / 100);
+      backendTake = effectiveBor! * (backendPct / 100);
     }
   }
   const hasBackendCalc = backendTake != null;
@@ -124,17 +131,20 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
       {hasGborData && (
         <div className="space-y-1 text-sm text-muted-foreground font-mono">
           <p>~{ticketCount!.toLocaleString()} tickets × {formatDollar(ticketPrice!)} = {formatDollar(gbor!)} GBOR</p>
+          {hasBackendCalc && backendBasis === "NBOR" && (
+            <p>Est. NBOR: {formatDollar(gbor!)} × {Math.round((1 - NBOR_EXPENSE_RATIO) * 100)}% = {formatDollar(effectiveBor!)}</p>
+          )}
           {hasBackendCalc && tieredDeal && (
             <p>
-              Tier 1: {Math.min(ticketCount!, tieredDeal.tier2Threshold).toLocaleString()} tickets × {backendPct}% = {formatDollar((Math.min(ticketCount!, tieredDeal.tier2Threshold)) * ticketPrice! * (backendPct! / 100))}
-              {ticketCount! > tieredDeal.tier2Threshold && ` + Tier 2: ${Math.max(0, ticketCount! - tieredDeal.tier2Threshold).toLocaleString()} tickets × ${tieredDeal.tier2Pct}% = ${formatDollar(Math.max(0, ticketCount! - tieredDeal.tier2Threshold) * ticketPrice! * (tieredDeal.tier2Pct / 100))}`}
+              Tier 1: {Math.min(ticketCount!, tieredDeal.tier2Threshold).toLocaleString()} tickets × {backendPct}% = {formatDollar((Math.min(ticketCount!, tieredDeal.tier2Threshold)) * ticketPrice! * borFactor * (backendPct! / 100))}
+              {ticketCount! > tieredDeal.tier2Threshold && ` + Tier 2: ${Math.max(0, ticketCount! - tieredDeal.tier2Threshold).toLocaleString()} tickets × ${tieredDeal.tier2Pct}% = ${formatDollar(Math.max(0, ticketCount! - tieredDeal.tier2Threshold) * ticketPrice! * borFactor * (tieredDeal.tier2Pct / 100))}`}
             </p>
           )}
           {hasBackendCalc && !tieredDeal && (
             <p>
               {dealType === "plus"
-                ? `Artist take: ${formatDollar(guarantee)} guarantee + ${backendPct}% × ${formatDollar(gbor!)} = ${formatDollar(artistTake!)}`
-                : `Artist take: max(${formatDollar(guarantee)} guarantee, ${backendPct}% × ${formatDollar(gbor!)}) = ${formatDollar(artistTake!)}`}
+                ? `Artist take: ${formatDollar(guarantee)} guarantee + ${backendPct}% × ${formatDollar(effectiveBor!)} = ${formatDollar(artistTake!)}`
+                : `Artist take: max(${formatDollar(guarantee)} guarantee, ${backendPct}% × ${formatDollar(effectiveBor!)}) = ${formatDollar(artistTake!)}`}
             </p>
           )}
           {hasBackendCalc && tieredDeal && (
@@ -158,9 +168,9 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
       <p className="text-xs text-muted-foreground">
         {hasBackendCalc
           ? cappedByWalkout
-            ? `GBOR calc (${formatDollar(rawProjected)}) exceeds walkout potential — capped at ${formatDollar(walkoutPotential)}. Likely due to ${backendBasis === "NBOR" ? "venue expenses not factored in" : "deal terms reducing net payout"}.`
+            ? `${backendBasis} calc (${formatDollar(rawProjected)}) exceeds walkout potential — capped at ${formatDollar(walkoutPotential)}. Likely due to ${backendBasis === "NBOR" ? "actual venue expenses exceeding the 20% estimate" : "deal terms reducing net payout"}.`
             : backendBasis === "NBOR"
-              ? `Using GBOR as an approximation for NBOR — venue expenses not factored in`
+              ? `Approximating NBOR as ${Math.round((1 - NBOR_EXPENSE_RATIO) * 100)}% of GBOR (industry avg. 20% venue-expense deduction)`
               : dealType === "plus"
                 ? `${formatDollar(guarantee)} guarantee + ${backendPct}% of GBOR`
                 : `${backendPct}% of GBOR vs ${formatDollar(guarantee)} guarantee`

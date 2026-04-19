@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Slider } from "@/components/ui/slider";
-import { formatDollar, parseDollar, parseBackendPct } from "@/components/RevenueSimulator";
+import { formatDollar, parseDollar, parseBackendPct, parseBackendBasis, NBOR_EXPENSE_RATIO } from "@/components/RevenueSimulator";
 
 interface TourRevenueSimulatorProps {
   shows: Array<{
@@ -28,9 +28,10 @@ export default function TourRevenueSimulator({ shows }: TourRevenueSimulatorProp
       const ticketPrice = parseDollar(s.ticket_price);
       const capacity = s.venue_capacity ? parseInt(s.venue_capacity.replace(/[^0-9]/g, ""), 10) : null;
       const backendPct = parseBackendPct(s.backend_deal);
+      const backendBasis = parseBackendBasis(s.backend_deal);
       const validCapacity = capacity != null && !isNaN(capacity) ? capacity : null;
 
-      return { guarantee, walkout, ticketPrice, capacity: validCapacity, backendPct, isSettled: !!s.is_settled };
+      return { guarantee, walkout, ticketPrice, capacity: validCapacity, backendPct, backendBasis, isSettled: !!s.is_settled };
     })
     .filter((s) => s.walkout !== null || (s.ticketPrice != null && s.ticketPrice > 0 && s.capacity != null));
 
@@ -56,7 +57,8 @@ export default function TourRevenueSimulator({ shows }: TourRevenueSimulatorProp
     const hasBackend = gbor != null && s.backendPct != null;
 
     if (hasBackend) {
-      const artistTake = Math.max(s.guarantee, gbor! * (s.backendPct! / 100));
+      const borFactor = s.backendBasis === "NBOR" ? 1 - NBOR_EXPENSE_RATIO : 1;
+      const artistTake = Math.max(s.guarantee, gbor! * borFactor * (s.backendPct! / 100));
       totalProjected += artistTake;
       totalWalkout += s.walkout ?? gbor!;
       dealShowCount++;
