@@ -256,6 +256,22 @@ export default function ShowDetailPage() {
     }
   }, [inlineField]);
 
+  // Silently mark the show as reviewed on first visit. Drives the "New" badge
+  // on show cards — visiting the detail page counts as acknowledgement.
+  const autoReviewedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!id || !show || show.is_reviewed || autoReviewedRef.current === id) return;
+    autoReviewedRef.current = id;
+    supabase
+      .from("shows")
+      .update({ is_reviewed: true })
+      .eq("id", id)
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ["shows"] });
+        queryClient.invalidateQueries({ queryKey: ["show", id] });
+      });
+  }, [id, show, queryClient]);
+
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<Show>) => {
       const { schedule_entries, show_party_members, tours, ...showUpdates } = updates as any;
@@ -774,17 +790,15 @@ export default function ShowDetailPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {(show as any).advance_imported_at && (
-                  <ParseAdvanceForShowDialog
-                    showId={id!}
-                    currentShow={show as Show}
-                    onUpdated={() => {
-                      queryClient.invalidateQueries({ queryKey: ["show", id] });
-                      queryClient.invalidateQueries({ queryKey: ["shows"] });
-                    }}
-                    trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Re-import advance</DropdownMenuItem>}
-                  />
-                )}
+                <ParseAdvanceForShowDialog
+                  showId={id!}
+                  currentShow={show as Show}
+                  onUpdated={() => {
+                    queryClient.invalidateQueries({ queryKey: ["show", id] });
+                    queryClient.invalidateQueries({ queryKey: ["shows"] });
+                  }}
+                  trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Import advance</DropdownMenuItem>}
+                />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={() => setDeleteOpen(true)}
@@ -817,23 +831,6 @@ export default function ShowDetailPage() {
           </TabsList>
         </div>
       </div>
-
-      {!show.is_reviewed && (
-        <div className="border-l-2 border-badge-new pl-3 pr-1 py-2 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <p className="text-sm text-foreground">
-            <span className="text-badge-new font-medium">New show</span>
-            <span className="text-muted-foreground"> created from advance email — review the details below.</span>
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="shrink-0"
-            onClick={() => updateMutation.mutate({ is_reviewed: true } as any)}
-          >
-            Mark Reviewed
-          </Button>
-        </div>
-      )}
 
       <TabsContent value="show">
           {!(show as any).advance_imported_at && !showManualForm ? (
