@@ -89,6 +89,9 @@ export default function ShowDetailPage() {
   const [driveCardDismissed, setDriveCardDismissed] = useState(() =>
     id ? localStorage.getItem(`drive-card-dismissed-${id}`) === "true" : false
   );
+  const [suggestionDismissed, setSuggestionDismissed] = useState(() =>
+    id ? localStorage.getItem(`departure-suggestion-dismissed-${id}`) === "true" : false
+  );
 
   // Settle modal state
   const [settleOpen, setSettleOpen] = useState(false);
@@ -951,8 +954,8 @@ export default function ShowDetailPage() {
                 </div>
               )}
               {editField("departure_time", "Departure Time", { alwaysShow: true, structuredTime: true })}
-              {recommendedDeparture && inlineField !== "departure_time" && show.departure_time !== recommendedDeparture && !driveCardDismissed && (
-                <div className="-mt-2">
+              {recommendedDeparture && inlineField !== "departure_time" && !show.departure_time && !driveCardDismissed && !suggestionDismissed && (
+                <div className="-mt-2 flex items-center gap-1.5">
                   <Button
                     variant="outline"
                     size="sm"
@@ -964,6 +967,17 @@ export default function ShowDetailPage() {
                     Use {recommendedDeparture}
                     <span className="text-muted-foreground">· load-in − drive − 45 min</span>
                   </Button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (id) localStorage.setItem(`departure-suggestion-dismissed-${id}`, "true");
+                      setSuggestionDismissed(true);
+                    }}
+                    className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
+                    aria-label="Dismiss departure suggestion"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               )}
               {editField("departure_notes", "Departure Notes", { multiline: true, alwaysShow: true, placeholder: "e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am" })}
