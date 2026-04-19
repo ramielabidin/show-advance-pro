@@ -88,7 +88,6 @@
     --pastel-green-fg: #346538;
     --pastel-yellow-bg: #fbf3db;
     --pastel-yellow-fg: #956400;
-    --accent-lime: #e8ff6b;
   }
 
   .dark {
@@ -137,7 +136,6 @@
     --pastel-green-fg: #b5d1b0;
     --pastel-yellow-bg: hsla(40, 40%, 20%, 0.5);
     --pastel-yellow-fg: #e8c988;
-    --accent-lime: #e8ff6b;
   }
 }
 

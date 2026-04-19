@@ -61,21 +61,17 @@ function fmtMoney(val: number): string {
   return val ? `$${val.toLocaleString()}` : "—";
 }
 
-const SELL_THROUGH = 0.7;
 const UPSIDE_TOOLTIP =
-  "Rough estimate based on 70% sell-through across remaining shows. Actual numbers will vary.";
+  "Potential earnings above guarantee if you hit walkout on every remaining show.";
 
 function projectedUpside(shows: Show[]): number {
   return shows.reduce((acc, s) => {
     if (s.is_settled) return acc;
     if (!isUpcomingDate(s.date)) return acc;
-    const capacity = Number(s.venue_capacity) || 0;
-    const ticketPrice = parseDollar(s.ticket_price) ?? 0;
-    if (capacity === 0 || ticketPrice === 0) return acc;
+    const walkout = parseDollar(s.walkout_potential) ?? 0;
+    if (walkout === 0) return acc;
     const guarantee = parseDollar(s.guarantee) ?? 0;
-    const estimated = capacity * ticketPrice * SELL_THROUGH;
-    const upside = Math.max(0, estimated - guarantee);
-    return acc + upside;
+    return acc + Math.max(0, walkout - guarantee);
   }, 0);
 }
 
@@ -703,7 +699,7 @@ function StatCard({
         {accent && (
           <div
             className="text-xs mt-1 flex items-center gap-1"
-            style={{ color: "var(--accent-lime)" }}
+            style={{ color: "var(--pastel-green-fg)" }}
           >
             <span>+ {accent.value} projected</span>
             <Tooltip>
