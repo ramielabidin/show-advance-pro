@@ -79,20 +79,16 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
     setGenerating(true);
 
     try {
-      // ── Document setup ──────────────────────────────────────────────────
       const doc = new jsPDF({ unit: "pt", format: "letter" });
-      const PW = doc.internal.pageSize.getWidth();   // 612 pt
-      const PH = doc.internal.pageSize.getHeight();  // 792 pt
+      const PW = doc.internal.pageSize.getWidth();  // 612 pt
+      const PH = doc.internal.pageSize.getHeight(); // 792 pt
 
-      // Margins
-      const ML = 52;  // left margin
-      const MR = 52;  // right margin
-      const MT = 44;  // top margin — enough to breathe, not wasteful
-      const MB = 44;  // bottom margin
+      const ML = 52;
+      const MR = 52;
+      const MT = 48;
+      const MB = 48;
+      const CW = PW - ML - MR; // 508 pt
 
-      const CW = PW - ML - MR; // content width = 500 pt
-
-      // Fill canvas with warm off-white (instead of default white)
       const paintCanvas = () => {
         doc.setFillColor(...T.canvas);
         doc.rect(0, 0, PW, PH, "F");
@@ -101,7 +97,6 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
 
       let y = MT;
 
-      // ── Utility: page break ─────────────────────────────────────────────
       const checkPage = (needed: number) => {
         if (y + needed > PH - MB) {
           doc.addPage();
@@ -110,211 +105,180 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
         }
       };
 
-      // ── Utility: draw the left-accent section rule ──────────────────────
-      // Mirrors the app's `border-l-2` + small-caps section label pattern.
-      const drawSectionLabel = (title: string, extraGap = 0) => {
-        checkPage(30);
-        y += 16 + extraGap;
-
-        // Accent bar — 2 pt wide, 11 pt tall, vertically centered on label
+      // ── Section header: accent bar + small-caps label ───────────────────
+      // Always call with a pre-gap so sections breathe relative to each other.
+      const sectionHeader = (title: string, preGap = 18) => {
+        checkPage(preGap + 24);
+        y += preGap;
         doc.setFillColor(...T.accent);
         doc.rect(ML, y - 8, 2, 10, "F");
-
-        // Small-caps label (simulated via uppercase + tracking via character spacing)
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(7.5);
+        doc.setFontSize(7);
         doc.setTextColor(...T.muted);
-        doc.setCharSpace(1.4); // wide tracking like the app's `tracking-widest`
+        doc.setCharSpace(1.5);
         doc.text(title.toUpperCase(), ML + 10, y);
-        doc.setCharSpace(0);   // reset
-
-        y += 11;
+        doc.setCharSpace(0);
+        y += 12;
       };
 
-      // ── Utility: stacked field (label above, value below) ───────────────
-      // This mirrors the app's FieldRow pattern: muted small label on top,
-      // heavier value below — NOT the old side-by-side column layout.
-      const drawStackedField = (
-        label: string,
-        value: string | null,
-        opts?: { mono?: boolean; bold?: boolean }
-      ) => {
+      // ── Simple section: label IS the heading, value flows directly below ─
+      // Use for single-value sections (Parking, Load In, Green Room, etc.)
+      // No redundant sub-label like "Notes" or "Details".
+      const drawSimpleSection = (title: string, value: string | null, opts?: { mono?: boolean }) => {
         if (!value) return;
         const lines = doc.splitTextToSize(value, CW - 10);
-        const blockH = 11 + lines.length * 13 + 7;
-        checkPage(blockH);
-
-        // Label
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.5);
-        doc.setTextColor(...T.muted);
-        if (label) doc.text(label, ML + 10, y);
-        y += 11;
-
-        // Value
-        doc.setFontSize(9.5);
+        checkPage(18 + 24 + lines.length * 13 + 6);
+        sectionHeader(title);
+        doc.setFont(opts?.mono ? "courier" : "helvetica", "normal");
+        doc.setFontSize(9);
         doc.setTextColor(...T.ink);
-        if (opts?.mono) {
-          doc.setFont("courier", opts.bold ? "bold" : "normal");
-        } else {
-          doc.setFont("helvetica", opts?.bold ? "bold" : "normal");
-        }
         doc.text(lines, ML + 10, y);
-        y += lines.length * 13 + 7;
+        y += lines.length * 13 + 6;
       };
 
-      // ── Utility: inline key-value pair (for compact single-line fields) ─
-      const drawInlineField = (
+      // ── Inline field: label left (muted), value right ───────────────────
+      // Use inside multi-field sections (Contact, Hotel, etc.)
+      const drawField = (
         label: string,
         value: string | null,
-        opts?: { mono?: boolean }
+        opts?: { mono?: boolean; labelW?: number }
       ) => {
         if (!value) return;
-        checkPage(15);
-        const labelW = 88;
+        const lw = opts?.labelW ?? 96;
+        const valLines = doc.splitTextToSize(value, CW - 10 - lw);
+        checkPage(valLines.length * 13 + 3);
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
         doc.setTextColor(...T.muted);
         doc.text(label, ML + 10, y);
 
-        doc.setFontSize(8.5);
+        doc.setFont(opts?.mono ? "courier" : "helvetica", "normal");
+        doc.setFontSize(9);
         doc.setTextColor(...T.ink);
-        if (opts?.mono) doc.setFont("courier", "normal");
-        else doc.setFont("helvetica", "normal");
+        doc.text(valLines, ML + 10 + lw, y);
 
-        const valLines = doc.splitTextToSize(value, CW - 10 - labelW);
-        doc.text(valLines, ML + 10 + labelW, y);
-        y += valLines.length * 13 + 1;
+        y += valLines.length * 13 + 3;
       };
 
       const has = (key: SectionKey) => hasData(show, key);
 
       // ════════════════════════════════════════════════════════════════════
-      // HEADER BLOCK
-      // Layout: "Advance" wordmark (serif, small) left — Tour name right
-      //         Venue name large (serif display)
-      //         Date · City  (muted, small caps feel)
-      //         Thin hairline rule
+      // HEADER
+      // "Advance" wordmark left · Tour pill right
+      // Venue name large
+      // City · Date muted
+      // Hairline
       // ════════════════════════════════════════════════════════════════════
 
-      // Wordmark row
+      // Wordmark
       doc.setFont("times", "bold");
       doc.setFontSize(11);
       doc.setTextColor(...T.ink);
       doc.text("Advance", ML, y);
 
-      // Tour name — right-aligned, small pill style
+      // Tour pill — measure BEFORE setting charSpace so width is accurate
       const tourName = (show as any).tours?.name;
       if (tourName) {
+        const tourLabel = tourName.toUpperCase();
         doc.setFont("helvetica", "bold");
         doc.setFontSize(7);
-        doc.setCharSpace(1.2);
-        doc.setTextColor(...T.muted);
-        const tourLabel = tourName.toUpperCase();
+        // Measure without charSpace first
         const tourW = doc.getTextWidth(tourLabel);
-        // Pill background
-        const pillX = PW - MR - tourW - 10;
-        const pillY = y - 8;
-        const pillH = 12;
+        const pillPad = 8;
+        const pillW = tourW + pillPad * 2;
+        const pillX = PW - MR - pillW;
+        const pillY = y - 9;
+
         doc.setFillColor(...T.accentLight);
-        doc.roundedRect(pillX - 5, pillY, tourW + 14, pillH, 3, 3, "F");
+        doc.roundedRect(pillX, pillY, pillW, 12, 2, 2, "F");
+
+        doc.setCharSpace(1.0);
         doc.setTextColor(...T.accent);
-        doc.text(tourLabel, pillX, y);
+        doc.text(tourLabel, pillX + pillPad, y);
         doc.setCharSpace(0);
       }
 
-      y += 18;
+      y += 20;
 
-      // Venue name — large serif display, tight tracking
+      // Venue name
       doc.setFont("times", "bold");
       doc.setFontSize(26);
       doc.setTextColor(...T.ink);
-      // Wrap if venue name is very long
       const venueLines = doc.splitTextToSize(show.venue_name, CW);
       doc.text(venueLines, ML, y);
       y += venueLines.length * 28;
 
-      // Date · City — muted metadata line
+      // City · Date
       const dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
       const cityStr = formatCityState(show.city);
       const metaStr = cityStr ? `${cityStr}  ·  ${dateStr}` : dateStr;
-
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(...T.muted);
       doc.text(metaStr, ML, y);
-      y += 13;
+      y += 14;
 
-      // Hairline rule — full content width
+      // Hairline
       doc.setDrawColor(...T.border);
       doc.setLineWidth(0.75);
       doc.line(ML, y, ML + CW, y);
-      y += 3;
+      y += 2;
 
       // ════════════════════════════════════════════════════════════════════
-      // SECTIONS — band-relevant, in fixed order
+      // SECTIONS
       // ════════════════════════════════════════════════════════════════════
 
-      // ── Contact ─────────────────────────────────────────────────────────
+      // ── Contact ──────────────────────────────────────────────────────────
       if (has("contact")) {
-        drawSectionLabel("Day of Show Contact");
-        drawInlineField("Name", val(show.dos_contact_name));
-        drawInlineField("Phone", val(show.dos_contact_phone), { mono: true });
+        sectionHeader("Day of Show Contact");
+        drawField("Name", val(show.dos_contact_name));
+        drawField("Phone", val(show.dos_contact_phone), { mono: true });
       }
 
-      // ── Venue Address ────────────────────────────────────────────────────
+      // ── Venue ─────────────────────────────────────────────────────────────
       if (has("venue") && val(show.venue_address)) {
-        drawSectionLabel("Venue");
-        drawInlineField(
-          "Address",
-          val(show.venue_address)?.replace(/,\s*United States$/i, "") ?? null
+        drawSimpleSection(
+          "Venue",
+          val(show.venue_address)?.replace(/,?\s*United States$/i, "") ?? null
         );
       }
 
-      // ── Schedule ─────────────────────────────────────────────────────────
-      // Special treatment: time in Courier/muted left column, event name right.
-      // Band's set time is bold. Curfew appended at end.
+      // ── Schedule ──────────────────────────────────────────────────────────
+      // Time in mono/muted left, event label right. No bold — is_band data
+      // is unreliable; uniform weight looks cleaner anyway.
       if (has("schedule")) {
         const entries = (show.schedule_entries ?? [])
           .slice()
           .sort((a, b) => a.sort_order - b.sort_order);
 
         if (entries.length > 0) {
-          drawSectionLabel("Schedule");
+          sectionHeader("Schedule");
 
-          const timeColW = 60;
-          const rowH = 15;
+          const timeColW = 58;
+          const rowH = 14;
 
           for (const entry of entries) {
-            checkPage(rowH + 4);
-
-            const isBand = entry.is_band;
-
-            // Time — Courier, muted
+            checkPage(rowH + 2);
             doc.setFont("courier", "normal");
             doc.setFontSize(8.5);
             doc.setTextColor(...T.muted);
             doc.text(entry.time, ML + 10, y);
 
-            // Event label — heavier if band
-            doc.setFont("helvetica", isBand ? "bold" : "normal");
+            doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
             doc.setTextColor(...T.ink);
-
             doc.text(entry.label, ML + 10 + timeColW, y);
             y += rowH;
           }
 
-          // Curfew row
+          // Curfew — rendered muted since it's a constraint, not an event
           if (val(show.curfew)) {
-            checkPage(rowH + 4);
-            y += 1;
+            checkPage(rowH + 2);
             doc.setFont("courier", "normal");
             doc.setFontSize(8.5);
             doc.setTextColor(...T.muted);
             doc.text(val(show.curfew)!, ML + 10, y);
-
             doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
             doc.setTextColor(...T.muted);
@@ -322,117 +286,126 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
             y += rowH;
           }
 
-          // Set length + curfew as standalone fields below grid if not in schedule
-          if (val(show.set_length) && !entries.some((e) => e.is_band)) {
-            y += 4;
-            drawInlineField("Set Length", val(show.set_length));
+          y += 4;
+        }
+      }
+
+      // ── Set Length ────────────────────────────────────────────────────────
+      // Always show as its own simple section when present.
+      if (val(show.set_length)) {
+        drawSimpleSection("Set Length", val(show.set_length));
+      }
+
+      // ── Departure ─────────────────────────────────────────────────────────
+      // Two fields so it gets a proper header + inline fields.
+      if (has("departure")) {
+        const dTime = val(show.departure_time);
+        const dNotes = val(show.departure_notes);
+        if (dTime || dNotes) {
+          sectionHeader("Departure");
+          drawField("Time", dTime, { mono: true });
+          // Notes can be long — give it full width, no label
+          if (dNotes) {
+            const noteLines = doc.splitTextToSize(dNotes, CW - 10);
+            checkPage(noteLines.length * 13 + 3);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(...T.ink);
+            doc.text(noteLines, ML + 10, y);
+            y += noteLines.length * 13 + 3;
           }
         }
       }
 
-      // ── Departure ────────────────────────────────────────────────────────
-      if (has("departure")) {
-        drawSectionLabel("Departure");
-        drawInlineField("Time", val(show.departure_time), { mono: true });
-        drawStackedField("Notes", val(show.departure_notes));
-      }
+      // ── Parking ───────────────────────────────────────────────────────────
+      drawSimpleSection("Parking", val(show.parking_notes));
 
-      // ── Parking ──────────────────────────────────────────────────────────
-      if (has("parking")) {
-        drawSectionLabel("Parking");
-        drawStackedField("Notes", val(show.parking_notes));
-      }
+      // ── Load In ───────────────────────────────────────────────────────────
+      drawSimpleSection("Load In", val(show.load_in_details));
 
-      // ── Load In ──────────────────────────────────────────────────────────
-      if (has("loadIn")) {
-        drawSectionLabel("Load In");
-        drawStackedField("Details", val(show.load_in_details));
-      }
+      // ── Green Room ────────────────────────────────────────────────────────
+      drawSimpleSection("Green Room", val(show.green_room_info));
 
-      // ── Green Room ───────────────────────────────────────────────────────
-      if (has("greenRoom")) {
-        drawSectionLabel("Green Room");
-        drawStackedField("Info", val(show.green_room_info));
-      }
-
-      // ── Venue Details ────────────────────────────────────────────────────
-      if (has("venueDetails")) {
+      // ── Venue Details ─────────────────────────────────────────────────────
+      {
         const cap = val(show.venue_capacity);
         const age = val(show.age_restriction);
         if (cap || age) {
-          drawSectionLabel("Venue Details");
-          drawInlineField("Capacity", cap);
-          drawInlineField("Age Restriction", age);
+          sectionHeader("Venue Details");
+          drawField("Capacity", cap);
+          drawField("Age Restriction", age);
         }
       }
 
-      // ── Band & Performance ────────────────────────────────────────────────
+      // ── WiFi ──────────────────────────────────────────────────────────────
       {
-        const setLen = val(show.set_length);
-        const curfew = val(show.curfew);
-        // Only render if we have values AND schedule didn't already show them
-        if ((setLen || curfew) && !has("schedule")) {
-          drawSectionLabel("Band & Performance");
-          drawInlineField("Set Length", setLen);
-          drawInlineField("Curfew", curfew, { mono: true });
+        const net = val(show.wifi_network);
+        const pw = val(show.wifi_password);
+        if (net || pw) {
+          sectionHeader("WiFi");
+          drawField("Network", net, { mono: true });
+          drawField("Password", pw, { mono: true });
         }
       }
 
-      // ── WiFi ─────────────────────────────────────────────────────────────
-      if (has("wifi")) {
-        drawSectionLabel("WiFi");
-        drawInlineField("Network", val(show.wifi_network), { mono: true });
-        drawInlineField("Password", val(show.wifi_password), { mono: true });
-      }
-
-      // ── Hotel / Accommodations ────────────────────────────────────────────
+      // ── Accommodations ────────────────────────────────────────────────────
+      // Keep all hotel fields together — checkPage before the block.
       if (has("hotel")) {
-        drawSectionLabel("Accommodations");
-        drawInlineField("Hotel", val(show.hotel_name));
-        drawInlineField("Address", val(show.hotel_address)?.replace(/,?\s*United States$/i, "") ?? null);
-        drawInlineField("Confirmation", val(show.hotel_confirmation), { mono: true });
-        drawInlineField("Check-in", val(show.hotel_checkin), { mono: true });
-        drawInlineField("Check-out", val(show.hotel_checkout), { mono: true });
+        const hotelFields = [
+          val(show.hotel_name),
+          val(show.hotel_address),
+          val(show.hotel_confirmation),
+          val(show.hotel_checkin),
+          val(show.hotel_checkout),
+        ].filter(Boolean);
+
+        if (hotelFields.length > 0) {
+          // Estimate block height so it doesn't split across pages
+          const blockH = 24 + hotelFields.length * 16 + 10;
+          checkPage(blockH);
+          sectionHeader("Accommodations");
+          drawField("Hotel", val(show.hotel_name));
+          drawField(
+            "Address",
+            val(show.hotel_address)?.replace(/,?\s*United States$/i, "") ?? null
+          );
+          drawField("Confirmation", val(show.hotel_confirmation), { mono: true });
+          drawField("Check-in", val(show.hotel_checkin), { mono: true });
+          drawField("Check-out", val(show.hotel_checkout), { mono: true });
+        }
       }
 
       // ── Guest List ────────────────────────────────────────────────────────
       if (has("guestList") && val(show.guest_list_details)) {
-        drawSectionLabel("Guest List");
         const formatted = formatGuestList(val(show.guest_list_details)!);
-        drawStackedField("", formatted);
+        drawSimpleSection("Guest List", formatted);
       }
 
       // ════════════════════════════════════════════════════════════════════
-      // FOOTER — "Generated with Advance · advancetouring.com"
-      // Sits at the bottom of the LAST page only, muted, small.
-      // This is the word-of-mouth seed per the roadmap.
+      // FOOTER — hairline + page number left, advancetouring.com right
       // ════════════════════════════════════════════════════════════════════
       const totalPages = (doc as any).internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
-
-        // Hairline above footer
         doc.setDrawColor(...T.border);
         doc.setLineWidth(0.5);
-        doc.line(ML, PH - MB + 10, ML + CW, PH - MB + 10);
+        doc.line(ML, PH - MB + 8, ML + CW, PH - MB + 8);
 
-        // Left: page number (if multi-page)
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7.5);
         doc.setTextColor(...T.muted);
+
         if (totalPages > 1) {
-          doc.text(`${i} / ${totalPages}`, ML, PH - MB + 22);
+          doc.text(`${i} / ${totalPages}`, ML, PH - MB + 20);
         }
 
-        // Right: Advance branding
-        doc.setCharSpace(0.3);
         const brandStr = "advancetouring.com";
-        const brandW = doc.getTextWidth(brandStr);
-        doc.text(brandStr, PW - MR - brandW, PH - MB + 22);
+        // Measure without charSpace
         doc.setCharSpace(0);
+        const brandW = doc.getTextWidth(brandStr);
+        doc.text(brandStr, PW - MR - brandW, PH - MB + 20);
       }
 
-      // ── Save ──────────────────────────────────────────────────────────────
       const venueSafe = show.venue_name.replace(/[^a-zA-Z0-9]/g, "");
       const filename = `${show.date}-${venueSafe}-DaySheet.pdf`;
       doc.save(filename);
