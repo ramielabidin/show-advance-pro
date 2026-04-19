@@ -62,16 +62,14 @@ function fmtMoney(val: number): string {
 }
 
 const UPSIDE_TOOLTIP =
-  "Potential earnings above guarantee if you hit walkout on every remaining show.";
+  "Projected earnings at 70% sell-through of walkout potential across remaining shows.";
 
 function projectedUpside(shows: Show[]): number {
   return shows.reduce((acc, s) => {
     if (s.is_settled) return acc;
     if (!isUpcomingDate(s.date)) return acc;
     const walkout = parseDollar(s.walkout_potential) ?? 0;
-    if (walkout === 0) return acc;
-    const guarantee = parseDollar(s.guarantee) ?? 0;
-    return acc + Math.max(0, walkout - guarantee);
+    return acc + walkout * 0.7;
   }, 0);
 }
 
