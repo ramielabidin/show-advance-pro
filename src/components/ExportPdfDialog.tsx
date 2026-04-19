@@ -8,6 +8,8 @@ import type { Show, ScheduleEntry } from "@/lib/types";
 import { formatCityState } from "@/lib/utils";
 import { hasData, type SectionKey } from "@/lib/daysheetSections";
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 function val(v: unknown): string | null {
   if (v == null) return null;
   const s = String(v).trim();
@@ -29,200 +31,419 @@ function formatGuestList(raw: string): string {
         .join(", ");
     }
   } catch {
-    // not JSON
+    // not JSON — fall through
   }
   return raw;
 }
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Props {
   show: Show & { schedule_entries?: ScheduleEntry[] };
   trigger?: React.ReactNode;
 }
 
+// ─── Design tokens (mirroring the app's light-mode palette) ─────────────────
+//
+// The PDF renders in light mode — paper is light. Colors map directly to the
+// app's CSS variables when the theme is `light`:
+//
+//   --background:         #F5F3EF  (warm off-white canvas)
+//   --foreground:         #1A1714  (near-black, never pure #000)
+//   --muted-foreground:   #8B7E76  (warm gray for labels / meta)
+//   --border:             #E2DAD4  (warm hairline)
+//   --accent-green:       #3D7A5C  (Advanced badge green)
+//
+// Typography: Geist Sans isn't embeddable in jsPDF without a custom font
+// registration workflow, so we use Helvetica (the closest system equivalent)
+// for sans and Courier for mono — both built into jsPDF. The display serif
+// headings use Times, but ONLY for the "Advance" wordmark and venue name,
+// mirroring the app's `font-display` serif used on those elements.
+
+const T = {
+  // Colors as [R, G, B] tuples for jsPDF setTextColor / setDrawColor
+  canvas:      [245, 243, 239] as [number, number, number], // warm off-white
+  ink:         [26,  23,  20]  as [number, number, number], // near-black
+  muted:       [139, 126, 118] as [number, number, number], // warm gray labels
+  border:      [220, 213, 207] as [number, number, number], // warm hairline
+  accent:      [61,  122, 92]  as [number, number, number], // green accent
+  accentLight: [237, 243, 240] as [number, number, number], // green pill bg
+} as const;
+
+// ─── Main component ──────────────────────────────────────────────────────────
+
 export default function ExportPdfDialog({ show, trigger }: Props) {
   const [generating, setGenerating] = useState(false);
 
   const generatePdf = () => {
     setGenerating(true);
-    try {
-      const doc = new jsPDF({ unit: "pt", format: "letter" });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 56;
-      const contentWidth = pageWidth - margin * 2;
-      let y = margin;
-      const lineHeight = 17;
-      const sectionGap = 22;
-      const labelWidth = 108;
 
-      // Warm color palette matching the UI
-      const C_DARK: [number, number, number] = [30, 24, 20];
-      const C_MUTED: [number, number, number] = [138, 126, 120];
-      const C_BORDER: [number, number, number] = [222, 216, 210];
+    try {
+      // ── Document setup ──────────────────────────────────────────────────
+      const doc = new jsPDF({ unit: "pt", format: "letter" });
+      const PW = doc.internal.pageSize.getWidth();   // 612 pt
+      const PH = doc.internal.pageSize.getHeight();  // 792 pt
+
+      // Margins — generous, editorial
+      const ML = 56;  // left margin
+      const MR = 56;  // right margin
+      const MT = 52;  // top margin
+      const MB = 52;  // bottom margin
+
+      const CW = PW - ML - MR; // content width = 500 pt
+
+      // Fill canvas with warm off-white (instead of default white)
+      const paintCanvas = () => {
+        doc.setFillColor(...T.canvas);
+        doc.rect(0, 0, PW, PH, "F");
+      };
+      paintCanvas();
+
+      let y = MT;
+
+      // ── Utility: page break ─────────────────────────────────────────────
+      const checkPage = (needed: number) => {
+        if (y + needed > PH - MB) {
+          doc.addPage();
+          paintCanvas();
+          y = MT;
+        }
+      };
+
+      // ── Utility: draw the left-accent section rule ──────────────────────
+      // Mirrors the app's `border-l-2` + small-caps section label pattern.
+      const drawSectionLabel = (title: string, extraGap = 0) => {
+        checkPage(36);
+        y += 22 + extraGap;
+
+        // Accent bar — 2 pt wide, 11 pt tall, vertically centered on label
+        doc.setFillColor(...T.accent);
+        doc.rect(ML, y - 8, 2, 10, "F");
+
+        // Small-caps label (simulated via uppercase + tracking via character spacing)
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7.5);
+        doc.setTextColor(...T.muted);
+        doc.setCharSpace(1.4); // wide tracking like the app's `tracking-widest`
+        doc.text(title.toUpperCase(), ML + 10, y);
+        doc.setCharSpace(0);   // reset
+
+        y += 14;
+      };
+
+      // ── Utility: stacked field (label above, value below) ───────────────
+      // This mirrors the app's FieldRow pattern: muted small label on top,
+      // heavier value below — NOT the old side-by-side column layout.
+      const drawStackedField = (
+        label: string,
+        value: string | null,
+        opts?: { mono?: boolean; bold?: boolean }
+      ) => {
+        if (!value) return;
+        const lines = doc.splitTextToSize(value, CW - 10);
+        const blockH = 13 + lines.length * 15 + 10;
+        checkPage(blockH);
+
+        // Label
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(...T.muted);
+        doc.text(label, ML + 10, y);
+        y += 13;
+
+        // Value
+        doc.setFontSize(10);
+        doc.setTextColor(...T.ink);
+        if (opts?.mono) {
+          doc.setFont("courier", opts.bold ? "bold" : "normal");
+        } else {
+          doc.setFont("helvetica", opts?.bold ? "bold" : "normal");
+        }
+        doc.text(lines, ML + 10, y);
+        y += lines.length * 15 + 10;
+      };
+
+      // ── Utility: inline key-value pair (for compact single-line fields) ─
+      const drawInlineField = (
+        label: string,
+        value: string | null,
+        opts?: { mono?: boolean }
+      ) => {
+        if (!value) return;
+        checkPage(18);
+        const labelW = 90;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(...T.muted);
+        doc.text(label, ML + 10, y);
+
+        doc.setFontSize(8.5);
+        doc.setTextColor(...T.ink);
+        if (opts?.mono) doc.setFont("courier", "normal");
+        else doc.setFont("helvetica", "normal");
+
+        const valLines = doc.splitTextToSize(value, CW - 10 - labelW);
+        doc.text(valLines, ML + 10 + labelW, y);
+        y += valLines.length * 14 + 2;
+      };
 
       const has = (key: SectionKey) => hasData(show, key);
 
-      const checkPage = (needed: number) => {
-        const pageHeight = doc.internal.pageSize.getHeight();
-        if (y + needed > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
-        }
-      };
+      // ════════════════════════════════════════════════════════════════════
+      // HEADER BLOCK
+      // Layout: "Advance" wordmark (serif, small) left — Tour name right
+      //         Venue name large (serif display)
+      //         Date · City  (muted, small caps feel)
+      //         Thin hairline rule
+      // ════════════════════════════════════════════════════════════════════
 
-      const drawSectionTitle = (title: string) => {
-        checkPage(lineHeight * 2 + sectionGap);
-        y += sectionGap;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(...C_MUTED);
-        doc.text(title.toUpperCase(), margin, y);
-        y += 5;
-        doc.setDrawColor(...C_BORDER);
-        doc.setLineWidth(0.5);
-        doc.line(margin, y, margin + contentWidth, y);
-        y += lineHeight - 4;
-      };
-
-      const drawField = (label: string, value: string | null, opts?: { mono?: boolean }) => {
-        if (!value) return;
-        checkPage(lineHeight);
-        doc.setFontSize(9.5);
-        doc.setTextColor(...C_MUTED);
-        doc.setFont("helvetica", "normal");
-        if (label) doc.text(label, margin + 6, y);
-        doc.setTextColor(...C_DARK);
-        if (opts?.mono) doc.setFont("courier", "normal");
-        else doc.setFont("helvetica", "normal");
-        const valX = margin + 6 + labelWidth;
-        const maxValWidth = contentWidth - 6 - labelWidth;
-        const lines = doc.splitTextToSize(value, maxValWidth);
-        doc.text(lines, valX, y);
-        y += lineHeight * lines.length;
-      };
-
-      // ── Header ──────────────────────────────────────────────────────────
+      // Wordmark row
       doc.setFont("times", "bold");
-      doc.setFontSize(22);
-      doc.setTextColor(...C_DARK);
-      doc.text("DAY SHEET", margin, y);
-      y += 27;
+      doc.setFontSize(11);
+      doc.setTextColor(...T.ink);
+      doc.text("Advance", ML, y);
 
-      doc.setFont("times", "normal");
-      doc.setFontSize(15);
-      doc.setTextColor(...C_DARK);
-      doc.text(show.venue_name, margin, y);
-      y += 20;
+      // Tour name — right-aligned, small pill style
+      const tourName = (show as any).tours?.name;
+      if (tourName) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7);
+        doc.setCharSpace(1.2);
+        doc.setTextColor(...T.muted);
+        const tourLabel = tourName.toUpperCase();
+        const tourW = doc.getTextWidth(tourLabel);
+        // Pill background
+        const pillX = PW - MR - tourW - 10;
+        const pillY = y - 8;
+        const pillH = 12;
+        doc.setFillColor(...T.accentLight);
+        doc.roundedRect(pillX - 5, pillY, tourW + 14, pillH, 3, 3, "F");
+        doc.setTextColor(...T.accent);
+        doc.text(tourLabel, pillX, y);
+        doc.setCharSpace(0);
+      }
 
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      doc.setTextColor(...C_MUTED);
+      y += 24;
+
+      // Venue name — large serif display, tight tracking
+      doc.setFont("times", "bold");
+      doc.setFontSize(28);
+      doc.setTextColor(...T.ink);
+      // Wrap if venue name is very long
+      const venueLines = doc.splitTextToSize(show.venue_name, CW);
+      doc.text(venueLines, ML, y);
+      y += venueLines.length * 32;
+
+      // Date · City — muted metadata line
       const dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
       const cityStr = formatCityState(show.city);
-      doc.text(cityStr ? `${cityStr}  ·  ${dateStr}` : dateStr, margin, y);
-      doc.setTextColor(...C_DARK);
-      y += 14;
+      const metaStr = cityStr ? `${cityStr}  ·  ${dateStr}` : dateStr;
 
-      doc.setDrawColor(...C_BORDER);
-      doc.setLineWidth(1);
-      doc.line(margin, y, margin + contentWidth, y);
-      y += 6;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(...T.muted);
+      doc.text(metaStr, ML, y);
+      y += 16;
 
-      // ── Sections (band-relevant only, in fixed order) ───────────────────
+      // Hairline rule — full content width
+      doc.setDrawColor(...T.border);
+      doc.setLineWidth(0.75);
+      doc.line(ML, y, ML + CW, y);
+      y += 4;
 
+      // ════════════════════════════════════════════════════════════════════
+      // SECTIONS — band-relevant, in fixed order
+      // ════════════════════════════════════════════════════════════════════
+
+      // ── Contact ─────────────────────────────────────────────────────────
       if (has("contact")) {
-        drawSectionTitle("Day of Show Contact");
-        drawField("Name", val(show.dos_contact_name));
-        drawField("Phone", val(show.dos_contact_phone), { mono: true });
+        drawSectionLabel("Day of Show Contact");
+        drawInlineField("Name", val(show.dos_contact_name));
+        drawInlineField("Phone", val(show.dos_contact_phone), { mono: true });
       }
 
+      // ── Venue Address ────────────────────────────────────────────────────
       if (has("venue") && val(show.venue_address)) {
-        drawSectionTitle("Venue Address");
-        drawField("Address", val(show.venue_address)?.replace(/,\s*United States$/i, "") ?? null);
+        drawSectionLabel("Venue");
+        drawInlineField(
+          "Address",
+          val(show.venue_address)?.replace(/,\s*United States$/i, "") ?? null
+        );
       }
 
+      // ── Schedule ─────────────────────────────────────────────────────────
+      // Special treatment: time in Courier/muted left column, event name right.
+      // Band's set time is bold. Curfew appended at end.
       if (has("schedule")) {
-        const entries = (show.schedule_entries ?? []).slice().sort((a, b) => a.sort_order - b.sort_order);
+        const entries = (show.schedule_entries ?? [])
+          .slice()
+          .sort((a, b) => a.sort_order - b.sort_order);
+
         if (entries.length > 0) {
-          drawSectionTitle("Schedule");
+          drawSectionLabel("Schedule");
+
+          const timeColW = 64;
+          const rowH = 17;
+
           for (const entry of entries) {
-            checkPage(lineHeight);
-            doc.setFontSize(9.5);
+            checkPage(rowH + 4);
+
+            const isBand = entry.is_band;
+
+            // Time — Courier, muted
             doc.setFont("courier", "normal");
-            doc.setTextColor(...C_MUTED);
-            doc.text(entry.time, margin + 6, y);
-            doc.setTextColor(...C_DARK);
-            doc.setFont("helvetica", entry.is_band ? "bold" : "normal");
-            const labelWithSet = entry.is_band && val(show.set_length) ? `${entry.label} (${val(show.set_length)})` : entry.label;
-            doc.text(labelWithSet, margin + 84, y);
-            y += lineHeight;
+            doc.setFontSize(9);
+            doc.setTextColor(...T.muted);
+            doc.text(entry.time, ML + 10, y);
+
+            // Event label — heavier if band
+            doc.setFont("helvetica", isBand ? "bold" : "normal");
+            doc.setFontSize(9.5);
+            doc.setTextColor(...T.ink);
+
+            const labelWithSet =
+              isBand && val(show.set_length)
+                ? `${entry.label}  ·  ${val(show.set_length)}`
+                : entry.label;
+
+            // If it's the band's slot, draw a subtle left tick
+            if (isBand) {
+              doc.setFillColor(...T.accent);
+              doc.rect(ML + 10 + timeColW - 6, y - 7, 2, 8, "F");
+            }
+
+            doc.text(labelWithSet, ML + 10 + timeColW, y);
+            y += rowH;
           }
+
+          // Curfew row
           if (val(show.curfew)) {
-            checkPage(lineHeight);
-            doc.setFontSize(9.5);
+            checkPage(rowH + 4);
+            y += 2; // slight extra gap before curfew
             doc.setFont("courier", "normal");
-            doc.setTextColor(...C_MUTED);
-            doc.text(val(show.curfew)!, margin + 6, y);
-            doc.setTextColor(...C_DARK);
+            doc.setFontSize(9);
+            doc.setTextColor(...T.muted);
+            doc.text(val(show.curfew)!, ML + 10, y);
+
             doc.setFont("helvetica", "normal");
-            doc.text("Curfew", margin + 84, y);
-            y += lineHeight;
+            doc.setFontSize(9.5);
+            doc.setTextColor(...T.muted); // curfew in muted too — it's a limit, not an event
+            doc.text("Curfew", ML + 10 + timeColW, y);
+            y += rowH;
+          }
+
+          // Set length + curfew as standalone fields below grid if not in schedule
+          if (val(show.set_length) && !entries.some((e) => e.is_band)) {
+            y += 4;
+            drawInlineField("Set Length", val(show.set_length));
           }
         }
       }
 
+      // ── Departure ────────────────────────────────────────────────────────
       if (has("departure")) {
-        drawSectionTitle("Departure");
-        drawField("Time", val(show.departure_time), { mono: true });
-        drawField("Notes", val(show.departure_notes));
+        drawSectionLabel("Departure");
+        drawInlineField("Time", val(show.departure_time), { mono: true });
+        drawStackedField("Notes", val(show.departure_notes));
       }
 
+      // ── Parking ──────────────────────────────────────────────────────────
       if (has("parking")) {
-        drawSectionTitle("Parking");
-        drawField("Notes", val(show.parking_notes));
+        drawSectionLabel("Parking");
+        drawStackedField("Notes", val(show.parking_notes));
       }
 
+      // ── Load In ──────────────────────────────────────────────────────────
       if (has("loadIn")) {
-        drawSectionTitle("Load In");
-        drawField("Details", val(show.load_in_details));
+        drawSectionLabel("Load In");
+        drawStackedField("Details", val(show.load_in_details));
       }
 
+      // ── Green Room ───────────────────────────────────────────────────────
       if (has("greenRoom")) {
-        drawSectionTitle("Green Room");
-        drawField("Info", val(show.green_room_info));
+        drawSectionLabel("Green Room");
+        drawStackedField("Info", val(show.green_room_info));
       }
 
+      // ── Venue Details ────────────────────────────────────────────────────
       if (has("venueDetails")) {
-        const fields: [string, string | null][] = [
-          ["Capacity", val(show.venue_capacity)],
-          ["Age Restriction", val(show.age_restriction)],
-        ];
-        if (fields.some(([, v]) => v)) {
-          drawSectionTitle("Venue Details");
-          for (const [label, v] of fields) drawField(label, v);
+        const cap = val(show.venue_capacity);
+        const age = val(show.age_restriction);
+        if (cap || age) {
+          drawSectionLabel("Venue Details");
+          drawInlineField("Capacity", cap);
+          drawInlineField("Age Restriction", age);
         }
       }
 
-      if (has("guestList") && val(show.guest_list_details)) {
-        drawSectionTitle("Guest List");
-        const formatted = formatGuestList(val(show.guest_list_details)!);
-        drawField("", formatted);
+      // ── Band & Performance ────────────────────────────────────────────────
+      {
+        const setLen = val(show.set_length);
+        const curfew = val(show.curfew);
+        // Only render if we have values AND schedule didn't already show them
+        if ((setLen || curfew) && !has("schedule")) {
+          drawSectionLabel("Band & Performance");
+          drawInlineField("Set Length", setLen);
+          drawInlineField("Curfew", curfew, { mono: true });
+        }
       }
 
+      // ── WiFi ─────────────────────────────────────────────────────────────
       if (has("wifi")) {
-        drawSectionTitle("WiFi");
-        drawField("Network", val(show.wifi_network), { mono: true });
-        drawField("Password", val(show.wifi_password), { mono: true });
+        drawSectionLabel("WiFi");
+        drawInlineField("Network", val(show.wifi_network), { mono: true });
+        drawInlineField("Password", val(show.wifi_password), { mono: true });
       }
 
+      // ── Hotel / Accommodations ────────────────────────────────────────────
       if (has("hotel")) {
-        drawSectionTitle("Accommodations");
-        drawField("Name", val(show.hotel_name));
-        drawField("Address", val(show.hotel_address));
-        drawField("Confirmation", val(show.hotel_confirmation), { mono: true });
-        drawField("Check-in", val(show.hotel_checkin), { mono: true });
-        drawField("Check-out", val(show.hotel_checkout), { mono: true });
+        drawSectionLabel("Accommodations");
+        drawInlineField("Hotel", val(show.hotel_name));
+        drawStackedField("Address", val(show.hotel_address));
+        drawInlineField("Confirmation", val(show.hotel_confirmation), { mono: true });
+        drawInlineField("Check-in", val(show.hotel_checkin), { mono: true });
+        drawInlineField("Check-out", val(show.hotel_checkout), { mono: true });
       }
 
+      // ── Guest List ────────────────────────────────────────────────────────
+      if (has("guestList") && val(show.guest_list_details)) {
+        drawSectionLabel("Guest List");
+        const formatted = formatGuestList(val(show.guest_list_details)!);
+        drawStackedField("", formatted);
+      }
+
+      // ════════════════════════════════════════════════════════════════════
+      // FOOTER — "Generated with Advance · advancetouring.com"
+      // Sits at the bottom of the LAST page only, muted, small.
+      // This is the word-of-mouth seed per the roadmap.
+      // ════════════════════════════════════════════════════════════════════
+      const totalPages = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+
+        // Hairline above footer
+        doc.setDrawColor(...T.border);
+        doc.setLineWidth(0.5);
+        doc.line(ML, PH - MB + 10, ML + CW, PH - MB + 10);
+
+        // Left: page number (if multi-page)
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(...T.muted);
+        if (totalPages > 1) {
+          doc.text(`${i} / ${totalPages}`, ML, PH - MB + 22);
+        }
+
+        // Right: Advance branding
+        doc.setCharSpace(0.3);
+        const brandStr = "advancetouring.com";
+        const brandW = doc.getTextWidth(brandStr);
+        doc.text(brandStr, PW - MR - brandW, PH - MB + 22);
+        doc.setCharSpace(0);
+      }
+
+      // ── Save ──────────────────────────────────────────────────────────────
       const venueSafe = show.venue_name.replace(/[^a-zA-Z0-9]/g, "");
       const filename = `${show.date}-${venueSafe}-DaySheet.pdf`;
       doc.save(filename);
@@ -235,8 +456,9 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
     }
   };
 
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   if (trigger) {
-    // Caller provided a custom trigger (e.g. a DropdownMenuItem) — wire click through.
     return (
       <span
         onClick={(e) => {
@@ -257,7 +479,11 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       onClick={generatePdf}
       disabled={generating}
     >
-      {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+      {generating ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Download className="h-4 w-4" />
+      )}
       PDF
     </Button>
   );
