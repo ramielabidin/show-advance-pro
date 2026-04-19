@@ -92,6 +92,9 @@ export default function ShowDetailPage() {
   const [suggestionDismissed, setSuggestionDismissed] = useState(() =>
     id ? localStorage.getItem(`departure-suggestion-dismissed-${id}`) === "true" : false
   );
+  const [dealTabSeen, setDealTabSeen] = useState(() =>
+    id ? localStorage.getItem(`deal-tab-seen-${id}`) === "true" : true
+  );
 
   // Settle modal state
   const [settleOpen, setSettleOpen] = useState(false);
@@ -577,7 +580,17 @@ export default function ShowDetailPage() {
 
   return (
     <div className="animate-fade-in max-w-3xl">
-      <Tabs value={viewTab} onValueChange={v => setViewTab(v as "show" | "deal")}>
+      <Tabs
+        value={viewTab}
+        onValueChange={(v) => {
+          const next = v as "show" | "deal";
+          setViewTab(next);
+          if (next === "deal" && id && !dealTabSeen) {
+            localStorage.setItem(`deal-tab-seen-${id}`, "true");
+            setDealTabSeen(true);
+          }
+        }}
+      >
       {/* Header */}
       <div className="mb-5 space-y-1.5 sm:space-y-2">
         {/* Back arrow + badges row */}
@@ -824,7 +837,7 @@ export default function ShowDetailPage() {
               className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
             >
               Deal Info
-              {!(show as any).advance_imported_at && (
+              {!dealTabSeen && (
                 <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" aria-hidden />
               )}
             </TabsTrigger>
