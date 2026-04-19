@@ -84,11 +84,11 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       const PW = doc.internal.pageSize.getWidth();   // 612 pt
       const PH = doc.internal.pageSize.getHeight();  // 792 pt
 
-      // Margins — generous, editorial
-      const ML = 56;  // left margin
-      const MR = 56;  // right margin
-      const MT = 52;  // top margin
-      const MB = 52;  // bottom margin
+      // Margins
+      const ML = 52;  // left margin
+      const MR = 52;  // right margin
+      const MT = 44;  // top margin — enough to breathe, not wasteful
+      const MB = 44;  // bottom margin
 
       const CW = PW - ML - MR; // content width = 500 pt
 
@@ -113,8 +113,8 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       // ── Utility: draw the left-accent section rule ──────────────────────
       // Mirrors the app's `border-l-2` + small-caps section label pattern.
       const drawSectionLabel = (title: string, extraGap = 0) => {
-        checkPage(36);
-        y += 22 + extraGap;
+        checkPage(30);
+        y += 16 + extraGap;
 
         // Accent bar — 2 pt wide, 11 pt tall, vertically centered on label
         doc.setFillColor(...T.accent);
@@ -128,7 +128,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
         doc.text(title.toUpperCase(), ML + 10, y);
         doc.setCharSpace(0);   // reset
 
-        y += 14;
+        y += 11;
       };
 
       // ── Utility: stacked field (label above, value below) ───────────────
@@ -141,18 +141,18 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       ) => {
         if (!value) return;
         const lines = doc.splitTextToSize(value, CW - 10);
-        const blockH = 13 + lines.length * 15 + 10;
+        const blockH = 11 + lines.length * 13 + 7;
         checkPage(blockH);
 
         // Label
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
+        doc.setFontSize(7.5);
         doc.setTextColor(...T.muted);
-        doc.text(label, ML + 10, y);
-        y += 13;
+        if (label) doc.text(label, ML + 10, y);
+        y += 11;
 
         // Value
-        doc.setFontSize(10);
+        doc.setFontSize(9.5);
         doc.setTextColor(...T.ink);
         if (opts?.mono) {
           doc.setFont("courier", opts.bold ? "bold" : "normal");
@@ -160,7 +160,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
           doc.setFont("helvetica", opts?.bold ? "bold" : "normal");
         }
         doc.text(lines, ML + 10, y);
-        y += lines.length * 15 + 10;
+        y += lines.length * 13 + 7;
       };
 
       // ── Utility: inline key-value pair (for compact single-line fields) ─
@@ -170,11 +170,11 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
         opts?: { mono?: boolean }
       ) => {
         if (!value) return;
-        checkPage(18);
-        const labelW = 90;
+        checkPage(15);
+        const labelW = 88;
 
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(8.5);
+        doc.setFontSize(8);
         doc.setTextColor(...T.muted);
         doc.text(label, ML + 10, y);
 
@@ -185,7 +185,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
 
         const valLines = doc.splitTextToSize(value, CW - 10 - labelW);
         doc.text(valLines, ML + 10 + labelW, y);
-        y += valLines.length * 14 + 2;
+        y += valLines.length * 13 + 1;
       };
 
       const has = (key: SectionKey) => hasData(show, key);
@@ -224,16 +224,16 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
         doc.setCharSpace(0);
       }
 
-      y += 24;
+      y += 18;
 
       // Venue name — large serif display, tight tracking
       doc.setFont("times", "bold");
-      doc.setFontSize(28);
+      doc.setFontSize(26);
       doc.setTextColor(...T.ink);
       // Wrap if venue name is very long
       const venueLines = doc.splitTextToSize(show.venue_name, CW);
       doc.text(venueLines, ML, y);
-      y += venueLines.length * 32;
+      y += venueLines.length * 28;
 
       // Date · City — muted metadata line
       const dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
@@ -241,16 +241,16 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       const metaStr = cityStr ? `${cityStr}  ·  ${dateStr}` : dateStr;
 
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(8.5);
+      doc.setFontSize(8);
       doc.setTextColor(...T.muted);
       doc.text(metaStr, ML, y);
-      y += 16;
+      y += 13;
 
       // Hairline rule — full content width
       doc.setDrawColor(...T.border);
       doc.setLineWidth(0.75);
       doc.line(ML, y, ML + CW, y);
-      y += 4;
+      y += 3;
 
       // ════════════════════════════════════════════════════════════════════
       // SECTIONS — band-relevant, in fixed order
@@ -283,8 +283,8 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
         if (entries.length > 0) {
           drawSectionLabel("Schedule");
 
-          const timeColW = 64;
-          const rowH = 17;
+          const timeColW = 60;
+          const rowH = 15;
 
           for (const entry of entries) {
             checkPage(rowH + 4);
@@ -293,42 +293,31 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
 
             // Time — Courier, muted
             doc.setFont("courier", "normal");
-            doc.setFontSize(9);
+            doc.setFontSize(8.5);
             doc.setTextColor(...T.muted);
             doc.text(entry.time, ML + 10, y);
 
             // Event label — heavier if band
             doc.setFont("helvetica", isBand ? "bold" : "normal");
-            doc.setFontSize(9.5);
+            doc.setFontSize(9);
             doc.setTextColor(...T.ink);
 
-            const labelWithSet =
-              isBand && val(show.set_length)
-                ? `${entry.label}  ·  ${val(show.set_length)}`
-                : entry.label;
-
-            // If it's the band's slot, draw a subtle left tick
-            if (isBand) {
-              doc.setFillColor(...T.accent);
-              doc.rect(ML + 10 + timeColW - 6, y - 7, 2, 8, "F");
-            }
-
-            doc.text(labelWithSet, ML + 10 + timeColW, y);
+            doc.text(entry.label, ML + 10 + timeColW, y);
             y += rowH;
           }
 
           // Curfew row
           if (val(show.curfew)) {
             checkPage(rowH + 4);
-            y += 2; // slight extra gap before curfew
+            y += 1;
             doc.setFont("courier", "normal");
-            doc.setFontSize(9);
+            doc.setFontSize(8.5);
             doc.setTextColor(...T.muted);
             doc.text(val(show.curfew)!, ML + 10, y);
 
             doc.setFont("helvetica", "normal");
-            doc.setFontSize(9.5);
-            doc.setTextColor(...T.muted); // curfew in muted too — it's a limit, not an event
+            doc.setFontSize(9);
+            doc.setTextColor(...T.muted);
             doc.text("Curfew", ML + 10 + timeColW, y);
             y += rowH;
           }
@@ -400,7 +389,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       if (has("hotel")) {
         drawSectionLabel("Accommodations");
         drawInlineField("Hotel", val(show.hotel_name));
-        drawStackedField("Address", val(show.hotel_address));
+        drawInlineField("Address", val(show.hotel_address)?.replace(/,?\s*United States$/i, "") ?? null);
         drawInlineField("Confirmation", val(show.hotel_confirmation), { mono: true });
         drawInlineField("Check-in", val(show.hotel_checkin), { mono: true });
         drawInlineField("Check-out", val(show.hotel_checkout), { mono: true });
