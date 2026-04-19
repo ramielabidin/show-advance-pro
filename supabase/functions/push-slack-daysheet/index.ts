@@ -77,7 +77,6 @@ function formatDaySheet(show: any): string {
       const setInline = entry.is_band && val(show.set_length) ? ` (${val(show.set_length)})` : "";
       blocks.push(`    \`${entry.time}\`  ${entry.label}${setInline}`);
     }
-    if (val(show.curfew)) blocks.push(`    \`${val(show.curfew)}\`  Curfew`);
     blocks.push("");
   }
 

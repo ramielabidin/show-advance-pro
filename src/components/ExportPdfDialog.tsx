@@ -130,10 +130,11 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       //     until the schedule fits the available height, with an absolute
       //     floor of 13pt. This guarantees one page without ever going
       //     so small the wall poster becomes useless.
+      //   - Vertically center the schedule block in the available space so
+      //     short schedules don't leave a huge empty bottom half.
       //   - Times left (muted, tabular), events right (ink).
       //   - The band's set row (entry.is_band === true) gets accent green.
       //     Set length shown inline as muted suffix ("Juice · 75 min").
-      //   - Curfew gets a separate muted row below the last entry.
       // ════════════════════════════════════════════════════════════════════
 
       const entries = (show.schedule_entries ?? [])
@@ -147,14 +148,10 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       const FOOTER_H = 16;
       const availableH = PH - MB - FOOTER_H - BOTTOM_STRIP_H - y;
 
-      const curfewVal = val(show.curfew);
       const setLenVal = val(show.set_length);
 
       // Band's set row is whichever entry is flagged is_band.
       const bandIdx = entries.findIndex((e) => e.is_band);
-
-      // Total row count (schedule entries + optional curfew row)
-      const totalRows = entries.length + (curfewVal ? 1 : 0);
 
       // Auto-size: try 22pt → 13pt in 0.5pt steps
       let fontSize = 22;
@@ -162,7 +159,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       const STEP = 0.5;
       const lineGap = 1.45; // line-height multiplier
 
-      const calcHeight = (fs: number) => totalRows * fs * lineGap;
+      const calcHeight = (fs: number) => entries.length * fs * lineGap;
 
       while (fontSize > FONT_MIN && calcHeight(fontSize) > availableH) {
         fontSize -= STEP;
@@ -176,7 +173,14 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       // Time column width scales with font size so it stays proportional.
       const timeColW = fontSize * 4.8;
 
-      if (totalRows > 0) {
+      if (entries.length > 0) {
+        // Vertical centering: offset y by half the leftover space so the
+        // schedule block sits in the middle of the available area. Clamped
+        // to 0 so long schedules just start at the top as before.
+        const blockH = calcHeight(fontSize);
+        const centerOffset = Math.max(0, (availableH - blockH) / 2);
+        y += centerOffset;
+
         for (let i = 0; i < entries.length; i++) {
           const entry = entries[i];
           const isBand = i === bandIdx;
@@ -202,16 +206,6 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
             doc.text(`  ·  ${setLenVal}`, ML + timeColW + labelW, y);
           }
 
-          y += rowH;
-        }
-
-        // Curfew row — muted, same size as schedule
-        if (curfewVal) {
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(fontSize);
-          doc.setTextColor(...T.muted);
-          doc.text(curfewVal, ML, y);
-          doc.text("Curfew", ML + timeColW, y);
           y += rowH;
         }
       }

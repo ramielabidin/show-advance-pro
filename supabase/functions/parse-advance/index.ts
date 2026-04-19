@@ -202,7 +202,6 @@ Key rules:
               hotel_checkin: { type: "string", description: "Hotel check-in time" },
               hotel_checkout: { type: "string", description: "Hotel check-out time" },
               set_length: { type: "string", description: "Duration of the band's set, e.g. '75 min'" },
-              curfew: { type: "string", description: "Stage or venue curfew time, e.g. '11:00 PM'" },
               backline_provided: { type: "string", description: "Backline/gear provided by the venue" },
               changeover_time: { type: "string", description: "Changeover time between acts, e.g. '20 min'" },
               venue_capacity: { type: "string", description: "Venue capacity" },
