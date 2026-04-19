@@ -170,7 +170,14 @@ Use `saveParsedShow(parsed, teamId)` from `src/lib/saveParsedShow.ts` — it han
 
 ### Day sheet exports
 
-PDF (`ExportPdfDialog`), email (`EmailBandDialog`), and Slack (`push-slack-daysheet`) all render the same section list from `src/lib/daysheetSections.ts`. Any new export format must import `DAYSHEET_SECTION_KEYS` and `hasData()` and render in the defined order, skipping sections where `hasData()` returns false. Financial / business-side sections are intentionally excluded from band-facing exports.
+Email and Slack are full day sheets; the PDF is intentionally not.
+
+- **Email (`EmailBandDialog`) and Slack (`push-slack-daysheet`)** render the same section list from `src/lib/daysheetSections.ts`. Any new section-driven export format must import `DAYSHEET_SECTION_KEYS` and `hasData()` and render in the defined order, skipping sections where `hasData()` returns false. Financial / business-side sections are intentionally excluded from band-facing exports.
+- **PDF (`ExportPdfDialog`)** is a different artifact: a single-page "Run of Show" poster meant to be printed and taped to the green-room wall. It deliberately omits the bulk of the day sheet (load in, parking, hotel, guest list, etc. — all of which live in email/Slack) and features the schedule at large scale. Don't "fix" the divergence by wiring it back into `daysheetSections.ts` — the split is intentional. Keep the PDF clean, single-page, and poster-legible.
+
+### `is_band` on schedule entries
+
+`schedule_entries.is_band` marks which row is the band's actual performance slot (as opposed to load in, soundcheck, doors, opener, curfew, etc.). At most one entry per show should be flagged. It's set by the AI parser (`parse-advance`) and toggleable in `ScheduleEditor` via the mic icon. Exports use it to attach `show.set_length` inline to the band's row and (in the PDF) to color that row with the accent. Never infer the band's row from the label text — use the flag.
 
 ### URL as state for list pages
 
