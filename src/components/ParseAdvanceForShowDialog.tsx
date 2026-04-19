@@ -229,10 +229,12 @@ export default function ParseAdvanceForShowDialog({
 
     setSaving(true);
     try {
-      if (hasUpdates) {
-        const { error } = await supabase.from("shows").update(updates).eq("id", showId);
-        if (error) throw error;
-      }
+      const showUpdate: Record<string, string> = {
+        ...updates,
+        advance_imported_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from("shows").update(showUpdate).eq("id", showId);
+      if (error) throw error;
 
       if (hasSchedule) {
         await supabase.from("schedule_entries").delete().eq("show_id", showId);

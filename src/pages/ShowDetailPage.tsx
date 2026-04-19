@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock, Sparkles } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,6 +97,10 @@ export default function ShowDetailPage() {
   const [settleOpen, setSettleOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [clearSettleOpen, setClearSettleOpen] = useState(false);
+  // When the advance hasn't been imported, the Show Info tab shows a CTA card.
+  // The user can click "or fill in manually" to bypass the CTA and see the
+  // normal field layout without waiting for a parsed advance.
+  const [showManualForm, setShowManualForm] = useState(false);
   const [settleForm, setSettleForm] = useState({
     actual_tickets_sold: "",
     actual_walkout: "",
@@ -698,95 +702,89 @@ export default function ShowDetailPage() {
           )}
         </p>
 
-        {/* Action buttons */}
-        <div className="pt-1">
-          {/* Desktop */}
-          <div className="hidden md:flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-            {/* Primary CTA: Settle Show */}
-            {(show as any).is_settled ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs text-[hsl(var(--success))] hover:text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.1)]"
-                onClick={() => setClearSettleOpen(true)}
+        {/* Status chips + icon actions — unified mobile + desktop */}
+        <div className="pt-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
+            {/* Advanced chip — instant toggle */}
+            {(show as any).advanced_at ? (
+              <button
+                type="button"
+                onClick={() => toggleAdvancedMutation.mutate(false)}
+                disabled={toggleAdvancedMutation.isPending}
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium shrink-0 transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
               >
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Settled
-              </Button>
+                <CheckCircle2 className="h-3 w-3" /> Advanced
+              </button>
             ) : (
-              <Button
-                size="sm"
-                className="h-8 text-xs bg-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.9)] text-[hsl(var(--success-foreground))]"
+              <button
+                type="button"
+                onClick={() => toggleAdvancedMutation.mutate(true)}
+                disabled={toggleAdvancedMutation.isPending}
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium shrink-0 bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              >
+                <Circle className="h-3 w-3" /> Not advanced
+              </button>
+            )}
+
+            {/* Settled chip — routes to existing dialogs */}
+            {(show as any).is_settled ? (
+              <button
+                type="button"
+                onClick={() => setClearSettleOpen(true)}
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium shrink-0 transition-opacity hover:opacity-80"
+                style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+              >
+                <CheckCircle2 className="h-3 w-3" /> Settled
+              </button>
+            ) : (
+              <button
+                type="button"
                 onClick={() => {
                   setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
                   setSettleOpen(true);
                 }}
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium shrink-0 bg-muted text-muted-foreground hover:text-foreground transition-colors"
               >
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Settle Show
-              </Button>
+                <Circle className="h-3 w-3" /> Not settled
+              </button>
             )}
+          </div>
 
-            {/* Advance toggle — secondary, yellow when needed / green when done */}
-            {(show as any).advanced_at ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs text-[hsl(var(--success))] hover:text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.1)]"
-                onClick={() => toggleAdvancedMutation.mutate(false)}
-                disabled={toggleAdvancedMutation.isPending}
-              >
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Advanced
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs gap-1"
-                style={{
-                  color: "var(--pastel-yellow-fg)",
-                  borderColor: "var(--pastel-yellow-fg)",
-                }}
-                onClick={() => toggleAdvancedMutation.mutate(true)}
-                disabled={toggleAdvancedMutation.isPending}
-              >
-                <Circle className="h-3.5 w-3.5" /> Mark as advanced
-              </Button>
-            )}
-
-            <Separator orientation="vertical" className="h-5" />
-
-            {/* Share dropdown: Slack, Email, PDF */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Share (paper plane) */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1.5">
-                  <Send className="h-3.5 w-3.5" />
-                  Share
+                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground">
+                  <Send className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
+              <DropdownMenuContent align="end">
                 <SlackPushDialog showId={id!} show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
                 <EmailBandDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email Band</DropdownMenuItem>} />
                 <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Overflow: Import, Delete */}
+            {/* Overflow — state-dependent contents */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <ParseAdvanceForShowDialog
-                  showId={id!}
-                  currentShow={show as Show}
-                  onUpdated={() => {
-                    queryClient.invalidateQueries({ queryKey: ["show", id] });
-                    queryClient.invalidateQueries({ queryKey: ["shows"] });
-                  }}
-                  trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Import Advance</DropdownMenuItem>}
-                />
+              <DropdownMenuContent align="end">
+                {(show as any).advance_imported_at && (
+                  <ParseAdvanceForShowDialog
+                    showId={id!}
+                    currentShow={show as Show}
+                    onUpdated={() => {
+                      queryClient.invalidateQueries({ queryKey: ["show", id] });
+                      queryClient.invalidateQueries({ queryKey: ["shows"] });
+                    }}
+                    trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Re-import advance</DropdownMenuItem>}
+                  />
+                )}
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={() => setDeleteOpen(true)}
@@ -795,108 +793,28 @@ export default function ShowDetailPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            </div>
-            <TabsList>
-              <TabsTrigger value="show">Show Info</TabsTrigger>
-              <TabsTrigger value="deal">Deal Info</TabsTrigger>
-            </TabsList>
           </div>
+        </div>
 
-          {/* Mobile */}
-          <div className="flex md:hidden flex-col gap-2">
-            {/* Settle Show — prominent, full-width primary action */}
-            {(show as any).is_settled ? (
-              <Button
-                variant="outline"
-                className="h-11 w-full text-sm font-medium border-[hsl(var(--success))] text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.1)] hover:text-[hsl(var(--success))]"
-                onClick={() => setClearSettleOpen(true)}
-              >
-                <CheckCircle2 className="h-4 w-4 mr-2" /> Settled — Tap to Clear
-              </Button>
-            ) : (
-              <Button
-                className="h-11 w-full text-base font-medium bg-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.9)] text-[hsl(var(--success-foreground))]"
-                onClick={() => {
-                  setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
-                  setSettleOpen(true);
-                }}
-              >
-                <CheckCircle2 className="h-5 w-5 mr-2" /> Settle Show
-              </Button>
-            )}
-
-            {/* Advance toggle — secondary */}
-            {(show as any).advanced_at ? (
-              <Button
-                variant="outline"
-                className="h-11 w-full text-sm font-medium border-[hsl(var(--success))] text-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.1)] hover:text-[hsl(var(--success))]"
-                onClick={() => toggleAdvancedMutation.mutate(false)}
-                disabled={toggleAdvancedMutation.isPending}
-              >
-                <CheckCircle2 className="h-4 w-4 mr-2" /> Advanced — Tap to Undo
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                className="h-11 w-full text-sm font-medium gap-2"
-                style={{
-                  color: "var(--pastel-yellow-fg)",
-                  borderColor: "var(--pastel-yellow-fg)",
-                }}
-                onClick={() => toggleAdvancedMutation.mutate(true)}
-                disabled={toggleAdvancedMutation.isPending}
-              >
-                <Circle className="h-4 w-4" /> Mark as advanced
-              </Button>
-            )}
-
-            {/* Secondary actions: Share + Overflow */}
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-11 flex-1 text-sm font-medium gap-2">
-                    <Send className="h-4 w-4" />
-                    Share
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <SlackPushDialog showId={id!} show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
-                  <EmailBandDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email Band</DropdownMenuItem>} />
-                  <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Overflow: Import, Delete */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-11 w-11 text-muted-foreground hover:text-foreground shrink-0">
-                    <MoreHorizontal className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <ParseAdvanceForShowDialog
-                    showId={id!}
-                    currentShow={show as Show}
-                    onUpdated={() => {
-                      queryClient.invalidateQueries({ queryKey: ["show", id] });
-                      queryClient.invalidateQueries({ queryKey: ["shows"] });
-                    }}
-                    trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Import Advance</DropdownMenuItem>}
-                  />
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => setDeleteOpen(true)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Show
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <TabsList className="w-full">
-              <TabsTrigger value="show" className="flex-1">Show Info</TabsTrigger>
-              <TabsTrigger value="deal" className="flex-1">Deal Info</TabsTrigger>
-            </TabsList>
-          </div>
+        {/* Underlined text tabs */}
+        <div className="pt-3 border-b border-border">
+          <TabsList className="h-auto bg-transparent p-0 gap-5 rounded-none">
+            <TabsTrigger
+              value="show"
+              className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
+            >
+              Show Info
+            </TabsTrigger>
+            <TabsTrigger
+              value="deal"
+              className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
+            >
+              Deal Info
+              {!(show as any).advance_imported_at && (
+                <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" aria-hidden />
+              )}
+            </TabsTrigger>
+          </TabsList>
         </div>
       </div>
 
@@ -918,6 +836,56 @@ export default function ShowDetailPage() {
       )}
 
       <TabsContent value="show">
+          {!(show as any).advance_imported_at && !showManualForm ? (
+            <div className="space-y-6 sm:space-y-8">
+              <div className="rounded-xl border border-border bg-card p-6 sm:p-8 text-center animate-fade-in">
+                <div className="inline-flex items-center justify-center rounded-full bg-muted p-3 mb-4">
+                  <Sparkles className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <h3 className="font-display text-xl sm:text-2xl text-foreground tracking-tight mb-2">
+                  Parse an advance email
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto mb-5">
+                  Forward or paste the advance from the promoter. We'll pull the schedule, contacts, tech specs, and hospitality into this show.
+                </p>
+                <ParseAdvanceForShowDialog
+                  showId={id!}
+                  currentShow={show as Show}
+                  onUpdated={() => {
+                    queryClient.invalidateQueries({ queryKey: ["show", id] });
+                    queryClient.invalidateQueries({ queryKey: ["shows"] });
+                  }}
+                  trigger={
+                    <Button className="gap-2">
+                      Import advance <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  }
+                />
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowManualForm(true)}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+                  >
+                    or fill in manually
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2 opacity-50 pointer-events-none select-none">
+                <div className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground border-l-2 border-border pl-2">
+                  Schedule
+                </div>
+                <div className="text-sm text-muted-foreground pl-2">Awaiting advance</div>
+              </div>
+              <div className="space-y-2 opacity-50 pointer-events-none select-none">
+                <div className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground border-l-2 border-border pl-2">
+                  Contacts
+                </div>
+                <div className="text-sm text-muted-foreground pl-2">Awaiting advance</div>
+              </div>
+            </div>
+          ) : (
           <div className="space-y-6 sm:space-y-8">
             {/* Departure — first chronologically */}
             <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
@@ -1177,6 +1145,7 @@ export default function ShowDetailPage() {
               {editField("additional_info", "Details", { multiline: true, alwaysShow: true })}
             </FieldGroup>
           </div>
+          )}
         </TabsContent>
 
         <TabsContent value="deal">
