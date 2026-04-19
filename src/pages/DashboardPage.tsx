@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn, formatCityState } from "@/lib/utils";
 import CreateShowDialog from "@/components/CreateShowDialog";
@@ -61,8 +60,12 @@ function fmtMoney(val: number): string {
   return val ? `$${val.toLocaleString()}` : "—";
 }
 
+// Rolling window used by the dashboard to scope "recent" stats. Stepping stone
+// toward a user-controlled date range picker.
+const SETTLED_WINDOW_MONTHS = 12;
+
 const UPSIDE_TOOLTIP =
-  "Projected earnings at 70% sell-through of walkout potential across remaining shows.";
+  "Projected earnings at 70% sell-through of walkout potential across upcoming shows.";
 
 function projectedUpside(shows: Show[]): number {
   return shows.reduce((acc, s) => {
@@ -189,182 +192,146 @@ export default function DashboardPage() {
     [standaloneShows],
   );
 
-  const toursWithUpcoming = useMemo(
-    () =>
-      tours.filter((t) =>
-        (t.shows ?? []).some((s) => isUpcomingDate(s.date)),
-      ),
-    [tours],
-  );
-
-  // --- Stat cards per scope ---
-  const statCards = useMemo<StatCardData[]>(() => {
+  // --- Dashboard stats per scope (dual-bar Progress + Upcoming Revenue) ---
+  const dashboardStats = useMemo<DashboardStats>(() => {
     const now = new Date();
+    const pctOf = (n: number, total: number) =>
+      total > 0 ? Math.round((n / total) * 100) : 0;
+
     if (scope === "tour" && activeTour) {
-      const total = tourShows.length;
-      const settled = tourShows.filter((s) => s.is_settled);
-      const settledCount = settled.length;
-      const actualIncome = settled.reduce((acc, s) => {
-        const v = parseDollar(s.actual_walkout);
-        return acc + (v ?? 0);
-      }, 0);
-
-      const firstCard: StatCardData = isPastTour
-        ? {
-            label: "Total Shows",
-            value: total,
-            icon: Calendar,
-            iconStyle: { backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" },
-          }
-        : {
-            label: "Remaining Shows",
-            value: `${tourShows.filter((s) => isUpcomingDate(s.date)).length} of ${total}`,
-            icon: Calendar,
-            iconStyle: { backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" },
-          };
-
-      const baseCards: StatCardData[] = [
-        firstCard,
-        {
-          label: "Shows Settled",
-          value: `${settledCount}/${total}`,
-          icon: CheckCircle2,
-          iconStyle: { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" },
-        },
-        {
-          label: "Actual Income",
-          value: fmtMoney(actualIncome),
-          icon: DollarSign,
-          iconStyle: { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" },
-        },
-      ];
-
       if (isPastTour) {
-        const totalGuarantee = tourShows.reduce((acc, s) => {
-          const v = parseDollar(s.guarantee);
-          return acc + (v ?? 0);
+        const totalSettledIncome = tourShows.reduce((acc, s) => {
+          if (!s.is_settled) return acc;
+          return acc + (parseDollar(s.actual_walkout) ?? 0);
         }, 0);
-        return [
-          ...baseCards,
-          {
-            label: "Total Guarantee",
-            value: fmtMoney(totalGuarantee),
-            icon: TrendingUp,
-            iconStyle: { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" },
-          },
-        ];
+        const totalGuarantee = tourShows.reduce(
+          (acc, s) => acc + (parseDollar(s.guarantee) ?? 0),
+          0,
+        );
+        return {
+          kind: "pastTour",
+          totalShows: tourShows.length,
+          totalSettledIncome,
+          totalGuarantee,
+        };
       }
 
+      const total = tourShows.length;
+      const advancedN = tourShows.filter((s) => !!s.advanced_at).length;
+      const settledList = tourShows.filter((s) => s.is_settled);
+      const settledN = settledList.length;
+      const earned = settledList.reduce(
+        (acc, s) => acc + (parseDollar(s.actual_walkout) ?? 0),
+        0,
+      );
       const guaranteedRemaining = tourShows.reduce((acc, s) => {
         if (s.is_settled) return acc;
         if (!isUpcomingDate(s.date)) return acc;
-        const v = parseDollar(s.guarantee);
-        return acc + (v ?? 0);
+        return acc + (parseDollar(s.guarantee) ?? 0);
       }, 0);
       const upside = projectedUpside(tourShows);
-      return [
-        ...baseCards,
-        {
-          label: "Guaranteed Remaining",
-          value: fmtMoney(guaranteedRemaining),
-          icon: TrendingUp,
-          iconStyle: { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" },
-          ...(upside > 0 && { accent: { value: fmtMoney(upside), tooltip: UPSIDE_TOOLTIP } }),
+
+      return {
+        kind: "dual",
+        scope: "tour",
+        label: "Tour Progress",
+        advanced: {
+          n: advancedN,
+          total,
+          pct: pctOf(advancedN, total),
+          remaining: Math.max(0, total - advancedN),
+          hasData: total > 0,
         },
-      ];
+        settled: {
+          n: settledN,
+          total,
+          pct: pctOf(settledN, total),
+          earned,
+          hasData: total > 0,
+        },
+        guaranteedRemaining,
+        upside,
+      };
     }
+
+    const cutoff = subMonths(now, SETTLED_WINDOW_MONTHS);
 
     if (scope === "standalone") {
-      const cutoff = subMonths(now, 12);
-      const recentSettled = standaloneShows.filter((s) => {
-        if (!s.is_settled) return false;
-        const d = parseISO(s.date);
-        return d >= cutoff;
-      });
-      const settledCount = recentSettled.length;
-      const actualIncome = recentSettled.reduce((acc, s) => {
-        const v = parseDollar(s.actual_walkout);
-        return acc + (v ?? 0);
-      }, 0);
+      const advancedTotal = standaloneUpcoming.length;
+      const advancedN = standaloneUpcoming.filter((s) => !!s.advanced_at).length;
+      const recent = standaloneShows.filter((s) => parseISO(s.date) >= cutoff);
+      const recentSettled = recent.filter((s) => s.is_settled);
+      const settledN = recentSettled.length;
+      const earned = recentSettled.reduce(
+        (acc, s) => acc + (parseDollar(s.actual_walkout) ?? 0),
+        0,
+      );
       const guaranteedRemaining = standaloneUpcoming.reduce((acc, s) => {
         if (s.is_settled) return acc;
-        const v = parseDollar(s.guarantee);
-        return acc + (v ?? 0);
+        return acc + (parseDollar(s.guarantee) ?? 0);
       }, 0);
       const upside = projectedUpside(standaloneUpcoming);
-      return [
-        {
-          label: "Upcoming Standalones",
-          value: standaloneUpcoming.length,
-          icon: Calendar,
-          iconStyle: { backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" },
+
+      return {
+        kind: "dual",
+        scope: "standalone",
+        label: "Recent Progress",
+        advanced: {
+          n: advancedN,
+          total: advancedTotal,
+          pct: pctOf(advancedN, advancedTotal),
+          remaining: Math.max(0, advancedTotal - advancedN),
+          hasData: advancedTotal > 0,
         },
-        {
-          label: "Settled (12 mo)",
-          value: settledCount,
-          icon: CheckCircle2,
-          iconStyle: { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" },
+        settled: {
+          n: settledN,
+          total: recent.length,
+          pct: pctOf(settledN, recent.length),
+          earned,
+          hasData: recent.length > 0,
         },
-        {
-          label: "Actual Income",
-          value: fmtMoney(actualIncome),
-          icon: DollarSign,
-          iconStyle: { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" },
-        },
-        {
-          label: "Guaranteed Remaining",
-          value: fmtMoney(guaranteedRemaining),
-          icon: TrendingUp,
-          iconStyle: { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" },
-          ...(upside > 0 && { accent: { value: fmtMoney(upside), tooltip: UPSIDE_TOOLTIP } }),
-        },
-      ];
+        guaranteedRemaining,
+        upside,
+      };
     }
 
-    // scope === "upcoming"
-    const cutoff = subMonths(now, 12);
-    const recentSettled = shows.filter((s) => {
-      if (!s.is_settled) return false;
-      const d = parseISO(s.date);
-      return d >= cutoff;
-    });
-    const actualIncome = recentSettled.reduce((acc, s) => {
-      const v = parseDollar(s.actual_walkout);
-      return acc + (v ?? 0);
-    }, 0);
+    // scope === "upcoming" — All Shows
+    const advancedTotal = allUpcoming.length;
+    const advancedN = allUpcoming.filter((s) => !!s.advanced_at).length;
+    const recent = shows.filter((s) => parseISO(s.date) >= cutoff);
+    const recentSettled = recent.filter((s) => s.is_settled);
+    const settledN = recentSettled.length;
+    const earned = recentSettled.reduce(
+      (acc, s) => acc + (parseDollar(s.actual_walkout) ?? 0),
+      0,
+    );
     const guaranteedRemaining = allUpcoming.reduce((acc, s) => {
       if (s.is_settled) return acc;
-      const v = parseDollar(s.guarantee);
-      return acc + (v ?? 0);
+      return acc + (parseDollar(s.guarantee) ?? 0);
     }, 0);
     const upside = projectedUpside(allUpcoming);
-    return [
-      {
-        label: "Upcoming Shows",
-        value: allUpcoming.length,
-        icon: Calendar,
-        iconStyle: { backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" },
+
+    return {
+      kind: "dual",
+      scope: "upcoming",
+      label: "Recent Progress",
+      advanced: {
+        n: advancedN,
+        total: advancedTotal,
+        pct: pctOf(advancedN, advancedTotal),
+        remaining: Math.max(0, advancedTotal - advancedN),
+        hasData: advancedTotal > 0,
       },
-      {
-        label: "Settled (12 mo)",
-        value: recentSettled.length,
-        icon: CheckCircle2,
-        iconStyle: { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" },
+      settled: {
+        n: settledN,
+        total: recent.length,
+        pct: pctOf(settledN, recent.length),
+        earned,
+        hasData: recent.length > 0,
       },
-      {
-        label: "Actual Income",
-        value: fmtMoney(actualIncome),
-        icon: DollarSign,
-        iconStyle: { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" },
-      },
-      {
-        label: "Guaranteed Remaining",
-        value: fmtMoney(guaranteedRemaining),
-        icon: TrendingUp,
-        iconStyle: { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" },
-        ...(upside > 0 && { accent: { value: fmtMoney(upside), tooltip: UPSIDE_TOOLTIP } }),
-      },
-    ];
+      guaranteedRemaining,
+      upside,
+    };
   }, [scope, activeTour, isPastTour, tourShows, standaloneShows, standaloneUpcoming, allUpcoming, shows]);
 
   // --- Featured show + list per scope ---
@@ -457,7 +424,7 @@ export default function DashboardPage() {
     ) : scope === "standalone" ? (
       <p className="text-sm text-muted-foreground mt-0.5">Standalone shows</p>
     ) : (
-      <p className="text-sm text-muted-foreground mt-0.5">All upcoming work</p>
+      <p className="text-sm text-muted-foreground mt-0.5">All shows, last 12 months and upcoming</p>
     );
 
   // The scope key drives section keys so React replays the stagger animation
@@ -503,7 +470,7 @@ export default function DashboardPage() {
           onClick={setScopeStandalone}
         />
         <ScopePill
-          label="All Upcoming"
+          label="All Shows"
           active={scope === "upcoming"}
           onClick={setScopeUpcoming}
         />
@@ -511,17 +478,15 @@ export default function DashboardPage() {
 
       {/* Stat cards */}
       <div key={`stats:${scopeKey}`}>
-        <div className="stagger-list grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-          {statCards.map((card) => (
-            <StatCard
-              key={card.label}
-              label={card.label}
-              value={card.value}
-              icon={card.icon}
-              iconStyle={card.iconStyle}
-              accent={card.accent}
-            />
-          ))}
+        <div className="stagger-list grid grid-cols-1 lg:grid-cols-3 gap-3">
+          {dashboardStats.kind === "pastTour" ? (
+            <TourCompleteCard stats={dashboardStats} />
+          ) : (
+            <>
+              <ProgressCard stats={dashboardStats} />
+              <UpcomingRevenueCard stats={dashboardStats} />
+            </>
+          )}
         </div>
       </div>
 
@@ -618,98 +583,200 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Tour Progress */}
-      {toursWithUpcoming.length > 0 && (
-        <div>
-          <SectionLabel>Tour Progress</SectionLabel>
-          <div
-            className={cn("grid w-full gap-3", toursWithUpcoming.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}
-          >
-            {toursWithUpcoming.map((tour) => {
-              const total = tour.shows?.length ?? 0;
-              const advanced = (tour.shows ?? []).filter((s) => !!(s as any).advanced_at).length;
-              const pct = total > 0 ? (advanced / total) * 100 : 0;
-              return (
-                <Link key={tour.id} to={`/shows?view=tour&tourId=${tour.id}`} className="w-full block card-pressable">
-                  <div className="rounded-lg border bg-card text-card-foreground w-full hover:border-foreground/20 [transition:border-color_160ms_var(--ease-out),box-shadow_200ms_var(--ease-out)]">
-                    <div className="pt-5 pb-4 px-6">
-                      <p className="text-sm font-medium text-foreground truncate">{tour.name}</p>
-                      {tour.start_date && tour.end_date && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {format(parseISO(tour.start_date), "MMM d")} –{" "}
-                          {format(parseISO(tour.end_date), "MMM d, yyyy")}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2 mt-3">
-                        <Progress value={pct} className="h-1.5 flex-1" />
-                        <span className="text-xs text-muted-foreground shrink-0">
-                          {advanced}/{total} · {Math.round(pct)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-/* --- Sub-components --- */
+/* --- Dashboard stats types + sub-components --- */
 
-interface StatCardData {
-  label: string;
-  value: string | number;
-  icon: React.ElementType;
-  iconStyle: React.CSSProperties;
-  accent?: { value: string; tooltip: string };
+type DualScope = "tour" | "standalone" | "upcoming";
+
+type DualBar = {
+  n: number;
+  total: number;
+  pct: number;
+  hasData: boolean;
+};
+
+type DashboardStats =
+  | {
+      kind: "dual";
+      scope: DualScope;
+      label: string;
+      advanced: DualBar & { remaining: number };
+      settled: DualBar & { earned: number };
+      guaranteedRemaining: number;
+      upside: number;
+    }
+  | {
+      kind: "pastTour";
+      totalShows: number;
+      totalSettledIncome: number;
+      totalGuarantee: number;
+    };
+
+function Bar({
+  leftLabel,
+  rightLabel,
+  pct,
+  color,
+  tooltip,
+}: {
+  leftLabel: string;
+  rightLabel: string;
+  pct: number;
+  color: string;
+  tooltip: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs mb-1.5">
+        <span className="text-muted-foreground">{leftLabel}</span>
+        <span className="text-foreground font-medium">{rightLabel}</span>
+      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={`${leftLabel}: ${rightLabel}`}
+            className="block w-full h-1.5 rounded-full bg-muted overflow-hidden cursor-help [transition:filter_150ms_var(--ease-out)] hover:[filter:brightness(1.1)]"
+          >
+            <span
+              className="block h-full rounded-full"
+              style={{ width: `${pct}%`, backgroundColor: color }}
+            />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{tooltip}</TooltipContent>
+      </Tooltip>
+    </div>
+  );
 }
 
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  iconStyle,
-  accent,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ElementType;
-  iconStyle: React.CSSProperties;
-  accent?: { value: string; tooltip: string };
-}) {
+function ProgressCard({ stats }: { stats: Extract<DashboardStats, { kind: "dual" }> }) {
+  const { label, advanced, settled, scope } = stats;
+
+  const advancedRight = advanced.hasData
+    ? `${advanced.n} of ${advanced.total} · ${advanced.pct}%`
+    : "0 of 0 · 0%";
+
+  const advancedTooltip = !advanced.hasData
+    ? scope === "tour"
+      ? "No shows on this tour yet"
+      : scope === "standalone"
+        ? "No upcoming standalone shows"
+        : "No upcoming shows"
+    : advanced.remaining > 0
+      ? `${advanced.remaining} shows still to advance`
+      : "All caught up";
+
+  const settledRight = settled.hasData
+    ? `${settled.n} of ${settled.total}`
+    : "0 of 0";
+
+  const settledTooltip = settled.hasData
+    ? `${fmtMoney(settled.earned)} earned`
+    : "No recent shows";
+
+  return (
+    <Card className="overflow-hidden shadow-none lg:col-span-2">
+      <CardContent className="pt-4 pb-4 px-4">
+        <div className="flex items-center gap-2 mb-4">
+          <div
+            className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
+            style={{ backgroundColor: "var(--pastel-purple-bg)", color: "var(--pastel-purple-fg)" }}
+          >
+            <TrendingUp className="h-3.5 w-3.5" />
+          </div>
+          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium leading-tight">
+            {label}
+          </span>
+        </div>
+        <div className="space-y-3">
+          <Bar
+            leftLabel="Advanced"
+            rightLabel={advancedRight}
+            pct={advanced.pct}
+            color="var(--pastel-purple-fg)"
+            tooltip={advancedTooltip}
+          />
+          <Bar
+            leftLabel="Settled"
+            rightLabel={settledRight}
+            pct={settled.pct}
+            color="var(--pastel-green-fg)"
+            tooltip={settledTooltip}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function UpcomingRevenueCard({ stats }: { stats: Extract<DashboardStats, { kind: "dual" }> }) {
+  const { guaranteedRemaining, upside } = stats;
   return (
     <Card className="overflow-hidden shadow-none">
       <CardContent className="pt-4 pb-3 px-4">
         <div className="flex items-center gap-2 mb-2">
           <div
             className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
-            style={iconStyle}
+            style={{ backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }}
           >
-            <Icon className="h-3.5 w-3.5" />
+            <DollarSign className="h-3.5 w-3.5" />
           </div>
-          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium leading-tight">{label}</span>
+          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium leading-tight">
+            Upcoming Revenue
+          </span>
         </div>
-        <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em]">{value}</p>
-        {accent && (
+        <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em]">
+          {fmtMoney(guaranteedRemaining)}
+        </p>
+        {upside > 0 && (
           <div
             className="text-xs mt-1 flex items-center gap-1"
-            style={{ color: "var(--pastel-green-fg)" }}
+            style={{ color: "var(--pastel-lime-fg)" }}
           >
-            <span>+ {accent.value} projected</span>
+            <span>+ {fmtMoney(upside)} upside</span>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="inline-flex cursor-help" aria-label="Projection details">
+                <span className="inline-flex cursor-help" aria-label="Upside details">
                   <Info className="h-3 w-3" />
                 </span>
               </TooltipTrigger>
-              <TooltipContent>{accent.tooltip}</TooltipContent>
+              <TooltipContent>{UPSIDE_TOOLTIP}</TooltipContent>
             </Tooltip>
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// TODO: proper tour recap design
+function TourCompleteCard({
+  stats,
+}: {
+  stats: Extract<DashboardStats, { kind: "pastTour" }>;
+}) {
+  const { totalShows, totalSettledIncome, totalGuarantee } = stats;
+  return (
+    <Card className="overflow-hidden shadow-none lg:col-span-3">
+      <CardContent className="pt-4 pb-3 px-4">
+        <div className="flex items-center gap-2 mb-2">
+          <div
+            className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
+            style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+          </div>
+          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium leading-tight">
+            Tour Complete
+          </span>
+        </div>
+        <p className="text-sm text-foreground">
+          {totalShows} shows · {fmtMoney(totalSettledIncome)} earned · {fmtMoney(totalGuarantee)} guaranteed
+        </p>
       </CardContent>
     </Card>
   );

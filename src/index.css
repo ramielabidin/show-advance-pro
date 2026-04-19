@@ -88,6 +88,10 @@
     --pastel-green-fg: #346538;
     --pastel-yellow-bg: #fbf3db;
     --pastel-yellow-fg: #956400;
+    --pastel-purple-bg: #efe8fa;
+    --pastel-purple-fg: #5b4a9f;
+    --pastel-lime-bg: #eef4dc;
+    --pastel-lime-fg: #5a7a2a;
   }
 
   .dark {
@@ -136,6 +140,10 @@
     --pastel-green-fg: #b5d1b0;
     --pastel-yellow-bg: hsla(40, 40%, 20%, 0.5);
     --pastel-yellow-fg: #e8c988;
+    --pastel-purple-bg: hsla(255, 35%, 22%, 0.5);
+    --pastel-purple-fg: #c8bce8;
+    --pastel-lime-bg: hsla(80, 35%, 18%, 0.5);
+    --pastel-lime-fg: #c3d98a;
   }
 }
 
