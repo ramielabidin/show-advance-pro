@@ -17,11 +17,12 @@ import {
   DollarSign,
   CheckCircle2,
   Circle,
-  Music,
+  Info,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn, formatCityState } from "@/lib/utils";
 import CreateShowDialog from "@/components/CreateShowDialog";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
@@ -58,6 +59,18 @@ function autoPickedTourId(tours: TourWithShows[]): string | null {
 
 function fmtMoney(val: number): string {
   return val ? `$${val.toLocaleString()}` : "—";
+}
+
+const UPSIDE_TOOLTIP =
+  "Projected earnings at 70% sell-through of walkout potential across remaining shows.";
+
+function projectedUpside(shows: Show[]): number {
+  return shows.reduce((acc, s) => {
+    if (s.is_settled) return acc;
+    if (!isUpcomingDate(s.date)) return acc;
+    const walkout = parseDollar(s.walkout_potential) ?? 0;
+    return acc + walkout * 0.7;
+  }, 0);
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -185,7 +198,7 @@ export default function DashboardPage() {
   );
 
   // --- Stat cards per scope ---
-  const statCards = useMemo(() => {
+  const statCards = useMemo<StatCardData[]>(() => {
     const now = new Date();
     if (scope === "tour" && activeTour) {
       const total = tourShows.length;
@@ -196,13 +209,22 @@ export default function DashboardPage() {
         return acc + (v ?? 0);
       }, 0);
 
+      const firstCard: StatCardData = isPastTour
+        ? {
+            label: "Total Shows",
+            value: total,
+            icon: Calendar,
+            iconStyle: { backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" },
+          }
+        : {
+            label: "Remaining Shows",
+            value: `${tourShows.filter((s) => isUpcomingDate(s.date)).length} of ${total}`,
+            icon: Calendar,
+            iconStyle: { backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" },
+          };
+
       const baseCards: StatCardData[] = [
-        {
-          label: "Shows This Tour",
-          value: total,
-          icon: Calendar,
-          iconStyle: { backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" },
-        },
+        firstCard,
         {
           label: "Shows Settled",
           value: `${settledCount}/${total}`,
@@ -239,6 +261,7 @@ export default function DashboardPage() {
         const v = parseDollar(s.guarantee);
         return acc + (v ?? 0);
       }, 0);
+      const upside = projectedUpside(tourShows);
       return [
         ...baseCards,
         {
@@ -246,6 +269,7 @@ export default function DashboardPage() {
           value: fmtMoney(guaranteedRemaining),
           icon: TrendingUp,
           iconStyle: { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" },
+          ...(upside > 0 && { accent: { value: fmtMoney(upside), tooltip: UPSIDE_TOOLTIP } }),
         },
       ];
     }
@@ -267,6 +291,7 @@ export default function DashboardPage() {
         const v = parseDollar(s.guarantee);
         return acc + (v ?? 0);
       }, 0);
+      const upside = projectedUpside(standaloneUpcoming);
       return [
         {
           label: "Upcoming Standalones",
@@ -291,12 +316,12 @@ export default function DashboardPage() {
           value: fmtMoney(guaranteedRemaining),
           icon: TrendingUp,
           iconStyle: { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" },
+          ...(upside > 0 && { accent: { value: fmtMoney(upside), tooltip: UPSIDE_TOOLTIP } }),
         },
       ];
     }
 
     // scope === "upcoming"
-    const distinctTourIds = new Set<string>();
     const cutoff = subMonths(now, 12);
     const recentSettled = shows.filter((s) => {
       if (!s.is_settled) return false;
@@ -307,14 +332,12 @@ export default function DashboardPage() {
       const v = parseDollar(s.actual_walkout);
       return acc + (v ?? 0);
     }, 0);
-    let guaranteedRemaining = 0;
-    allUpcoming.forEach((s) => {
-      if (s.tour_id) distinctTourIds.add(s.tour_id);
-      if (!s.is_settled) {
-        const v = parseDollar(s.guarantee);
-        if (v != null) guaranteedRemaining += v;
-      }
-    });
+    const guaranteedRemaining = allUpcoming.reduce((acc, s) => {
+      if (s.is_settled) return acc;
+      const v = parseDollar(s.guarantee);
+      return acc + (v ?? 0);
+    }, 0);
+    const upside = projectedUpside(allUpcoming);
     return [
       {
         label: "Upcoming Shows",
@@ -323,10 +346,10 @@ export default function DashboardPage() {
         iconStyle: { backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" },
       },
       {
-        label: "Tours Active",
-        value: distinctTourIds.size,
-        icon: Music,
-        iconStyle: { backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" },
+        label: "Settled (12 mo)",
+        value: recentSettled.length,
+        icon: CheckCircle2,
+        iconStyle: { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" },
       },
       {
         label: "Actual Income",
@@ -339,6 +362,7 @@ export default function DashboardPage() {
         value: fmtMoney(guaranteedRemaining),
         icon: TrendingUp,
         iconStyle: { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" },
+        ...(upside > 0 && { accent: { value: fmtMoney(upside), tooltip: UPSIDE_TOOLTIP } }),
       },
     ];
   }, [scope, activeTour, isPastTour, tourShows, standaloneShows, standaloneUpcoming, allUpcoming, shows]);
@@ -495,6 +519,7 @@ export default function DashboardPage() {
               value={card.value}
               icon={card.icon}
               iconStyle={card.iconStyle}
+              accent={card.accent}
             />
           ))}
         </div>
@@ -640,6 +665,7 @@ interface StatCardData {
   value: string | number;
   icon: React.ElementType;
   iconStyle: React.CSSProperties;
+  accent?: { value: string; tooltip: string };
 }
 
 function StatCard({
@@ -647,11 +673,13 @@ function StatCard({
   value,
   icon: Icon,
   iconStyle,
+  accent,
 }: {
   label: string;
   value: string | number;
   icon: React.ElementType;
   iconStyle: React.CSSProperties;
+  accent?: { value: string; tooltip: string };
 }) {
   return (
     <Card className="overflow-hidden shadow-none">
@@ -666,6 +694,22 @@ function StatCard({
           <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium leading-tight">{label}</span>
         </div>
         <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em]">{value}</p>
+        {accent && (
+          <div
+            className="text-xs mt-1 flex items-center gap-1"
+            style={{ color: "var(--pastel-green-fg)" }}
+          >
+            <span>+ {accent.value} projected</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex cursor-help" aria-label="Projection details">
+                  <Info className="h-3 w-3" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{accent.tooltip}</TooltipContent>
+            </Tooltip>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
