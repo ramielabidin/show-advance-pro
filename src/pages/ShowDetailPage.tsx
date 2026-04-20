@@ -470,7 +470,7 @@ export default function ShowDetailPage() {
       if (opts?.structuredTime) {
         return (
           <div ref={inlineRef} className="space-y-2">
-            <Label className="text-xs text-muted-foreground">{label}</Label>
+            <Label className="label-small">{label}</Label>
             <TimeInput
               value={inlineValue}
               onChange={(val) => setInlineValue(val)}
@@ -484,7 +484,7 @@ export default function ShowDetailPage() {
 
       return (
         <div ref={inlineRef} className="space-y-1">
-          <Label className="text-xs text-muted-foreground">{label}</Label>
+          <Label className="label-small">{label}</Label>
           {opts?.multiline ? (
             <Textarea
               value={inlineValue}
@@ -542,7 +542,7 @@ export default function ShowDetailPage() {
     if (isInlineGuest) {
       return (
         <div ref={inlineRef} className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Guest List</Label>
+          <Label className="label-small">Guest List</Label>
           <GuestListEditor
             value={inlineValue}
             capacity={show.venue_capacity}
@@ -1086,23 +1086,23 @@ export default function ShowDetailPage() {
                   return (
                     <div ref={inlineRef} className="space-y-2">
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Name</Label>
+                        <Label className="label-small">Name</Label>
                         <Input value={hotelForm.hotel_name ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_name: e.target.value }))} className="text-sm h-9" autoFocus />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Address</Label>
+                        <Label className="label-small">Address</Label>
                         <Input value={hotelForm.hotel_address ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_address: e.target.value }))} className="text-sm h-9" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Confirmation #</Label>
+                        <Label className="label-small">Confirmation #</Label>
                         <Input value={hotelForm.hotel_confirmation ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_confirmation: e.target.value }))} className="text-sm h-9 font-mono" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Check In</Label>
+                        <Label className="label-small">Check In</Label>
                         <Input value={hotelForm.hotel_checkin ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkin: e.target.value }))} className="text-sm h-9 font-mono" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Check Out</Label>
+                        <Label className="label-small">Check Out</Label>
                         <Input value={hotelForm.hotel_checkout ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkout: e.target.value }))} className="text-sm h-9 font-mono" />
                       </div>
                       <InlineActions onSave={saveHotelGroup} onCancel={cancelInline} />
@@ -1180,7 +1180,7 @@ export default function ShowDetailPage() {
                       const hasTier = backendDealForm.showTierRow;
                       return (
                         <div ref={inlineRef} className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Backend Deal</Label>
+                          <Label className="label-small">Backend Deal</Label>
 
                           {/* Row 1: percentage + GBOR/NBOR + vs/plus */}
                           <div className="flex items-center gap-2 flex-wrap">

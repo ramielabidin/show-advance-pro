@@ -48,7 +48,7 @@ export default function FieldRow({ label, value, mono, compact, noLabel }: Field
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-      <span className={cn("text-sm text-muted-foreground sm:shrink-0", compact ? "sm:w-16" : "sm:w-32")}>{label}</span>
+      <span className={cn("label-small sm:shrink-0 pt-0.5", compact ? "sm:w-16" : "sm:w-32")}>{label.toLowerCase()}</span>
       {listItems ? (
         <ol className="text-sm text-foreground list-decimal list-outside pl-4 space-y-1">
           {listItems.map((item, i) => (

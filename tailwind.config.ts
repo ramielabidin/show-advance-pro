@@ -16,7 +16,7 @@ export default {
       fontFamily: {
         sans: ["DM Sans", "system-ui", "sans-serif"],
         display: ["DM Serif Display", "Georgia", "serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
       },
       colors: {
         border: "hsl(var(--border))",

@@ -197,9 +197,7 @@ export default function TourPicker({
           <div className="max-h-[360px] overflow-y-auto p-2">
             {active.length > 0 && (
               <div className="mb-1">
-                <div className="px-2 pt-1 pb-1.5 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
-                  Active
-                </div>
+                <div className="label-smaller px-2 pt-1 pb-1.5">active</div>
                 {active.map((t) => (
                   <TourRow
                     key={t.id}
@@ -215,9 +213,7 @@ export default function TourPicker({
             )}
             {upcoming.length > 0 && (
               <div className="mb-1">
-                <div className="px-2 pt-2 pb-1.5 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
-                  Upcoming
-                </div>
+                <div className="label-smaller px-2 pt-2 pb-1.5">upcoming</div>
                 {upcoming.map((t) => (
                   <TourRow
                     key={t.id}
@@ -233,9 +229,7 @@ export default function TourPicker({
             )}
             {past.length > 0 && (
               <div className="mb-1">
-                <div className="px-2 pt-2 pb-1.5 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
-                  Past
-                </div>
+                <div className="label-smaller px-2 pt-2 pb-1.5">past</div>
                 {past.map((t) => (
                   <TourRow
                     key={t.id}

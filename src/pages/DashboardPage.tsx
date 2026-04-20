@@ -98,8 +98,10 @@ function projectedUpside(shows: Show[]): number {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-3 border-b border-border/60 pb-2">
-      <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">{children}</span>
+    <div className="mb-3 border-l border-border pl-2.5">
+      <span className="label-smaller">
+        {typeof children === "string" ? children.toLowerCase() : children}
+      </span>
     </div>
   );
 }
@@ -448,9 +450,7 @@ export default function DashboardPage() {
 
       {/* Scope selector */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium mr-1">
-          View
-        </span>
+        <span className="label-smaller mr-1">view</span>
         <TourPicker
           selectedTourId={scope === "tour" ? activeTourId : null}
           selectedTourName={scope === "tour" ? activeTour?.name ?? null : null}
@@ -629,9 +629,7 @@ function ProgressCard({
           >
             <TrendingUp className="h-3.5 w-3.5" />
           </div>
-          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium leading-tight">
-            {progressLabel}
-          </span>
+          <span className="label-small leading-tight">{progressLabel.toLowerCase()}</span>
         </div>
 
         <div className="space-y-3">
@@ -798,9 +796,7 @@ function PastTourCard({
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
           </div>
-          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium leading-tight">
-            Tour Complete
-          </span>
+          <span className="label-small leading-tight">tour complete</span>
         </div>
         <p className="text-sm text-foreground">
           {totalShows} shows

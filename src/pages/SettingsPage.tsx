@@ -481,7 +481,7 @@ export default function SettingsPage() {
 
       {/* ── Active Artist ── */}
       <div className="rounded-lg border bg-card p-4 sm:p-6">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Active Artist</p>
+        <p className="label-small mb-2">active artist</p>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
@@ -654,9 +654,7 @@ export default function SettingsPage() {
         <Separator />
 
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
-            Recent Inbound Emails
-          </p>
+          <p className="label-small mb-2">recent inbound emails</p>
           {recentInboundEvents.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground">
               <Mail className="h-7 w-7 mx-auto mb-2 opacity-40" />
@@ -884,7 +882,7 @@ export default function SettingsPage() {
 
         {invites.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Pending Invites</p>
+            <p className="label-small">pending invites</p>
             {invites.map((inv) => (
               <div key={inv.id} className="flex items-center justify-between rounded-md border border-dashed px-3 py-2.5 sm:py-2">
                 <span className="text-sm text-muted-foreground truncate">{inv.email}</span>

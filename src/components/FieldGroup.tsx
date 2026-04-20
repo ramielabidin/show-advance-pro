@@ -11,10 +11,9 @@ interface FieldGroupProps {
 export default function FieldGroup({ title, children, className, contentClassName, incomplete }: FieldGroupProps) {
   return (
     <div className={className}>
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-0.5 h-3.5 rounded-full bg-foreground/25 shrink-0" />
-        <h3 className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-          {title}
+      <div className="border-l border-border pl-2.5 mb-4">
+        <h3 className="label-smaller flex items-center gap-1.5">
+          {title.toLowerCase()}
           {incomplete && <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />}
         </h3>
       </div>

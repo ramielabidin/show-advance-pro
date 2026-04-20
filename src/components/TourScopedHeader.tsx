@@ -130,7 +130,7 @@ export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: Tou
     <div className="mb-6">
       <div className="flex items-start sm:items-center justify-between gap-4 mb-2">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium mb-0.5">Tour</p>
+          <p className="label-smaller mb-0.5">tour</p>
           {editing ? (
             <Input
               value={form.name}

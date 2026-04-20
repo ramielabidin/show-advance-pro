@@ -42,13 +42,13 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
     >
       <div className="flex items-center gap-3 sm:gap-5 min-w-0">
         <div className="text-center w-12 sm:w-14 shrink-0">
-          <div className="text-[10px] sm:text-xs font-medium uppercase text-muted-foreground">
-            {format(date, "MMM")}
+          <div className="label-small sm:text-[11px]">
+            {format(date, "MMM").toLowerCase()}
           </div>
           <div className="text-xl sm:text-2xl font-display text-foreground leading-tight">
             {format(date, "d")}
           </div>
-          <div className="text-[10px] sm:text-xs text-muted-foreground">{format(date, "EEE")}</div>
+          <div className="label-small sm:text-[11px] tracking-[0.12em]">{format(date, "EEE").toLowerCase()}</div>
         </div>
         <div className="border-l pl-3 sm:pl-5 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">

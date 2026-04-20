@@ -193,9 +193,7 @@ export default function ShowsPage() {
       {/* View toggle + upcoming/past tabs */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
-            View
-          </span>
+          <span className="label-smaller">view</span>
           <ViewPill label="All" active={view === "all"} onClick={() => setView("all")} />
           <TourPicker
             selectedTourId={view === "tour" ? tourId : null}
