@@ -1,7 +1,8 @@
 import { format, parseISO } from "date-fns";
 import { Users } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import FieldGroup from "@/components/FieldGroup";
-import { formatCityState } from "@/lib/utils";
+import { cn, formatCityState } from "@/lib/utils";
 import { parseGuestList, guestTotal } from "@/components/GuestListEditor";
 import type { GuestShowPayload } from "@/lib/guestLinks";
 
@@ -53,18 +54,33 @@ export default function DoorListGuestView({ show }: DoorListGuestViewProps) {
           }
           const total = guestTotal(entries);
           return (
-            <div className="space-y-2">
-              <ul className="space-y-1">
+            <div className="space-y-3">
+              <Card className="p-3 sm:p-4">
                 {entries.map((entry, i) => (
-                  <li key={i} className="flex items-baseline gap-2 text-sm">
-                    <span className="text-foreground break-words">{entry.name}</span>
+                  <div
+                    key={i}
+                    className={cn(
+                      "grid grid-cols-[32px_1fr_auto] sm:grid-cols-[40px_1fr_auto] gap-3 items-baseline py-3 sm:py-3.5 px-1",
+                      i < entries.length - 1 && "border-b border-border/60",
+                    )}
+                  >
+                    <span className="font-mono text-xs sm:text-sm text-muted-foreground tabular-nums">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="font-display text-xl sm:text-2xl tracking-[-0.01em] leading-tight text-foreground break-words">
+                      {entry.name}
+                    </span>
                     {entry.plusOnes > 0 ? (
-                      <span className="text-xs text-muted-foreground">+{entry.plusOnes}</span>
-                    ) : null}
-                  </li>
+                      <span className="font-mono text-xs sm:text-sm text-muted-foreground shrink-0">
+                        +{entry.plusOnes}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                  </div>
                 ))}
-              </ul>
-              <div className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
+              </Card>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Users className="h-3 w-3" />
                 <span>
                   {total} guest{total !== 1 ? "s" : ""}
