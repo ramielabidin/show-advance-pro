@@ -267,7 +267,7 @@ For loading UI, use React Query's `isLoading` / `isPending` (and `isFetching` wh
 
 ## UI & Design
 
-When making any frontend changes — components, pages, modals, layouts, styling — read and follow `docs/design-system.md` before writing any code.
+When making any frontend changes — components, pages, modals, layouts, styling — consult `docs/design-system.md` and '.claude/skills/advance-design' before writing any code.
 
 For logic-only changes (edge functions, migrations, Supabase queries, API routes, utility functions, type definitions), skip the design system doc entirely.
 
