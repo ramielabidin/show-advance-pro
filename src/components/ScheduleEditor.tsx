@@ -62,7 +62,7 @@ export default function ScheduleEditor({ initial, onSave, onCancel, saving }: Sc
               value={row.label}
               onChange={(e) => update(i, { label: e.target.value })}
               placeholder="Activity"
-              className="text-sm h-9 flex-1"
+              className="text-sm h-11 sm:h-9 flex-1"
             />
             <Button
               type="button"
