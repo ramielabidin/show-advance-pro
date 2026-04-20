@@ -484,9 +484,6 @@ export default function DashboardPage() {
 
       {/* Scope selector */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium mr-1">
-          View
-        </span>
         <TourPicker
           selectedTourId={scope === "tour" ? activeTourId : null}
           selectedTourName={scope === "tour" ? activeTour?.name ?? null : null}
@@ -630,7 +627,7 @@ function ProgressCard({
 
   return (
     <Card className={cn("overflow-hidden shadow-none", className)}>
-      <CardContent className="pt-3 pb-3 px-4">
+      <CardContent className="pt-3 pb-4 px-4">
         <div className="flex items-center gap-2 mb-3">
           <div
             className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
