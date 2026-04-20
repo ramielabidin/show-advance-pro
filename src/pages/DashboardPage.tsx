@@ -726,7 +726,7 @@ function RevenueCard({
               Revenue
             </span>
           </div>
-          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0 -rotate-90" />
         </button>
       </Card>
     );
@@ -742,69 +742,69 @@ function RevenueCard({
   return (
     <Card className="overflow-hidden shadow-none">
       <CardContent className="pt-3 pb-4 px-4">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="h-7 w-7 shrink-0" aria-hidden />
-          <div className="grid grid-cols-2 gap-0.5 bg-secondary border border-border/60 p-[3px] rounded-md flex-1">
-            {(["earned", "upcoming"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                className={cn(
-                  "h-7 text-xs font-medium rounded-[4px] transition-colors flex items-center justify-center",
-                  mode === m
-                    ? "bg-background text-foreground border border-border/60"
-                    : "text-muted-foreground",
+        <div className="flex items-start justify-between gap-2">
+          <div key={mode} className="animate-in fade-in-0 duration-150 min-w-0 flex-1">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium leading-tight">
+              {mode === "earned" ? "Earned" : "Upcoming"}
+            </p>
+            {mode === "earned" ? (
+              <>
+                <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl mt-1">
+                  {fmtMoney(earnedIncome)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2 truncate">{earnedSubline}</p>
+              </>
+            ) : (
+              <>
+                <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl mt-1">
+                  {guaranteedRemaining === 0 ? "—" : fmtMoney(guaranteedRemaining)}
+                </p>
+                {upside > 0 && (
+                  <div
+                    className="text-xs mt-2 flex items-center gap-1"
+                    style={{ color: "var(--pastel-green-fg)" }}
+                  >
+                    <span>+ {fmtMoney(upside)} upside</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex cursor-help" aria-label="Upside details">
+                          <Info className="h-3 w-3" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{UPSIDE_TOOLTIP}</TooltipContent>
+                    </Tooltip>
+                  </div>
                 )}
-              >
-                {m === "earned" ? "Earned" : "Upcoming"}
-              </button>
-            ))}
+              </>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)] shrink-0"
-            aria-label="Collapse revenue card"
-          >
-            <ChevronDown className="h-4 w-4 rotate-180" />
-          </button>
-        </div>
-
-        <div
-          key={mode}
-          className="animate-in fade-in-0 duration-150 flex items-baseline justify-center gap-x-2 gap-y-1 flex-wrap"
-        >
-          {mode === "earned" ? (
-            <>
-              <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl">
-                {fmtMoney(earnedIncome)}
-              </p>
-              <p className="text-xs text-muted-foreground">{earnedSubline}</p>
-            </>
-          ) : (
-            <>
-              <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl">
-                {guaranteedRemaining === 0 ? "—" : fmtMoney(guaranteedRemaining)}
-              </p>
-              {upside > 0 && (
-                <div
-                  className="text-xs flex items-center gap-1"
-                  style={{ color: "var(--pastel-green-fg)" }}
+          <div className="flex items-center gap-1 shrink-0">
+            <div className="grid grid-cols-2 gap-0.5 bg-secondary border border-border/60 p-[3px] rounded-md">
+              {(["earned", "upcoming"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m)}
+                  className={cn(
+                    "h-7 px-2 text-xs font-medium rounded-[4px] transition-colors flex items-center justify-center",
+                    mode === m
+                      ? "bg-background text-foreground border border-border/60"
+                      : "text-muted-foreground",
+                  )}
                 >
-                  <span>+ {fmtMoney(upside)} upside</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex cursor-help" aria-label="Upside details">
-                        <Info className="h-3 w-3" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>{UPSIDE_TOOLTIP}</TooltipContent>
-                  </Tooltip>
-                </div>
-              )}
-            </>
-          )}
+                  {m === "earned" ? "Earned" : "Upcoming"}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              aria-label="Collapse revenue card"
+              className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent [transition:background-color_150ms_var(--ease-out)]"
+            >
+              <ChevronDown className="h-4 w-4 rotate-180" />
+            </button>
+          </div>
         </div>
       </CardContent>
     </Card>
