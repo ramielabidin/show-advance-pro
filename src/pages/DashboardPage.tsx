@@ -741,7 +741,7 @@ function RevenueCard({
 
   return (
     <Card className="overflow-hidden shadow-none">
-      <CardContent className="pt-3 pb-3 px-4">
+      <CardContent className="pt-3 pb-4 px-4">
         <div className="flex items-center gap-2 mb-3">
           <div className="h-7 w-7 shrink-0" aria-hidden />
           <div className="grid grid-cols-2 gap-0.5 bg-secondary border border-border/60 p-[3px] rounded-md flex-1">
