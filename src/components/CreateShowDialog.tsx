@@ -173,7 +173,7 @@ export default function CreateShowDialog({ defaultTourId }: CreateShowDialogProp
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5 h-11 sm:h-9">
           <Plus className="h-4 w-4" />
-          Add Show
+          Show
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">

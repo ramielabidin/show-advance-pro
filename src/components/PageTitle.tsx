@@ -10,7 +10,7 @@ export default function PageTitle({ children, eyebrow, subline }: PageTitleProps
   return (
     <div>
       {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-      <h1 className="text-2xl sm:text-3xl font-medium tracking-tight leading-[1.1] text-foreground m-0">
+      <h1 className="font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground m-0">
         {children}
       </h1>
       {subline && (

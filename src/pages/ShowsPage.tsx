@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ShowCard from "@/components/ShowCard";
 import CreateShowDialog from "@/components/CreateShowDialog";
-import PasteAdvanceDialog from "@/components/PasteAdvanceDialog";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
 import EmptyState from "@/components/EmptyState";
 import PageTitle from "@/components/PageTitle";
@@ -175,16 +174,12 @@ export default function ShowsPage() {
         />
       ) : (
         <div className="flex items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
-          <PageTitle
-            eyebrow="Shows"
-            subline={`${upcoming.length} upcoming · ${past.length} past`}
-          >
+          <PageTitle subline={`${upcoming.length} upcoming · ${past.length} past`}>
             All shows
           </PageTitle>
           <div className="flex items-center gap-2 shrink-0">
             <div className="hidden sm:flex items-center gap-2">
               <BulkUploadDialog />
-              <PasteAdvanceDialog />
             </div>
             <CreateShowDialog />
           </div>
