@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock, Sparkles, Mic, DollarSign, Ticket, Users, TrendingUp } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +36,10 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
+import Eyebrow from "@/components/Eyebrow";
+import StatTile from "@/components/StatTile";
+import DriveTimeCallout from "@/components/DriveTimeCallout";
+import { Card } from "@/components/ui/card";
 import SlackPushDialog from "@/components/SlackPushDialog";
 import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
@@ -615,6 +619,43 @@ export default function ShowDetailPage() {
           </div>
         </div>
 
+        {/* Eyebrow — date (click to edit) */}
+        {inlineField === "date" ? (
+          <div ref={inlineRef}>
+            <Input
+              type="date"
+              autoFocus
+              value={inlineValue}
+              onChange={(e) => setInlineValue(e.target.value)}
+              onBlur={() => {
+                if (inlineValue && inlineValue !== show.date) {
+                  updateMutation.mutate({ date: inlineValue } as any);
+                } else {
+                  setInlineField(null);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  (e.target as HTMLInputElement).blur();
+                } else if (e.key === "Escape") {
+                  setInlineField(null);
+                }
+              }}
+              className="h-auto py-0 px-1 text-xs w-auto inline-block"
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => { setInlineField("date"); setInlineValue(show.date); }}
+            className="block text-left hover:text-foreground transition-colors"
+          >
+            <Eyebrow className="mb-0">
+              {format(parseISO(show.date), "MMM d · EEEE")}
+            </Eyebrow>
+          </button>
+        )}
+
         {/* Venue name — inline editable */}
         {inlineField === "venue_name" ? (
           <div ref={inlineRef}>
@@ -648,39 +689,8 @@ export default function ShowDetailPage() {
           </h1>
         )}
 
-        {/* Metadata — date · address */}
-        <p className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5">
-          {inlineField === "date" ? (
-            <Input
-              type="date"
-              autoFocus
-              value={inlineValue}
-              onChange={(e) => setInlineValue(e.target.value)}
-              onBlur={() => {
-                if (inlineValue && inlineValue !== show.date) {
-                  updateMutation.mutate({ date: inlineValue } as any);
-                } else {
-                  setInlineField(null);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  (e.target as HTMLInputElement).blur();
-                } else if (e.key === "Escape") {
-                  setInlineField(null);
-                }
-              }}
-              className="h-auto py-0 px-1 text-xs sm:text-sm w-auto inline-block"
-            />
-          ) : (
-            <span
-              className="cursor-pointer hover:text-foreground transition-colors"
-              onClick={() => { setInlineField("date"); setInlineValue(show.date); }}
-            >
-              {format(parseISO(show.date), "EEEE, MMMM d, yyyy")}
-            </span>
-          )}
-          <span className="text-border">·</span>
+        {/* Address row */}
+        <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5">
           {show.venue_address ? (
             <a
               href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
@@ -729,7 +739,7 @@ export default function ShowDetailPage() {
               </Button>
             </span>
           )}
-        </p>
+        </div>
 
         {/* Status chips + icon actions — unified mobile + desktop */}
         <div className="pt-3 flex items-center justify-between gap-3">
@@ -903,40 +913,21 @@ export default function ShowDetailPage() {
             </div>
           ) : (
           <div className="space-y-6 sm:space-y-8">
+            {/* Drive-time callout — pulled out of Departure so it sits at the top of the show view */}
+            {driveTimeLabel && departureOrigin && !driveCardDismissed && (
+              <DriveTimeCallout
+                driveTimeLabel={driveTimeLabel}
+                originLabel={departureOrigin.label}
+                distanceText={driveTime?.distance_text}
+                onDismiss={() => {
+                  if (id) localStorage.setItem(`drive-card-dismissed-${id}`, "true");
+                  setDriveCardDismissed(true);
+                }}
+              />
+            )}
+
             {/* Departure — first chronologically */}
             <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
-              {driveTimeLabel && departureOrigin && !driveCardDismissed && (
-                <div className="flex items-start gap-4 rounded-md border bg-muted/30 px-4 py-3">
-                  <Clock className="h-4 w-4 mt-1 shrink-0 text-muted-foreground" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-display text-2xl text-foreground leading-none tracking-[-0.02em]">
-                      {driveTimeLabel}
-                    </div>
-                    <div className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
-                      from {departureOrigin.label}
-                      {driveTime?.distance_text && (
-                        <span className="text-border mx-1.5">·</span>
-                      )}
-                      {driveTime?.distance_text && (
-                        <span className="font-mono normal-case tracking-normal">
-                          {driveTime.distance_text}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (id) localStorage.setItem(`drive-card-dismissed-${id}`, "true");
-                      setDriveCardDismissed(true);
-                    }}
-                    className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
-                    aria-label="Dismiss drive time suggestion"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
               {editField("departure_time", "Departure Time", { alwaysShow: true, structuredTime: true })}
               {recommendedDeparture && inlineField !== "departure_time" && !show.departure_time && !driveCardDismissed && !suggestionDismissed && (
                 <div className="-mt-2 flex items-center gap-1.5">
@@ -1005,19 +996,25 @@ export default function ShowDetailPage() {
                   />
                 ) : scheduleEntries.length > 0 ? (
                   <button onClick={() => setEditingSchedule(true)} className="w-full text-left card-pressable">
-                    <div className="space-y-1">
-                      {scheduleEntries.map((entry) => (
+                    <Card className="p-3">
+                      {scheduleEntries.map((entry, i) => (
                         <div
                           key={entry.id}
-                          className="flex items-baseline gap-3 sm:gap-4 rounded px-2 sm:px-3 py-2"
+                          className={cn(
+                            "grid grid-cols-[70px_1fr] gap-3 items-center py-1.5 px-1",
+                            i < scheduleEntries.length - 1 && "border-b border-border/60",
+                          )}
                         >
-                          <span className="font-mono text-base shrink-0 whitespace-nowrap text-muted-foreground">
+                          <span className="font-mono text-sm shrink-0 whitespace-nowrap text-muted-foreground">
                             {entry.time}
                           </span>
-                          <span className="text-base text-foreground">{entry.label}</span>
+                          <span className="text-sm text-foreground inline-flex items-center gap-1.5">
+                            {entry.is_band && <Mic className="h-3 w-3 text-muted-foreground shrink-0" />}
+                            {entry.label}
+                          </span>
                         </div>
                       ))}
-                    </div>
+                    </Card>
                   </button>
                 ) : (
                   <EmptyFieldPrompt label="schedule" onClick={() => {
@@ -1059,13 +1056,89 @@ export default function ShowDetailPage() {
 
             <Separator />
 
-            {/* At The Venue */}
-            <FieldGroup title="At The Venue">
-              {editField("green_room_info", "Green Room", { multiline: true, alwaysShow: true })}
-              {editField("hospitality", "Hospitality", { multiline: true })}
-              {editField("wifi_network", "WiFi Network", { mono: true, alwaysShow: true })}
-              {editField("wifi_password", "WiFi Password", { mono: true, alwaysShow: true })}
-            </FieldGroup>
+            {/* At The Venue + Accommodations — paired two-column */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <FieldGroup title="At The Venue">
+                {editField("green_room_info", "Green Room", { multiline: true, alwaysShow: true })}
+                {editField("hospitality", "Hospitality", { multiline: true })}
+                {editField("wifi_network", "WiFi Network", { mono: true, alwaysShow: true })}
+                {editField("wifi_password", "WiFi Password", { mono: true, alwaysShow: true })}
+              </FieldGroup>
+
+              <FieldGroup title="Accommodations">
+                {(() => {
+                  const hotelEmpty = !show.hotel_name && !show.hotel_address && !show.hotel_confirmation && !show.hotel_checkin && !show.hotel_checkout;
+                  const isHotelInline = inlineField === "hotel_group";
+
+                  if (isHotelInline) {
+                    return (
+                      <div ref={inlineRef} className="space-y-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Name</Label>
+                          <Input value={hotelForm.hotel_name ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_name: e.target.value }))} className="text-sm h-9" autoFocus />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Address</Label>
+                          <Input value={hotelForm.hotel_address ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_address: e.target.value }))} className="text-sm h-9" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Confirmation #</Label>
+                          <Input value={hotelForm.hotel_confirmation ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_confirmation: e.target.value }))} className="text-sm h-9 font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Check In</Label>
+                          <Input value={hotelForm.hotel_checkin ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkin: e.target.value }))} className="text-sm h-9 font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Check Out</Label>
+                          <Input value={hotelForm.hotel_checkout ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkout: e.target.value }))} className="text-sm h-9 font-mono" />
+                        </div>
+                        <InlineActions onSave={saveHotelGroup} onCancel={cancelInline} />
+                      </div>
+                    );
+                  }
+
+                  if (hotelEmpty) {
+                    return <EmptyFieldPrompt label="accommodations" onClick={startHotelEdit} />;
+                  }
+
+                  return (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={startHotelEdit}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          startHotelEdit();
+                        }
+                      }}
+                      className="w-full text-left space-y-3 card-pressable cursor-pointer"
+                    >
+                      <FieldRow label="Name" value={show.hotel_name} />
+                      {show.hotel_address ? (
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+                          <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Address</span>
+                          <a
+                            href={`https://maps.google.com/?q=${encodeURIComponent(show.hotel_address)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-sm text-foreground inline-flex items-start gap-1 hover:underline hover:text-foreground/80 transition-colors"
+                          >
+                            <MapPin className="h-3 w-3 shrink-0 mt-1" />
+                            <span>{show.hotel_address.replace(/,?\s*United States$/i, "")}</span>
+                          </a>
+                        </div>
+                      ) : null}
+                      <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
+                      <FieldRow label="Check In" value={show.hotel_checkin} mono />
+                      <FieldRow label="Check Out" value={show.hotel_checkout} mono />
+                    </div>
+                  );
+                })()}
+              </FieldGroup>
+            </div>
 
             <Separator />
 
@@ -1076,89 +1149,11 @@ export default function ShowDetailPage() {
 
             <Separator />
 
-            {/* Accommodations (formerly Hotel) */}
-            <FieldGroup title="Accommodations">
-              {(() => {
-                const hotelEmpty = !show.hotel_name && !show.hotel_address && !show.hotel_confirmation && !show.hotel_checkin && !show.hotel_checkout;
-                const isHotelInline = inlineField === "hotel_group";
-
-                if (isHotelInline) {
-                  return (
-                    <div ref={inlineRef} className="space-y-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Name</Label>
-                        <Input value={hotelForm.hotel_name ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_name: e.target.value }))} className="text-sm h-9" autoFocus />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Address</Label>
-                        <Input value={hotelForm.hotel_address ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_address: e.target.value }))} className="text-sm h-9" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Confirmation #</Label>
-                        <Input value={hotelForm.hotel_confirmation ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_confirmation: e.target.value }))} className="text-sm h-9 font-mono" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Check In</Label>
-                        <Input value={hotelForm.hotel_checkin ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkin: e.target.value }))} className="text-sm h-9 font-mono" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Check Out</Label>
-                        <Input value={hotelForm.hotel_checkout ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkout: e.target.value }))} className="text-sm h-9 font-mono" />
-                      </div>
-                      <InlineActions onSave={saveHotelGroup} onCancel={cancelInline} />
-                    </div>
-                  );
-                }
-
-                if (hotelEmpty) {
-                  return <EmptyFieldPrompt label="accommodations" onClick={startHotelEdit} />;
-                }
-
-                return (
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={startHotelEdit}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        startHotelEdit();
-                      }
-                    }}
-                    className="w-full text-left space-y-3 card-pressable cursor-pointer"
-                  >
-                    <FieldRow label="Name" value={show.hotel_name} />
-                    {show.hotel_address ? (
-                      <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                        <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Address</span>
-                        <a
-                          href={`https://maps.google.com/?q=${encodeURIComponent(show.hotel_address)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-sm text-foreground inline-flex items-start gap-1 hover:underline hover:text-foreground/80 transition-colors"
-                        >
-                          <MapPin className="h-3 w-3 shrink-0 mt-1" />
-                          <span>{show.hotel_address.replace(/,?\s*United States$/i, "")}</span>
-                        </a>
-                      </div>
-                    ) : null}
-                    <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
-                    <FieldRow label="Check In" value={show.hotel_checkin} mono />
-                    <FieldRow label="Check Out" value={show.hotel_checkout} mono />
-                  </div>
-                );
-              })()}
-            </FieldGroup>
-
-
-            <Separator />
-
             <EmailAttachments showId={show.id} />
 
-            {/* Additional Info — always visible at bottom */}
-            <FieldGroup title="Additional Info">
-              {editField("additional_info", "Details", { multiline: true, alwaysShow: true })}
+            {/* Notes — always visible at bottom */}
+            <FieldGroup title="Notes">
+              {editField("additional_info", "Notes", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add notes" })}
             </FieldGroup>
           </div>
           )}
@@ -1166,13 +1161,56 @@ export default function ShowDetailPage() {
 
         <TabsContent value="deal">
           <div className="space-y-6 sm:space-y-8">
-            {/* Deal — balanced 3×2 grid */}
+            {/* Deal — stat tiles for the four primary numerics (click to inline-edit); backend deal + comps below */}
             <FieldGroup title="Deal" incomplete={!show.guarantee && !show.backend_deal && !show.ticket_price && !show.venue_capacity && !show.walkout_potential && !show.artist_comps}>
+              {(() => {
+                const tiles: Array<{ key: keyof Show; label: string; icon: typeof DollarSign; tone: "blue" | "green" | "yellow"; currency?: boolean; placeholder?: string }> = [
+                  { key: "guarantee", label: "Guarantee", icon: DollarSign, tone: "green", currency: true },
+                  { key: "ticket_price", label: "Ticket Price", icon: Ticket, tone: "blue", currency: true, placeholder: "e.g. $20 or $18/$20/$25" },
+                  { key: "venue_capacity", label: "Capacity", icon: Users, tone: "blue" },
+                  { key: "walkout_potential", label: "Walkout", icon: TrendingUp, tone: "yellow", currency: true },
+                ];
+                const anyEditing = tiles.some(({ key }) => inlineField === key);
+                if (anyEditing) {
+                  // Single editing field spans full width; other fields continue as tiles below it would crowd the edit — keep it focused.
+                  const editing = tiles.find(({ key }) => inlineField === key)!;
+                  return (
+                    <div>
+                      {editField(editing.key, editing.label, { mono: true, alwaysShow: true, currency: editing.currency, placeholder: editing.placeholder })}
+                    </div>
+                  );
+                }
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {tiles.map(({ key, label, icon, tone, currency }) => {
+                      const raw = (show as any)[key];
+                      if (!raw) {
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => startInlineEdit(key as string)}
+                            className="rounded-[10px] border border-dashed border-border px-4 py-3.5 text-left hover:border-foreground/30 transition-colors"
+                          >
+                            <span className="text-sm italic text-muted-foreground/60">Tap to add {label.toLowerCase()}</span>
+                          </button>
+                        );
+                      }
+                      return (
+                        <StatTile
+                          key={key}
+                          icon={icon}
+                          tone={tone}
+                          label={label}
+                          value={currency ? formatCurrency(String(raw)) : String(raw)}
+                          onClick={() => startInlineEdit(key as string)}
+                        />
+                      );
+                    })}
+                  </div>
+                );
+              })()}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                <div>{editField("guarantee", "Guarantee", { mono: true, alwaysShow: true, currency: true })}</div>
-                <div>{editField("ticket_price", "Ticket Price", { mono: true, alwaysShow: true, currency: true, placeholder: "e.g. $20 or $18/$20/$25" })}</div>
-                <div>{editField("venue_capacity", "Capacity", { alwaysShow: true })}</div>
-                <div>{editField("walkout_potential", "Walkout Potential", { mono: true, alwaysShow: true, currency: true })}</div>
                 {/* Backend Deal — spans full width when editing */}
                 <div className={cn(inlineField === "backend_deal" && "sm:col-span-2")}>
                   {(() => {
