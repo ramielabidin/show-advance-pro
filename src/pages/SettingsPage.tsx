@@ -10,7 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+import PageTitle from "@/components/PageTitle";
+import SectionLabel from "@/components/SectionLabel";
+import Eyebrow from "@/components/Eyebrow";
+import Chip from "@/components/Chip";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import BandDocuments from "@/components/BandDocuments";
 import {
   AlertDialog,
@@ -50,6 +54,16 @@ interface PartyMemberForm {
 }
 
 const emptyPartyForm: PartyMemberForm = { name: "", email: "", phone: "", role: "" };
+
+function initialsFor(source: string): string {
+  const trimmed = source.trim();
+  if (!trimmed) return "?";
+  const local = trimmed.includes("@") ? trimmed.split("@")[0] : trimmed;
+  const parts = local.split(/[\s._-]+/).filter(Boolean);
+  if (parts.length === 0) return trimmed.slice(0, 2).toUpperCase();
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
@@ -473,90 +487,32 @@ export default function SettingsPage() {
   });
 
   return (
-    <div className="animate-fade-in stagger-list max-w-5xl space-y-6 sm:space-y-8">
-      <div>
-        <h1 className="text-2xl sm:text-3xl tracking-[-0.02em]">Settings</h1>
-        <p className="text-muted-foreground text-sm mt-1">Manage your artist profile and integrations</p>
-      </div>
+    <div className="animate-fade-in stagger-list mx-auto max-w-[920px] space-y-6 sm:space-y-8">
+      <PageTitle subline="Manage your artist profile and integrations">Settings</PageTitle>
 
       {/* ── Active Artist ── */}
-      <div className="rounded-lg border bg-card p-4 sm:p-6">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Active Artist</p>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
-              <Music className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <span className="text-xl font-semibold tracking-tight text-foreground">{team?.name}</span>
-          </div>
-          <Badge variant={isOwner ? "default" : "secondary"} className="gap-1">
-            {isOwner ? <><Crown className="h-3 w-3" />Owner</> : "Member"}
-          </Badge>
-        </div>
-      </div>
-
-      {/* ── App Settings (full width) ── */}
-      <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-6">
-        {/* Slack Integration */}
-        <div>
-          <h2 className="font-medium text-foreground mb-1">Slack Integration</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Connect your Slack workspace to push day sheets directly to a channel.
-          </p>
-          {settingsLoading ? (
-            <div className="h-10 rounded-md bg-muted animate-pulse" />
-          ) : appSettings?.slack_webhook_url ? (
-            <div className="flex items-center justify-between rounded-md border border-pastel-green/60 bg-pastel-green px-3 py-2.5">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="h-2 w-2 rounded-full bg-[hsl(var(--success))] shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-pastel-green-foreground leading-tight">
-                    {appSettings.slack_channel_name ?? "Slack"} connected
-                  </p>
-                  {appSettings.slack_team_name && (
-                    <p className="text-xs text-muted-foreground">{appSettings.slack_team_name}</p>
-                  )}
-                </div>
+      <section>
+        <SectionLabel>Active artist</SectionLabel>
+        <div className="rounded-lg border bg-card p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                <Music className="h-5 w-5 text-muted-foreground" />
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                disabled={disconnectSlackMutation.isPending}
-                onClick={() => setSlackDisconnectOpen(true)}
-              >
-                {disconnectSlackMutation.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  "Disconnect"
-                )}
-              </Button>
+              <span className="text-xl font-semibold tracking-tight text-foreground truncate">{team?.name}</span>
             </div>
-          ) : (
-            <Button
-              onClick={handleConnectSlack}
-              disabled={connectingSlack || !teamId}
-              className="gap-2 h-11 sm:h-9"
-              style={{ backgroundColor: "#4A154B" }}
-            >
-              {connectingSlack ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
-                  <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
-                </svg>
-              )}
-              {connectingSlack ? "Connecting…" : "Connect Slack"}
-            </Button>
-          )}
+            <Chip tone={isOwner ? "blue" : "muted"}>
+              {isOwner ? <><Crown className="h-3 w-3" />Owner</> : "Member"}
+            </Chip>
+          </div>
         </div>
+      </section>
 
-        <Separator />
-
-        {/* Home Base City */}
-        <div>
-          <h2 className="font-medium text-foreground mb-1">Home Base City</h2>
-          <p className="text-sm text-muted-foreground mb-4">
+      {/* ── Home base ── */}
+      <section>
+        <SectionLabel>Home base</SectionLabel>
+        <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
+          <p className="text-sm text-muted-foreground">
             Used to calculate drive times for the first show of a tour when there's no previous show to depart from.
           </p>
           <div className="space-y-2">
@@ -594,7 +550,7 @@ export default function SettingsPage() {
                           type="button"
                           className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground [transition:background-color_150ms_var(--ease-out),color_150ms_var(--ease-out)]"
                           onMouseDown={(e) => {
-                            e.preventDefault(); // prevent blur before click
+                            e.preventDefault();
                             selectCityPrediction(p.description);
                           }}
                         >
@@ -607,92 +563,171 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
+          <Button
+            onClick={() => saveMutation.mutate()}
+            disabled={saveMutation.isPending || settingsLoading}
+            className="gap-1.5 w-full sm:w-auto h-11 sm:h-9"
+          >
+            <Save className="h-4 w-4" />
+            {saveMutation.isPending ? "Saving…" : "Save"}
+          </Button>
         </div>
-        <Button
-          onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending || settingsLoading}
-          className="gap-1.5 w-full sm:w-auto h-11 sm:h-9"
-        >
-          <Save className="h-4 w-4" />
-          {saveMutation.isPending ? "Saving…" : "Save Settings"}
-        </Button>
-      </div>
+      </section>
 
-      {/* ── Email Forwarding (full width) ── */}
-      <div id="email-forwarding" className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
-        <div>
-          <h2 className="font-medium text-foreground mb-1 flex items-center gap-2">
-            <Mail className="h-4 w-4" />
-            Email Forwarding
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Forward any venue advance email to this address and Advance will automatically queue it for review.
-          </p>
-        </div>
-
-        {settingsLoading ? (
-          <div className="h-10 rounded-md bg-muted animate-pulse" />
-        ) : forwardingAddress ? (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <code className="flex-1 rounded-md border bg-muted/40 px-3 py-2 font-mono text-sm truncate">
-              {forwardingAddress}
-            </code>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 h-11 sm:h-9 shrink-0"
-              onClick={copyForwardingAddress}
-            >
-              <Copy className="h-3.5 w-3.5" />
-              Copy
-            </Button>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No forwarding address provisioned yet.</p>
-        )}
-
-        <Separator />
-
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
-            Recent Inbound Emails
-          </p>
-          {recentInboundEvents.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground">
-              <Mail className="h-7 w-7 mx-auto mb-2 opacity-40" />
-              <p className="text-sm">Forwarded emails will appear here.</p>
+      {/* ── Integrations ── */}
+      <section>
+        <SectionLabel>Integrations</SectionLabel>
+        <div className="space-y-3">
+          {/* Slack */}
+          <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium text-foreground">Slack</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Push day sheets directly to a channel.</p>
+              </div>
+              <Chip tone={appSettings?.slack_webhook_url ? "green" : "muted"}>
+                {appSettings?.slack_webhook_url ? "Connected" : "Not connected"}
+              </Chip>
             </div>
-          ) : (
-            <div className="space-y-2">
-              {recentInboundEvents.map((e) => (
-                <div
-                  key={e.id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2 gap-2"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {e.email_subject || "(no subject)"}
+            {settingsLoading ? (
+              <div className="h-10 rounded-md bg-muted animate-pulse" />
+            ) : appSettings?.slack_webhook_url ? (
+              <div className="flex items-center justify-between rounded-md border border-pastel-green/60 bg-pastel-green px-3 py-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="h-2 w-2 rounded-full bg-[hsl(var(--success))] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-pastel-green-foreground leading-tight">
+                      {appSettings.slack_channel_name ?? "Slack"} connected
                     </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {e.from_address || "unknown sender"} · {formatDistanceToNow(new Date(e.created_at), { addSuffix: true })}
-                    </p>
+                    {appSettings.slack_team_name && (
+                      <p className="text-xs text-muted-foreground">{appSettings.slack_team_name}</p>
+                    )}
                   </div>
-                  <Badge
-                    variant={
-                      e.status === "pending" ? "default"
-                      : e.status === "reviewed" ? "secondary"
-                      : "outline"
-                    }
-                    className="text-[10px] px-1.5 py-0 shrink-0 capitalize"
-                  >
-                    {e.status}
-                  </Badge>
                 </div>
-              ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                  disabled={disconnectSlackMutation.isPending}
+                  onClick={() => setSlackDisconnectOpen(true)}
+                >
+                  {disconnectSlackMutation.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    "Disconnect"
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={handleConnectSlack}
+                disabled={connectingSlack || !teamId}
+                className="gap-2 h-11 sm:h-9"
+                style={{ backgroundColor: "#4A154B" }}
+              >
+                {connectingSlack ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                    <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
+                  </svg>
+                )}
+                {connectingSlack ? "Connecting…" : "Connect Slack"}
+              </Button>
+            )}
+          </div>
+
+          {/* Email forwarding */}
+          <div id="email-forwarding" className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email forwarding
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Forward venue advances to auto-queue them for review.
+                </p>
+              </div>
+              <Chip tone={forwardingAddress ? "green" : "muted"}>
+                {forwardingAddress ? "Active" : "Not provisioned"}
+              </Chip>
             </div>
-          )}
+
+            {settingsLoading ? (
+              <div className="h-10 rounded-md bg-muted animate-pulse" />
+            ) : forwardingAddress ? (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <code className="flex-1 rounded-md border bg-muted/40 px-3 py-2 font-mono text-sm truncate">
+                  {forwardingAddress}
+                </code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-11 sm:h-9 shrink-0"
+                  onClick={copyForwardingAddress}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Copy
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No forwarding address provisioned yet.</p>
+            )}
+
+            <Separator />
+
+            <div>
+              <Eyebrow>Recent inbound emails</Eyebrow>
+              {recentInboundEvents.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Mail className="h-7 w-7 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">Forwarded emails will appear here.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {recentInboundEvents.map((e) => (
+                    <div
+                      key={e.id}
+                      className="flex items-center justify-between rounded-md border px-3 py-2 gap-2"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {e.email_subject || "(no subject)"}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {e.from_address || "unknown sender"} · {formatDistanceToNow(new Date(e.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                      <Chip
+                        tone={
+                          e.status === "pending" ? "yellow"
+                          : e.status === "reviewed" ? "green"
+                          : "muted"
+                        }
+                        className="capitalize"
+                      >
+                        {e.status}
+                      </Chip>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Google Maps */}
+          <div className="rounded-lg border bg-card p-4 sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium text-foreground">Google Maps</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Drive-time auto-calc between shows.</p>
+              </div>
+              <Chip tone="green">Connected</Chip>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* ── Band Documents (full width) ── */}
       <BandDocuments />
@@ -701,88 +736,31 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-start">
 
       {/* ── Touring Party ── */}
-      <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-medium text-foreground mb-0.5">Touring Party</h2>
-            <p className="text-sm text-muted-foreground">
-              {partyMembers.length} member{partyMembers.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-          <Dialog open={partyDialogOpen} onOpenChange={setPartyDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5">
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Add Member</span>
-                <span className="sm:hidden">Add</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add Member</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-2">
-                <div className="space-y-2">
-                  <Label>Name</Label>
-                  <Input value={partyForm.name} onChange={(e) => setPartyForm({ ...partyForm, name: e.target.value })} className="h-11 sm:h-9" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Role</Label>
-                  <Select value={partyForm.role} onValueChange={(v) => setPartyForm({ ...partyForm, role: v })}>
-                    <SelectTrigger className="h-11 sm:h-9">
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PARTY_ROLES.map((r) => (
-                        <SelectItem key={r} value={r}>{r}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" value={partyForm.email} onChange={(e) => setPartyForm({ ...partyForm, email: e.target.value })} className="h-11 sm:h-9" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Phone</Label>
-                  <Input value={partyForm.phone} onChange={(e) => setPartyForm({ ...partyForm, phone: e.target.value })} className="h-11 sm:h-9" />
-                </div>
-                <Button
-                  className="w-full h-11 sm:h-9"
-                  onClick={() => createPartyMutation.mutate(partyForm)}
-                  disabled={!partyForm.name || createPartyMutation.isPending}
-                >
-                  Add Member
+      <section>
+        <SectionLabel
+          action={
+            <Dialog open={partyDialogOpen} onOpenChange={setPartyDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline" className="gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Add member</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {partyLoading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-14 rounded-md bg-muted animate-pulse" />
-            ))}
-          </div>
-        ) : partyMembers.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
-            <p className="text-sm">No members yet. Add people to your touring party.</p>
-          </div>
-        ) : (
-          <div className="space-y-2 stagger-list">
-            {partyMembers.map((m) => (
-              <div
-                key={m.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between rounded-md border px-3 py-2.5 gap-2"
-              >
-                {partyEditingId === m.id ? (
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <Input value={partyForm.name} onChange={(e) => setPartyForm({ ...partyForm, name: e.target.value })} placeholder="Name" className="h-9" />
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add Member</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                    <Label>Name</Label>
+                    <Input value={partyForm.name} onChange={(e) => setPartyForm({ ...partyForm, name: e.target.value })} className="h-11 sm:h-9" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Role</Label>
                     <Select value={partyForm.role} onValueChange={(v) => setPartyForm({ ...partyForm, role: v })}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Role" />
+                      <SelectTrigger className="h-11 sm:h-9">
+                        <SelectValue placeholder="Select a role" />
                       </SelectTrigger>
                       <SelectContent>
                         {PARTY_ROLES.map((r) => (
@@ -790,116 +768,192 @@ export default function SettingsPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Input value={partyForm.email} onChange={(e) => setPartyForm({ ...partyForm, email: e.target.value })} placeholder="Email" className="h-9" />
-                    <Input value={partyForm.phone} onChange={(e) => setPartyForm({ ...partyForm, phone: e.target.value })} placeholder="Phone" className="h-9" />
                   </div>
-                ) : (
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground text-sm">{m.name}</span>
-                      {(m as any).role && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          {(m as any).role}
-                        </Badge>
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input type="email" value={partyForm.email} onChange={(e) => setPartyForm({ ...partyForm, email: e.target.value })} className="h-11 sm:h-9" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Phone</Label>
+                    <Input value={partyForm.phone} onChange={(e) => setPartyForm({ ...partyForm, phone: e.target.value })} className="h-11 sm:h-9" />
+                  </div>
+                  <Button
+                    className="w-full h-11 sm:h-9"
+                    onClick={() => createPartyMutation.mutate(partyForm)}
+                    disabled={!partyForm.name || createPartyMutation.isPending}
+                  >
+                    Add Member
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          }
+        >
+          Touring party · {partyMembers.length}
+        </SectionLabel>
+
+        <div className="rounded-lg border bg-card overflow-hidden">
+          {partyLoading ? (
+            <div className="p-4 space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-12 rounded-md bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : partyMembers.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">
+              <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">No members yet. Add people to your touring party.</p>
+            </div>
+          ) : (
+            <div className="stagger-list">
+              {partyMembers.map((m, i) => {
+                const isEditing = partyEditingId === m.id;
+                const role = (m as any).role as string | null;
+                return (
+                  <div
+                    key={m.id}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3",
+                      i < partyMembers.length - 1 && "border-b border-border/60",
+                    )}
+                  >
+                    {isEditing ? (
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <Input value={partyForm.name} onChange={(e) => setPartyForm({ ...partyForm, name: e.target.value })} placeholder="Name" className="h-9" />
+                        <Select value={partyForm.role} onValueChange={(v) => setPartyForm({ ...partyForm, role: v })}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PARTY_ROLES.map((r) => (
+                              <SelectItem key={r} value={r}>{r}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input value={partyForm.email} onChange={(e) => setPartyForm({ ...partyForm, email: e.target.value })} placeholder="Email" className="h-9" />
+                        <Input value={partyForm.phone} onChange={(e) => setPartyForm({ ...partyForm, phone: e.target.value })} placeholder="Phone" className="h-9" />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0 text-[11px] font-medium text-muted-foreground">
+                          {initialsFor(m.name)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-foreground truncate">{m.name}</div>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-3 mt-0.5">
+                            {m.email && <span className="text-xs text-muted-foreground truncate">{m.email}</span>}
+                            {m.phone && <span className="text-xs font-mono text-muted-foreground">{m.phone}</span>}
+                          </div>
+                        </div>
+                        {role && <Chip tone="muted">{role}</Chip>}
+                      </>
+                    )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isEditing ? (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setPartyEditingId(null); setPartyForm(emptyPartyForm); }}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updatePartyMutation.mutate({ id: m.id, ...partyForm })}>
+                            <Save className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startPartyEdit(m)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setPendingRemovePartyId(m.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
                       )}
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-3 mt-0.5">
-                      {m.email && <span className="text-xs text-muted-foreground truncate">{m.email}</span>}
-                      {m.phone && <span className="text-xs font-mono text-muted-foreground">{m.phone}</span>}
-                    </div>
                   </div>
-                )}
-                <div className="flex items-center gap-1 self-end sm:self-auto shrink-0">
-                  {partyEditingId === m.id ? (
-                    <>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setPartyEditingId(null); setPartyForm(emptyPartyForm); }}>
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updatePartyMutation.mutate({ id: m.id, ...partyForm })}>
-                        <Save className="h-3.5 w-3.5" />
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startPartyEdit(m)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => setPendingRemovePartyId(m.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* ── Team Members ── */}
-      <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
-        <div>
-          <h2 className="font-medium text-foreground mb-0.5">Team Members</h2>
-          <p className="text-sm text-muted-foreground">
-            {team?.name} · {teamMembers.length} member{teamMembers.length !== 1 ? "s" : ""} with login access
-          </p>
-        </div>
+      <section className="space-y-4">
+        <SectionLabel>
+          Team · {teamMembers.length} with login access
+        </SectionLabel>
 
-        <div className="space-y-2">
-          {teamMembers.map((m) => (
-            <div key={m.id} className="flex items-center justify-between rounded-md border px-3 py-2.5 sm:py-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-sm text-foreground truncate">
-                  {m.user_id === session?.user.id ? "You" : (emailMap[m.user_id] || m.user_id.slice(0, 8) + "…")}
-                </span>
-                {m.role === "owner" ? (
-                  <Badge variant="default" className="text-[10px] px-1.5 py-0 gap-0.5">
-                    <Crown className="h-2.5 w-2.5" />
-                    Owner
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                    Member
-                  </Badge>
+        <div className="rounded-lg border bg-card overflow-hidden">
+          {teamMembers.map((m, i) => {
+            const isSelf = m.user_id === session?.user.id;
+            const display = isSelf ? "You" : (emailMap[m.user_id] || m.user_id.slice(0, 8) + "…");
+            const email = emailMap[m.user_id];
+            return (
+              <div
+                key={m.id}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3",
+                  i < teamMembers.length - 1 && "border-b border-border/60",
                 )}
-              </div>
-              {isOwner && m.user_id !== session?.user.id && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
-                  onClick={() => setPendingRemoveMemberId(m.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {invites.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Pending Invites</p>
-            {invites.map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between rounded-md border border-dashed px-3 py-2.5 sm:py-2">
-                <span className="text-sm text-muted-foreground truncate">{inv.email}</span>
-                {isOwner && (
+              >
+                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0 text-[11px] font-medium text-muted-foreground">
+                  {initialsFor(email || display)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-foreground truncate">{display}</div>
+                  {email && !isSelf && (
+                    <div className="text-xs font-mono text-muted-foreground truncate">{email}</div>
+                  )}
+                </div>
+                <Chip tone={m.role === "owner" ? "blue" : "muted"}>
+                  {m.role === "owner" ? <><Crown className="h-2.5 w-2.5" />Owner</> : "Member"}
+                </Chip>
+                {isOwner && !isSelf && (
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
-                    onClick={() => removeInviteMutation.mutate(inv.id)}
+                    onClick={() => setPendingRemoveMemberId(m.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 )}
               </div>
-            ))}
+            );
+          })}
+        </div>
+
+        {invites.length > 0 && (
+          <div className="space-y-2">
+            <Eyebrow>Pending invites</Eyebrow>
+            <div className="rounded-lg border border-dashed overflow-hidden">
+              {invites.map((inv, i) => (
+                <div
+                  key={inv.id}
+                  className={cn(
+                    "flex items-center justify-between gap-3 px-4 py-3",
+                    i < invites.length - 1 && "border-b border-dashed border-border/60",
+                  )}
+                >
+                  <span className="text-sm text-muted-foreground truncate">{inv.email}</span>
+                  {isOwner && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
+                      onClick={() => removeInviteMutation.mutate(inv.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -919,6 +973,7 @@ export default function SettingsPage() {
             />
             <Button
               size="sm"
+              variant="outline"
               className="gap-1.5 shrink-0 h-11 sm:h-9"
               onClick={() => inviteMutation.mutate(inviteEmail)}
               disabled={!inviteEmail.trim() || inviteMutation.isPending}
@@ -928,7 +983,7 @@ export default function SettingsPage() {
             </Button>
           </div>
         )}
-      </div>
+      </section>
 
       </div>{/* end 2-column grid */}
 
