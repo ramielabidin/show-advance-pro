@@ -808,32 +808,32 @@ function RevenueCard({
         {mobileToggle}
         {desktopToggle}
 
-        <div className="relative min-h-[72px] lg:min-h-[96px]">
+        <div className="relative flex flex-col items-center justify-center min-h-[72px] lg:min-h-[120px]">
           <div
             key={mode}
-            className="animate-in fade-in-0 duration-150 text-center lg:text-left"
+            className="animate-in fade-in-0 duration-150 text-center"
           >
             {mode === "earned" ? (
               <>
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
                   Actual Income
                 </p>
-                <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em] mt-1">
+                <p className="font-display text-foreground leading-none tracking-[-0.03em] mt-1 lg:mt-2 text-3xl lg:text-4xl">
                   {fmtMoney(earnedIncome)}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">{earnedSubline}</p>
+                <p className="text-xs text-muted-foreground mt-1 lg:mt-2">{earnedSubline}</p>
               </>
             ) : (
               <>
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
                   Upcoming Revenue
                 </p>
-                <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em] mt-1">
+                <p className="font-display text-foreground leading-none tracking-[-0.03em] mt-1 lg:mt-2 text-3xl lg:text-4xl">
                   {guaranteedRemaining === 0 ? "—" : fmtMoney(guaranteedRemaining)}
                 </p>
                 {upside > 0 && (
                   <div
-                    className="text-xs mt-1 flex items-center gap-1 justify-center lg:justify-start"
+                    className="text-xs mt-1 lg:mt-2 flex items-center gap-1 justify-center"
                     style={{ color: "var(--pastel-green-fg)" }}
                   >
                     <span>+ {fmtMoney(upside)} upside</span>
