@@ -524,12 +524,13 @@ export default function DashboardPage() {
             />
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
             <ProgressCard data={dashCards} className="lg:col-span-3" />
             <RevenueCard
               data={dashCards}
               collapsed={false}
               onToggleCollapse={() => setRevenueCollapsed((c) => !c)}
+              className="lg:col-span-2"
             />
           </div>
         )}
@@ -698,17 +699,19 @@ function RevenueCard({
   data,
   collapsed,
   onToggleCollapse,
+  className,
 }: {
   data: ProgressRevenueData;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  className?: string;
 }) {
   const [mode, setMode] = useState<"earned" | "upcoming">("earned");
   const { earnedIncome, settledCount, guaranteedRemaining, upside, isTourScope } = data;
 
   if (collapsed) {
     return (
-      <Card className="overflow-hidden shadow-none">
+      <Card className={cn("overflow-hidden shadow-none", className)}>
         <button
           type="button"
           onClick={onToggleCollapse}
@@ -740,7 +743,7 @@ function RevenueCard({
         : `From ${settledCount} settled shows · last 12 months`;
 
   return (
-    <Card className="overflow-hidden shadow-none">
+    <Card className={cn("overflow-hidden shadow-none", className)}>
       <CardContent className="pt-3 pb-4 px-4">
         <div className="flex items-start justify-between gap-2">
           <div key={mode} className="animate-in fade-in-0 duration-150 min-w-0 flex-1">
