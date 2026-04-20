@@ -52,7 +52,7 @@ export default function GuestShowPage() {
       {data.link_type === "daysheet" ? (
         <DaysheetGuestView show={data} token={token!} />
       ) : (
-        <DoorListGuestView show={data} token={token!} />
+        <DoorListGuestView show={data} />
       )}
     </GuestLayout>
   );

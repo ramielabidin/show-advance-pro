@@ -154,12 +154,6 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
           </FieldGroup>
         )}
 
-        {show.venue_capacity ? (
-          <FieldGroup title="Venue Details">
-            <FieldRow label="Capacity" value={show.venue_capacity.toString()} />
-          </FieldGroup>
-        ) : null}
-
         <Separator />
 
         <FieldGroup title="Guest List">
