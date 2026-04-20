@@ -473,7 +473,7 @@ export default function SettingsPage() {
   });
 
   return (
-    <div className="stagger-list max-w-5xl space-y-6 sm:space-y-8">
+    <div className="animate-fade-in stagger-list max-w-5xl space-y-6 sm:space-y-8">
       <div>
         <h1 className="text-2xl sm:text-3xl tracking-[-0.02em]">Settings</h1>
         <p className="text-muted-foreground text-sm mt-1">Manage your artist profile and integrations</p>
