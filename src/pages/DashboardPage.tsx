@@ -527,8 +527,8 @@ export default function DashboardPage() {
             />
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-            <ProgressCard data={dashCards} className="lg:col-span-2" />
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+            <ProgressCard data={dashCards} className="lg:col-span-3" />
             <RevenueCard
               data={dashCards}
               collapsed={false}
@@ -631,7 +631,7 @@ function ProgressCard({
   return (
     <Card className={cn("overflow-hidden shadow-none", className)}>
       <CardContent className="pt-4 pb-4 px-4">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-4">
           <div
             className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
             style={{ backgroundColor: "var(--pastel-purple-bg)", color: "var(--pastel-purple-fg)" }}
@@ -641,21 +641,19 @@ function ProgressCard({
           <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium leading-tight">
             {progressLabel}
           </span>
+          {scopeSubtitle && (
+            scopeSubtitleHref ? (
+              <Link
+                to={scopeSubtitleHref}
+                className="ml-auto text-sm font-medium text-foreground hover:text-muted-foreground [transition:color_150ms_var(--ease-out)] truncate min-w-0"
+              >
+                {scopeSubtitle}
+              </Link>
+            ) : (
+              <p className="ml-auto text-sm font-medium text-foreground truncate min-w-0">{scopeSubtitle}</p>
+            )
+          )}
         </div>
-        {scopeSubtitle ? (
-          scopeSubtitleHref ? (
-            <Link
-              to={scopeSubtitleHref}
-              className="block text-sm font-medium text-foreground hover:text-muted-foreground [transition:color_150ms_var(--ease-out)] truncate mb-4"
-            >
-              {scopeSubtitle}
-            </Link>
-          ) : (
-            <p className="text-sm font-medium text-foreground truncate mb-4">{scopeSubtitle}</p>
-          )
-        ) : (
-          <div className="mb-4" />
-        )}
 
         <div className="space-y-3">
           <Tooltip>
@@ -818,7 +816,7 @@ function RevenueCard({
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
                   Actual Income
                 </p>
-                <p className="font-display text-foreground leading-none tracking-[-0.03em] mt-1 lg:mt-2 text-3xl lg:text-4xl">
+                <p className="font-display text-foreground leading-none tracking-[-0.03em] mt-1 lg:mt-2 text-3xl">
                   {fmtMoney(earnedIncome)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 lg:mt-2">{earnedSubline}</p>
@@ -828,7 +826,7 @@ function RevenueCard({
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
                   Upcoming Revenue
                 </p>
-                <p className="font-display text-foreground leading-none tracking-[-0.03em] mt-1 lg:mt-2 text-3xl lg:text-4xl">
+                <p className="font-display text-foreground leading-none tracking-[-0.03em] mt-1 lg:mt-2 text-3xl">
                   {guaranteedRemaining === 0 ? "—" : fmtMoney(guaranteedRemaining)}
                 </p>
                 {upside > 0 && (
