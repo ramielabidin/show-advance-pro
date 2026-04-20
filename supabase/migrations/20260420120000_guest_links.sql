@@ -67,9 +67,10 @@ RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
 DECLARE
-  v_link   public.guest_links%ROWTYPE;
-  v_show   public.shows%ROWTYPE;
-  v_result jsonb;
+  v_link        public.guest_links%ROWTYPE;
+  v_show        public.shows%ROWTYPE;
+  v_artist_name text;
+  v_result      jsonb;
 BEGIN
   SELECT * INTO v_link
   FROM public.guest_links
@@ -87,10 +88,13 @@ BEGIN
     RETURN NULL;
   END IF;
 
+  SELECT name INTO v_artist_name FROM public.teams WHERE id = v_show.team_id LIMIT 1;
+
   v_result := jsonb_build_object(
     'link_type',           v_link.link_type,
     'expires_at',          v_link.expires_at,
     'id',                  v_show.id,
+    'artist_name',         v_artist_name,
     'date',                v_show.date,
     'venue_name',          v_show.venue_name,
     'venue_address',       v_show.venue_address,

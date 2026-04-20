@@ -35,6 +35,7 @@ export interface GuestShowPayload {
   link_type: GuestLinkType;
   expires_at: string;
   id: string;
+  artist_name: string | null;
   date: string | null;
   venue_name: string | null;
   venue_address: string | null;
