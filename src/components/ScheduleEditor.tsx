@@ -71,7 +71,7 @@ export default function ScheduleEditor({ initial, onSave, onCancel, saving }: Sc
               className={cn(
                 "h-8 w-8 shrink-0",
                 row.is_band
-                  ? "text-green-700 hover:text-green-700 dark:text-green-400 dark:hover:text-green-400"
+                  ? "text-[var(--pastel-green-fg)] hover:text-[var(--pastel-green-fg)]"
                   : "text-muted-foreground/50 hover:text-foreground"
               )}
               onClick={() => toggleBand(i)}
