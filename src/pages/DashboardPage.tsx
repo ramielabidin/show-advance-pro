@@ -12,13 +12,14 @@ import {
 import {
   Calendar,
   MapPin,
-  ChevronRight,
   ChevronDown,
   TrendingUp,
   DollarSign,
   CheckCircle2,
+  CircleDashed,
   Circle,
   Info,
+  AlertTriangle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +31,10 @@ import BulkUploadDialog from "@/components/BulkUploadDialog";
 import TourPicker from "@/components/TourPicker";
 import { useTeam } from "@/components/TeamProvider";
 import { parseDollar } from "@/components/RevenueSimulator";
+import PageTitle from "@/components/PageTitle";
+import SectionLabel from "@/components/SectionLabel";
+import StatTile from "@/components/StatTile";
+import ShowCard from "@/components/ShowCard";
 import type { Show, Tour } from "@/lib/types";
 
 type Scope = "tour" | "standalone" | "upcoming";
@@ -140,14 +145,6 @@ function projectedUpside(shows: Show[]): number {
   }, 0);
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mb-3 border-b border-border/60 pb-2">
-      <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">{children}</span>
-    </div>
-  );
-}
-
 export default function DashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedScope = parseScope(searchParams.get("scope"));
@@ -191,13 +188,8 @@ export default function DashboardPage() {
     [shows, todayStr],
   );
 
-  const headerLine = showToday
-    ? artistName
-      ? `Have a great show, ${artistName}`
-      : "Have a great show tonight"
-    : artistName
-      ? `${greeting}, ${artistName}`
-      : greeting;
+  const headerEyebrow = showToday ? "Have a great show" : greeting;
+  const headerTitle = artistName ?? "Dashboard";
 
   const autoTourId = useMemo(() => autoPickedTourId(tours), [tours]);
 
@@ -441,6 +433,39 @@ export default function DashboardPage() {
     return "/shows";
   }, [scope, activeTourId]);
 
+  const upcomingInScope = useMemo(() => {
+    if (scope === "tour") return tourShows.filter((s) => isUpcomingDate(s.date));
+    if (scope === "standalone") return standaloneUpcoming;
+    return allUpcoming;
+  }, [scope, tourShows, standaloneUpcoming, allUpcoming]);
+
+  const tileCounts = useMemo(() => {
+    const now = new Date();
+    const upcoming = upcomingInScope.length;
+    const pending = upcomingInScope.filter((s) => !(s as Show).advanced_at).length;
+    const within7 = upcomingInScope.filter((s) => {
+      if ((s as Show).advanced_at) return false;
+      const d = differenceInCalendarDays(parseISO(s.date), now);
+      return d >= 0 && d < 7;
+    }).length;
+    const settled = dashCards.kind === "progressRevenue" ? dashCards.settled.n : 0;
+    return { upcoming, pending, within7, settled };
+  }, [upcomingInScope, dashCards]);
+
+  const pastTourTileValues = useMemo(() => {
+    if (dashCards.kind !== "pastTour") return null;
+    const settledList = tourShows.filter((s) => s.is_settled);
+    const avgWalkout = settledList.length
+      ? Math.round(dashCards.totalEarned / settledList.length)
+      : 0;
+    return {
+      shows: dashCards.totalShows,
+      earned: dashCards.totalEarned,
+      guaranteed: dashCards.totalGuarantee,
+      avgWalkout,
+    };
+  }, [dashCards, tourShows]);
+
   if (showsLoading) {
     return (
       <div className="animate-fade-in space-y-4">
@@ -452,15 +477,14 @@ export default function DashboardPage() {
   }
 
   const header = (
-    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
-      <div className="min-w-0 md:flex-1">
-        <h1 className="font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
-          {headerLine}
-        </h1>
-        {showToday && (
+    <PageTitle
+      eyebrow={headerEyebrow}
+      title={headerTitle}
+      subline={
+        showToday ? (
           <Link
             to={`/shows/${showToday.id}`}
-            className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground [transition:color_150ms_var(--ease-out)] truncate max-w-full"
+            className="inline-flex items-center gap-2 hover:text-foreground [transition:color_150ms_var(--ease-out)] truncate max-w-full"
           >
             <span
               className="h-1.5 w-1.5 rounded-full shrink-0"
@@ -471,13 +495,15 @@ export default function DashboardPage() {
               {showToday.city ? `, ${formatCityState(showToday.city)}` : ""}
             </span>
           </Link>
-        )}
-      </div>
-      <div className="flex items-center gap-2 self-end md:self-auto md:shrink-0">
-        <BulkUploadDialog />
-        <CreateShowDialog />
-      </div>
-    </div>
+        ) : undefined
+      }
+      actions={
+        <>
+          <BulkUploadDialog />
+          <CreateShowDialog />
+        </>
+      }
+    />
   );
 
   // Empty state — user has no shows at all.
@@ -530,6 +556,53 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* At-a-glance stat tiles */}
+      <div
+        key={`tiles:${scopeKey}`}
+        className="stagger-list grid grid-cols-2 lg:grid-cols-4 gap-3"
+      >
+        {pastTourTileValues ? (
+          <>
+            <StatTile icon={Calendar} tone="blue" label="Shows" value={pastTourTileValues.shows} />
+            <StatTile
+              icon={DollarSign}
+              tone="green"
+              label="Earned"
+              value={fmtMoney(pastTourTileValues.earned)}
+            />
+            <StatTile
+              icon={TrendingUp}
+              tone="purple"
+              label="Guaranteed"
+              value={fmtMoney(pastTourTileValues.guaranteed)}
+            />
+            <StatTile
+              icon={CircleDashed}
+              tone="yellow"
+              label="Avg walkout"
+              value={fmtMoney(pastTourTileValues.avgWalkout)}
+            />
+          </>
+        ) : (
+          <>
+            <StatTile icon={Calendar} tone="blue" label="Upcoming" value={tileCounts.upcoming} />
+            <StatTile icon={CheckCircle2} tone="green" label="Settled" value={tileCounts.settled} />
+            <StatTile
+              icon={CircleDashed}
+              tone="yellow"
+              label="Pending advance"
+              value={tileCounts.pending}
+            />
+            <StatTile
+              icon={AlertTriangle}
+              tone="red"
+              label="Within 7 days"
+              value={tileCounts.within7}
+            />
+          </>
+        )}
+      </div>
+
       {/* Progress + Revenue cards */}
       <div key={`stats:${scopeKey}`}>
         {dashCards.kind === "pastTour" ? (
@@ -579,76 +652,27 @@ export default function DashboardPage() {
       {/* List */}
       {listShows.length > 0 && (
         <div key={`list:${scopeKey}`}>
-          <SectionLabel>{listSectionLabel}</SectionLabel>
-          <Card>
-            <CardContent className="pt-4 space-y-1">
-              {listShows.map((show, i) => {
-                const daysAway = differenceInCalendarDays(parseISO(show.date), today);
-                const isAdvanced = !!(show as any).advanced_at;
-                const isPastShow = daysAway < 0;
-                const isWithin7 = daysAway >= 0 && daysAway < 7;
-
-                const dotStyle: React.CSSProperties = isPastShow
-                  ? { backgroundColor: "var(--pastel-green-fg)" }
-                  : isAdvanced
-                    ? { backgroundColor: "var(--pastel-green-fg)" }
-                    : isWithin7
-                      ? { backgroundColor: "var(--pastel-red-fg)" }
-                      : { backgroundColor: "var(--pastel-yellow-fg)" };
-
-                const dateChipStyle: React.CSSProperties | undefined =
-                  isWithin7 && !isAdvanced && !isPastShow
-                    ? { backgroundColor: "var(--pastel-red-bg)", color: "var(--pastel-red-fg)" }
-                    : undefined;
-
-                return (
-                  <Link
-                    key={show.id}
-                    to={`/shows/${show.id}`}
-                    className="stagger-item flex items-center gap-3 rounded-md px-2 py-2 hover:bg-accent group card-pressable [transition:background-color_150ms_var(--ease-out),transform_160ms_var(--ease-out)]"
-                    style={{ animationDelay: `${i * 40}ms` }}
-                  >
-                    <span
-                      className={cn(
-                        "text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 w-14 text-center",
-                        !dateChipStyle && "bg-muted text-muted-foreground",
-                      )}
-                      style={dateChipStyle}
-                    >
-                      {format(parseISO(show.date), "MMM d")}
-                    </span>
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-medium text-foreground truncate">{show.venue_name}</span>
-                        {showTourChip && show.tour_id && show.tours?.name && (
-                          <span
-                            className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium shrink-0 max-w-[200px] truncate"
-                            style={{ backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" }}
-                          >
-                            {show.tours.name}
-                          </span>
-                        )}
-                        {showTourChip && !show.tour_id && (
-                          <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground shrink-0">
-                            Standalone
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground truncate">{formatCityState(show.city)}</span>
-                    </div>
-                    <span className="h-2 w-2 rounded-full shrink-0" style={dotStyle} />
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0 [transition:opacity_150ms_var(--ease-out)]" />
-                  </Link>
-                );
-              })}
+          <SectionLabel
+            action={
               <Link
                 to={viewAllHref}
-                className="block text-xs text-muted-foreground hover:text-foreground pt-2 text-center transition-colors"
+                className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
-                View all shows →
+                View all →
               </Link>
-            </CardContent>
-          </Card>
+            }
+          >
+            {listSectionLabel}
+          </SectionLabel>
+          <div className="stagger-list space-y-2">
+            {listShows.map((show) => (
+              <ShowCard
+                key={show.id}
+                show={show}
+                chip={showTourChip ? (show.tour_id ? "tour" : "standalone") : "none"}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -1061,70 +1085,65 @@ function FeaturedShowCard({
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{formatCityState(show.city)}</span>
               </div>
-              {showFinalDate ? (
-                <span className="inline-block mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                  {format(date, "MMM d, yyyy")}
-                </span>
-              ) : (
+              <div className="flex items-center gap-2 mt-2">
+                {showFinalDate ? (
+                  <span className="inline-block text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                    {format(date, "MMM d, yyyy")}
+                  </span>
+                ) : (
+                  <span
+                    className={cn(
+                      "inline-block text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full",
+                      !isUrgent && "bg-secondary text-muted-foreground",
+                    )}
+                    style={
+                      isUrgent
+                        ? { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
+                        : undefined
+                    }
+                  >
+                    {daysLabel}
+                  </span>
+                )}
                 <span
-                  className={cn(
-                    "inline-block mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full",
-                    !isUrgent && "bg-secondary text-muted-foreground",
-                  )}
+                  className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full"
                   style={
-                    isUrgent
-                      ? { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
-                      : undefined
+                    isAdvanced
+                      ? { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }
+                      : { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
                   }
                 >
-                  {daysLabel}
+                  {isAdvanced ? (
+                    <CheckCircle2 className="h-3 w-3" />
+                  ) : (
+                    <Circle className="h-3 w-3" />
+                  )}
+                  {isAdvanced ? "Advanced" : "Not Advanced"}
                 </span>
-              )}
-            </div>
+              </div>
 
-            {/* Advance status */}
-            <div className="text-right shrink-0">
-              <span
-                className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-medium px-2 py-1 rounded-full"
-                style={
-                  isAdvanced
-                    ? { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }
-                    : { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
-                }
-              >
-                {isAdvanced ? (
-                  <CheckCircle2 className="h-3 w-3" />
-                ) : (
-                  <Circle className="h-3 w-3" />
-                )}
-                {isAdvanced ? "Advanced" : "Not Advanced"}
-              </span>
+              {hasAnyFooterData && (
+                <div className="flex flex-wrap gap-x-5 gap-y-3 mt-4 pt-3 border-t border-border/60">
+                  {footerCells.map((cell) => (
+                    <div key={cell.label} className="flex flex-col min-w-[64px]">
+                      <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                        {cell.label}
+                      </span>
+                      <span
+                        className={cn(
+                          "font-mono text-sm mt-0.5 tabular-nums",
+                          cell.value ? "text-foreground" : "text-muted-foreground",
+                        )}
+                      >
+                        {cell.value ?? "—"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
-        {hasAnyFooterData && (
-          <div className="grid grid-cols-4 border-t bg-muted/40">
-            {footerCells.map((cell, i) => (
-              <div
-                key={cell.label}
-                className={cn("py-4 px-5", i < 3 && "border-r")}
-                style={i < 3 ? { borderRightWidth: "0.5px" } : undefined}
-              >
-                <div className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground">
-                  {cell.label}
-                </div>
-                <div
-                  className={cn(
-                    "text-base mt-1",
-                    cell.value ? "text-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  {cell.value ?? "—"}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </Card>
     </Link>
   );
