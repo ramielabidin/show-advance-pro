@@ -757,6 +757,7 @@ function RevenueCard({
 
   const mobileToggle = (
     <div className="flex items-center gap-2 lg:hidden mb-3">
+      <div className="h-7 w-7 shrink-0" aria-hidden />
       <div className="grid grid-cols-2 gap-0.5 bg-secondary border border-border/60 p-[3px] rounded-md flex-1">
         {(["earned", "upcoming"] as const).map((m) => (
           <button
@@ -764,7 +765,7 @@ function RevenueCard({
             type="button"
             onClick={() => setMode(m)}
             className={cn(
-              "h-10 text-sm font-medium rounded-[4px] transition-colors flex items-center justify-center",
+              "h-8 text-sm font-medium rounded-[4px] transition-colors flex items-center justify-center",
               mode === m
                 ? "bg-background text-foreground border border-border/60"
                 : "text-muted-foreground",
@@ -807,8 +808,11 @@ function RevenueCard({
         {mobileToggle}
         {desktopToggle}
 
-        <div className="relative" style={{ minHeight: 96 }}>
-          <div key={mode} className="animate-in fade-in-0 duration-150">
+        <div className="relative min-h-[72px] lg:min-h-[96px]">
+          <div
+            key={mode}
+            className="animate-in fade-in-0 duration-150 text-center lg:text-left"
+          >
             {mode === "earned" ? (
               <>
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
@@ -829,7 +833,7 @@ function RevenueCard({
                 </p>
                 {upside > 0 && (
                   <div
-                    className="text-xs mt-1 flex items-center gap-1"
+                    className="text-xs mt-1 flex items-center gap-1 justify-center lg:justify-start"
                     style={{ color: "var(--pastel-green-fg)" }}
                   >
                     <span>+ {fmtMoney(upside)} upside</span>
