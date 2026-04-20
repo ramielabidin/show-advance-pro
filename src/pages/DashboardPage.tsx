@@ -26,6 +26,7 @@ import { cn, formatCityState } from "@/lib/utils";
 import CreateShowDialog from "@/components/CreateShowDialog";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
 import TourPicker from "@/components/TourPicker";
+import { useTeam } from "@/components/TeamProvider";
 import { parseDollar } from "@/components/RevenueSimulator";
 import type { Show, Tour } from "@/lib/types";
 
@@ -44,6 +45,8 @@ type DashCards =
       kind: "progressRevenue";
       progressLabel: "Tour Progress" | "Recent Progress";
       scopeKind: "tour" | "standalone" | "all";
+      scopeSubtitle: string | null;
+      scopeSubtitleHref: string | null;
       advanced: { n: number; total: number };
       settled: { n: number; total: number; earned: number };
       earnedIncome: number;
@@ -147,6 +150,7 @@ export default function DashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedScope = parseScope(searchParams.get("scope"));
   const requestedTourId = searchParams.get("tourId");
+  const { team } = useTeam();
 
   const { data: shows = [], isLoading: showsLoading } = useQuery<ShowWithTour[]>({
     queryKey: ["shows"],
@@ -175,6 +179,22 @@ export default function DashboardPage() {
   const today = new Date();
   const hour = today.getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  const artistName = team?.name ?? null;
+  const todayStr = format(today, "yyyy-MM-dd");
+
+  const showToday = useMemo(
+    () => shows.find((s) => s.date === todayStr && !s.is_settled) ?? null,
+    [shows, todayStr],
+  );
+
+  const headerLine = showToday
+    ? artistName
+      ? `Have a great show, ${artistName}`
+      : "Have a great show tonight"
+    : artistName
+      ? `${greeting}, ${artistName}`
+      : greeting;
 
   const autoTourId = useMemo(() => autoPickedTourId(tours), [tours]);
 
@@ -294,6 +314,8 @@ export default function DashboardPage() {
         kind: "progressRevenue",
         progressLabel: "Tour Progress",
         scopeKind: "tour",
+        scopeSubtitle: activeTour.name,
+        scopeSubtitleHref: `/shows?view=tour&tourId=${activeTour.id}`,
         advanced: { n: advanced, total },
         settled: { n: settledCount, total, earned },
         earnedIncome: earned,
@@ -327,6 +349,8 @@ export default function DashboardPage() {
         kind: "progressRevenue",
         progressLabel: "Recent Progress",
         scopeKind: "standalone",
+        scopeSubtitle: "Standalone shows",
+        scopeSubtitleHref: "/shows?view=standalone",
         advanced: { n: advanced, total: upcomingTotal },
         settled: { n: settledCount, total: recentStandalone.length, earned },
         earnedIncome: earned,
@@ -358,6 +382,8 @@ export default function DashboardPage() {
       kind: "progressRevenue",
       progressLabel: "Recent Progress",
       scopeKind: "all",
+      scopeSubtitle: "All shows · last 12 months",
+      scopeSubtitleHref: "/shows",
       advanced: { n: advanced, total: upcomingTotal },
       settled: { n: settledCount, total: recentAll.length, earned },
       earnedIncome: earned,
@@ -422,23 +448,40 @@ export default function DashboardPage() {
     );
   }
 
+  const header = (
+    <div className="flex items-start justify-between gap-3 md:gap-4">
+      <div className="min-w-0 flex-1">
+        <h1 className="font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
+          {headerLine}
+        </h1>
+        {showToday && (
+          <Link
+            to={`/shows/${showToday.id}`}
+            className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground [transition:color_150ms_var(--ease-out)] truncate max-w-full"
+          >
+            <span
+              className="h-1.5 w-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: "var(--pastel-red-fg)" }}
+            />
+            <span className="truncate">
+              Tonight · {showToday.venue_name}
+              {showToday.city ? `, ${formatCityState(showToday.city)}` : ""}
+            </span>
+          </Link>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <BulkUploadDialog />
+        <CreateShowDialog />
+      </div>
+    </div>
+  );
+
   // Empty state — user has no shows at all.
   if (shows.length === 0) {
     return (
       <div className="animate-fade-in space-y-6 sm:space-y-8">
-        <div className="flex items-center md:items-start justify-between gap-3 md:gap-4">
-          <div className="min-w-0">
-            <span className="md:hidden font-display text-xl tracking-tight text-foreground">Advance</span>
-            <div className="hidden md:block">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-0.5">{greeting}</p>
-              <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <BulkUploadDialog />
-            <CreateShowDialog />
-          </div>
-        </div>
+        {header}
         <Card>
           <CardContent className="py-12 text-center">
             <Calendar className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
@@ -449,41 +492,13 @@ export default function DashboardPage() {
     );
   }
 
-  const subline =
-    scope === "tour" && activeTour ? (
-      <Link
-        to={`/shows?view=tour&tourId=${activeTour.id}`}
-        className="text-sm text-muted-foreground hover:text-foreground [transition:color_150ms_var(--ease-out)] mt-0.5 inline-block truncate max-w-full"
-      >
-        {activeTour.name}
-      </Link>
-    ) : scope === "standalone" ? (
-      <p className="text-sm text-muted-foreground mt-0.5">Standalone shows</p>
-    ) : (
-      <p className="text-sm text-muted-foreground mt-0.5">All shows, last 12 months and upcoming</p>
-    );
-
   // The scope key drives section keys so React replays the stagger animation
   // when the user switches scopes.
   const scopeKey = scope === "tour" ? `tour:${activeTourId}` : scope;
 
   return (
     <div className="animate-fade-in space-y-6 sm:space-y-8">
-      {/* Header */}
-      <div className="flex items-center md:items-start justify-between gap-3 md:gap-4">
-        <div className="min-w-0">
-          <span className="md:hidden font-display text-xl tracking-tight text-foreground">Advance</span>
-          <div className="hidden md:block">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-0.5">{greeting}</p>
-            <h1 className="text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
-            {subline}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <BulkUploadDialog />
-          <CreateShowDialog />
-        </div>
-      </div>
+      {header}
 
       {/* Scope selector */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -636,7 +651,16 @@ function ProgressCard({
   data: ProgressRevenueData;
   className?: string;
 }) {
-  const { progressLabel, scopeKind, advanced, settled, noUpcoming, noRecent } = data;
+  const {
+    progressLabel,
+    scopeKind,
+    scopeSubtitle,
+    scopeSubtitleHref,
+    advanced,
+    settled,
+    noUpcoming,
+    noRecent,
+  } = data;
 
   const advancedPct = advanced.total > 0 ? Math.round((advanced.n / advanced.total) * 100) : 0;
   const settledPct = settled.total > 0 ? Math.round((settled.n / settled.total) * 100) : 0;
@@ -661,7 +685,7 @@ function ProgressCard({
   return (
     <Card className={cn("overflow-hidden shadow-none", className)}>
       <CardContent className="pt-4 pb-4 px-4">
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-1">
           <div
             className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
             style={{ backgroundColor: "var(--pastel-purple-bg)", color: "var(--pastel-purple-fg)" }}
@@ -672,6 +696,20 @@ function ProgressCard({
             {progressLabel}
           </span>
         </div>
+        {scopeSubtitle ? (
+          scopeSubtitleHref ? (
+            <Link
+              to={scopeSubtitleHref}
+              className="block text-sm font-medium text-foreground hover:text-muted-foreground [transition:color_150ms_var(--ease-out)] truncate mb-4"
+            >
+              {scopeSubtitle}
+            </Link>
+          ) : (
+            <p className="text-sm font-medium text-foreground truncate mb-4">{scopeSubtitle}</p>
+          )
+        ) : (
+          <div className="mb-4" />
+        )}
 
         <div className="space-y-3">
           <Tooltip>
