@@ -776,14 +776,14 @@ function RevenueCard({
 
         <div
           key={mode}
-          className="animate-in fade-in-0 duration-150 text-center"
+          className="animate-in fade-in-0 duration-150 flex items-baseline justify-center gap-x-2 gap-y-1 flex-wrap"
         >
           {mode === "earned" ? (
             <>
               <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl">
                 {fmtMoney(earnedIncome)}
               </p>
-              <p className="text-xs text-muted-foreground mt-2">{earnedSubline}</p>
+              <p className="text-xs text-muted-foreground">{earnedSubline}</p>
             </>
           ) : (
             <>
@@ -792,7 +792,7 @@ function RevenueCard({
               </p>
               {upside > 0 && (
                 <div
-                  className="text-xs mt-2 flex items-center gap-1 justify-center"
+                  className="text-xs flex items-center gap-1"
                   style={{ color: "var(--pastel-green-fg)" }}
                 >
                   <span>+ {fmtMoney(upside)} upside</span>
