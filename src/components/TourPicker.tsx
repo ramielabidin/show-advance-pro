@@ -27,7 +27,6 @@ interface TourPickerProps {
   emptyLabel?: string;
   showClear?: boolean;
   fixedLabel?: string;
-  trigger?: React.ReactNode;
 }
 
 interface TourWithShows {
@@ -79,7 +78,6 @@ export default function TourPicker({
   emptyLabel = "No tours",
   showClear = true,
   fixedLabel,
-  trigger,
 }: TourPickerProps) {
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -145,7 +143,7 @@ export default function TourPicker({
 
   const triggerLabel = fixedLabel ?? selectedTourName ?? "Tour";
 
-  if (disabled && !trigger) {
+  if (disabled) {
     return (
       <button
         type="button"
@@ -167,37 +165,33 @@ export default function TourPicker({
           if (next) onOpen?.();
         }}
       >
-        {trigger ? (
-          <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-        ) : (
-          <div
-            className={cn(
-              "inline-flex items-center rounded-md border text-sm font-medium h-9 overflow-hidden transition-colors",
-              selectedTourId
-                ? "bg-foreground text-background border-foreground"
-                : "bg-background text-foreground border-input hover:bg-accent",
-            )}
-          >
-            <PopoverTrigger asChild>
-              <button className="flex items-center gap-1.5 px-3 h-full">
-                <span className="truncate max-w-[280px]">{triggerLabel}</span>
-                <ChevronDown className="h-3.5 w-3.5 opacity-70" />
-              </button>
-            </PopoverTrigger>
-            {selectedTourId && showClear && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClear();
-                }}
-                className="h-full px-2 border-l border-background/20 hover:bg-background/10 transition-colors"
-                aria-label="Clear tour filter"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        )}
+        <div
+          className={cn(
+            "inline-flex items-center rounded-md border text-sm font-medium h-9 overflow-hidden transition-colors",
+            selectedTourId
+              ? "bg-foreground text-background border-foreground"
+              : "bg-background text-foreground border-input hover:bg-accent",
+          )}
+        >
+          <PopoverTrigger asChild>
+            <button className="flex items-center gap-1.5 px-3 h-full">
+              <span className="truncate max-w-[280px]">{triggerLabel}</span>
+              <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+            </button>
+          </PopoverTrigger>
+          {selectedTourId && showClear && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onClear();
+              }}
+              className="h-full px-2 border-l border-background/20 hover:bg-background/10 transition-colors"
+              aria-label="Clear tour filter"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
 
         <PopoverContent align="start" className="w-80 p-0">
           <div className="max-h-[360px] overflow-y-auto p-2">

@@ -479,43 +479,27 @@ export default function DashboardPage() {
   const scopeKey = scope === "tour" ? `tour:${activeTourId}` : scope;
 
   return (
-    <div className="animate-fade-in space-y-8">
+    <div className="animate-fade-in space-y-6 sm:space-y-8">
       {header}
 
-      {/* Scope selector — segmented toggle */}
-      <div className="grid grid-cols-3 gap-0.5 bg-secondary border border-border/60 p-[3px] rounded-md">
+      {/* Scope selector */}
+      <div className="flex items-center gap-2 flex-wrap">
         <TourPicker
           selectedTourId={scope === "tour" ? activeTourId : null}
           selectedTourName={scope === "tour" ? activeTour?.name ?? null : null}
           onSelect={(id) => setScopeTour(id)}
           onClear={clearTourScope}
           disabled={tours.length === 0}
+          emptyLabel="No tours"
           showClear={false}
-          trigger={
-            <button
-              type="button"
-              disabled={tours.length === 0}
-              className={cn(
-                "h-9 px-2 text-sm font-medium rounded-[4px] transition-colors flex items-center justify-center gap-1 min-w-0",
-                scope === "tour"
-                  ? "bg-background text-foreground border border-border/60"
-                  : "text-muted-foreground",
-                tours.length === 0 && "opacity-60 cursor-not-allowed",
-              )}
-            >
-              <span className="truncate">
-                {scope === "tour" ? activeTour?.name ?? "Tour" : "Tour"}
-              </span>
-              <ChevronDown className="h-3.5 w-3.5 opacity-70 shrink-0" />
-            </button>
-          }
+          fixedLabel="Tour"
         />
-        <ScopeSegment
+        <ScopePill
           label="Standalone"
           active={scope === "standalone"}
           onClick={setScopeStandalone}
         />
-        <ScopeSegment
+        <ScopePill
           label="All Shows"
           active={scope === "upcoming"}
           onClick={setScopeUpcoming}
@@ -863,7 +847,7 @@ function PastTourCard({
   );
 }
 
-function ScopeSegment({
+function ScopePill({
   label,
   active,
   onClick,
@@ -874,13 +858,12 @@ function ScopeSegment({
 }) {
   return (
     <button
-      type="button"
       onClick={onClick}
       className={cn(
-        "h-9 text-sm font-medium rounded-[4px] transition-colors flex items-center justify-center",
+        "inline-flex items-center h-9 px-3 rounded-md border text-sm font-medium transition-colors",
         active
-          ? "bg-background text-foreground border border-border/60"
-          : "text-muted-foreground",
+          ? "bg-foreground text-background border-foreground"
+          : "bg-background text-foreground border-input hover:bg-accent",
       )}
     >
       {label}
