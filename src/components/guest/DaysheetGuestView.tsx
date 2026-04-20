@@ -1,5 +1,5 @@
 import { format, parseISO } from "date-fns";
-import { Mic } from "lucide-react";
+import { MapPin, Mic } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import FieldGroup from "@/components/FieldGroup";
@@ -75,26 +75,37 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
 
   return (
     <div className="space-y-8">
-      <header className="space-y-1">
+      <header className="space-y-2">
         <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
           Day Sheet
         </p>
-        <h1 className="font-display text-2xl sm:text-3xl md:text-4xl tracking-[-0.02em] break-words">
-          {formatDate(show.date)}
-        </h1>
-        <p className="text-sm sm:text-base text-foreground break-words">
-          {show.venue_name}
-          {city ? <span className="text-muted-foreground"> · {city}</span> : null}
-        </p>
+        {show.venue_name ? (
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-[-0.02em] leading-[1.05] break-words">
+            {show.venue_name}
+          </h1>
+        ) : null}
+        <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          {rawAddr ? (
+            <a
+              href={`https://maps.google.com/?q=${encodeURIComponent(rawAddr)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 hover:underline hover:text-foreground transition-colors break-words"
+            >
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span className="break-words">{rawAddr}</span>
+            </a>
+          ) : city ? (
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span>{city}</span>
+            </span>
+          ) : null}
+        </div>
+        <p className="text-sm sm:text-base text-foreground pt-1">{formatDate(show.date)}</p>
       </header>
 
       <div className="space-y-6">
-        {has("venue") && rawAddr ? (
-          <FieldGroup title="Venue">
-            <FieldRow label="Address" value={rawAddr} />
-          </FieldGroup>
-        ) : null}
-
         {showTwoColumn && (
           <div className="grid grid-cols-1 md:grid-cols-[3fr_auto_2fr] gap-x-6 gap-y-6">
             <div className="min-w-0">
