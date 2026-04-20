@@ -105,7 +105,6 @@ BEGIN
     'guest_list_details',  v_show.guest_list_details,
     'artist_comps',        v_show.artist_comps,
     'venue_capacity',      v_show.venue_capacity,
-    'age_restriction',     v_show.age_restriction,
     'wifi_network',        v_show.wifi_network,
     'wifi_password',       v_show.wifi_password,
     'hotel_name',          v_show.hotel_name,

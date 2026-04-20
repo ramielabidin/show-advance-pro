@@ -49,7 +49,6 @@ export interface GuestShowPayload {
   guest_list_details: string | null;
   artist_comps: string | null;
   venue_capacity: number | string | null;
-  age_restriction: string | null;
   wifi_network: string | null;
   wifi_password: string | null;
   hotel_name: string | null;
