@@ -50,7 +50,7 @@ function GuestCount({ total, compsAllotment }: { total: number; compsAllotment?:
   let colorClass = "text-muted-foreground";
   if (cap !== null) {
     if (total >= cap) colorClass = "text-destructive";
-    else if (total >= cap - 3) colorClass = "text-amber-500";
+    else if (total >= cap - 3) colorClass = "text-[var(--pastel-yellow-fg)]";
   }
 
   return (
