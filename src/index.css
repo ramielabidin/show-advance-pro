@@ -88,6 +88,8 @@
     --pastel-green-fg: #346538;
     --pastel-yellow-bg: #fbf3db;
     --pastel-yellow-fg: #956400;
+    --pastel-purple-bg: #ece7f7;
+    --pastel-purple-fg: #5b3aa0;
   }
 
   .dark {
@@ -136,6 +138,8 @@
     --pastel-green-fg: #b5d1b0;
     --pastel-yellow-bg: hsla(40, 40%, 20%, 0.5);
     --pastel-yellow-fg: #e8c988;
+    --pastel-purple-bg: hsla(260, 30%, 22%, 0.5);
+    --pastel-purple-fg: #c6b8ea;
   }
 }
 
