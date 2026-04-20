@@ -1,0 +1,19 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Radii</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>body{margin:0;padding:20px;background:hsl(var(--background));color:hsl(var(--foreground));font-family:var(--font-sans)}
+.row{display:flex;gap:14px;align-items:flex-end}
+.item{display:flex;flex-direction:column;align-items:center;gap:6px}
+.box{width:66px;height:52px;background:hsl(var(--card));border:1px solid hsl(var(--border))}
+.nm{font-size:12px;font-weight:500}
+.px{font:500 10.5px/1 var(--font-mono);color:hsl(var(--muted-foreground))}
+.note{margin-top:16px;font-size:12px;color:hsl(var(--muted-foreground));line-height:1.45}
+</style></head><body>
+<div class="row">
+  <div class="item"><div class="box" style="border-radius:4px"></div><div class="nm">sm</div><div class="px">4px</div></div>
+  <div class="item"><div class="box" style="border-radius:6px"></div><div class="nm">md−</div><div class="px">6px</div></div>
+  <div class="item"><div class="box" style="border-radius:8px"></div><div class="nm">md</div><div class="px">8px · --radius</div></div>
+  <div class="item"><div class="box" style="border-radius:10px"></div><div class="nm">lg</div><div class="px">10px · cards</div></div>
+  <div class="item"><div class="box" style="border-radius:999px;width:80px;height:28px"></div><div class="nm">full</div><div class="px">chips · dots</div></div>
+</div>
+<div class="note">Only these five radii. Buttons / inputs / cards → <code>rounded-md</code>. Chips / status dots / avatars → <code>rounded-full</code>. Nothing in between.</div>
+</body></html>

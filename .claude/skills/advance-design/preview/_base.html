@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Advance — Preview base</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: hsl(var(--background)); color: hsl(var(--foreground)); }
+  body { padding: 20px 22px; font-family: var(--font-sans); }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 10px; font: 500 11px/1 var(--font-sans); }
+  .label-up { font: 500 10.5px/1.1 var(--font-sans); text-transform: uppercase; letter-spacing: 0.14em; color: hsl(var(--muted-foreground)); }
+  .swatch { width: 44px; height: 44px; border-radius: 8px; border: 1px solid hsl(var(--border)); }
+  .swatch-row { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 82px; }
+  .swatch-row .name { font: 500 11px/1.2 var(--font-sans); color: hsl(var(--foreground)); }
+  .swatch-row .hex { font: 500 10.5px/1 var(--font-mono); color: hsl(var(--muted-foreground)); letter-spacing: -0.01em; }
+  .card { border: 1px solid hsl(var(--border)); background: hsl(var(--card)); border-radius: 10px; padding: 14px 16px; }
+  .bold-600 { font-weight: 600; }
+  .mono { font-family: var(--font-mono); }
+  .disp { font-family: var(--font-display); }
+  .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+  button { font-family: inherit; cursor: pointer; }
+</style>
+</head>
+<body>
+  <slot id="card"></slot>
+</body>
+</html>

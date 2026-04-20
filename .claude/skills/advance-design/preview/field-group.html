@@ -1,0 +1,22 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Field group</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>body{margin:0;padding:18px 22px;background:hsl(var(--background));color:hsl(var(--foreground));font-family:var(--font-sans)}
+.grp{}
+.head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.acc{width:2px;height:14px;background:hsl(var(--foreground)/.25);border-radius:2px}
+.head h3{font:500 11px/1.2 var(--font-sans);text-transform:uppercase;letter-spacing:.14em;color:hsl(var(--muted-foreground));margin:0;display:flex;gap:6px;align-items:center}
+.incomp{width:6px;height:6px;border-radius:999px;background:hsl(38 92% 50%)}
+.row{display:grid;grid-template-columns:110px 1fr;gap:10px;padding:4px 0}
+.row .l{font-size:13px;color:hsl(var(--muted-foreground))}
+.row .v{font-size:13px;color:hsl(var(--foreground))}
+.row.mono .v{font-family:var(--font-mono);font-size:12.5px}
+.empty{font-size:13px;color:hsl(var(--muted-foreground)/.6);font-style:italic}
+</style></head><body>
+<div class="grp">
+  <div class="head"><div class="acc"></div><h3>Day of Show Contact <span class="incomp" title="incomplete"></span></h3></div>
+  <div class="row"><span class="l">Name</span><span class="v">Katie Ramírez</span></div>
+  <div class="row mono"><span class="l">Phone</span><span class="v">(512) 478 0226</span></div>
+  <div class="row"><span class="l">Role</span><span class="v">Talent buyer</span></div>
+  <div class="row"><span class="l">Email</span><span class="empty">Tap to add email</span></div>
+</div>
+</body></html>

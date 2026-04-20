@@ -1,0 +1,25 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Motion</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>body{margin:0;padding:18px 22px;background:hsl(var(--background));color:hsl(var(--foreground));font-family:var(--font-sans);font-size:13px}
+.tbl{display:grid;grid-template-columns:auto 1fr auto;gap:8px 14px;align-items:center}
+.nm{font-weight:500}
+.curve{height:18px;border-radius:3px;background:linear-gradient(90deg, hsl(var(--muted)) 0%, hsl(var(--foreground)) 100%)}
+.dur{font:500 11px/1 var(--font-mono);color:hsl(var(--muted-foreground));text-align:right}
+.h{grid-column:1/-1;font:500 10.5px/1 var(--font-sans);text-transform:uppercase;letter-spacing:.14em;color:hsl(var(--muted-foreground));margin-top:6px}
+.note{font-size:12px;color:hsl(var(--muted-foreground));margin-top:12px;line-height:1.45}
+</style></head><body>
+<div class="tbl">
+  <div class="h">Easing</div>
+  <div class="nm">--ease-out</div><div class="curve"></div><div class="dur">default UI</div>
+  <div class="nm">--ease-editorial</div><div class="curve" style="background:linear-gradient(90deg,hsl(var(--muted)) 0%, hsl(var(--foreground)) 85%)"></div><div class="dur">page entrance</div>
+  <div class="nm">--ease-in-out</div><div class="curve" style="background:linear-gradient(90deg,hsl(var(--muted)) 15%, hsl(var(--foreground)) 85%)"></div><div class="dur">morph</div>
+  <div class="nm">--ease-drawer</div><div class="curve" style="background:linear-gradient(90deg,hsl(var(--muted)) 0%, hsl(var(--foreground)) 70%)"></div><div class="dur">vaul</div>
+  <div class="h">Duration</div>
+  <div class="nm">press</div><div></div><div class="dur">160ms</div>
+  <div class="nm">hover</div><div></div><div class="dur">150ms</div>
+  <div class="nm">dropdown</div><div></div><div class="dur">220ms</div>
+  <div class="nm">page fade-in</div><div></div><div class="dur">220ms</div>
+  <div class="nm">modal</div><div></div><div class="dur">200–500ms</div>
+</div>
+<div class="note">UI max 300ms. Never raw <code>ease</code> / <code>ease-in</code>. Stagger lists use 40ms per child (caps at 9).</div>
+</body></html>

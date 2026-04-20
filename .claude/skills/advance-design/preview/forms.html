@@ -1,0 +1,15 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Form inputs</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>body{margin:0;padding:18px 22px;background:hsl(var(--background));color:hsl(var(--foreground));font-family:var(--font-sans)}
+.lbl{font:500 11px/1 var(--font-sans);color:hsl(var(--muted-foreground));margin:4px 0 6px}
+input,textarea,select{width:100%;box-sizing:border-box;height:36px;border-radius:8px;border:1px solid hsl(var(--input));background:hsl(var(--background));padding:0 12px;font:400 13px/1 var(--font-sans);color:hsl(var(--foreground));outline:none}
+input:focus{border-color:hsl(var(--ring));box-shadow:0 0 0 2px hsl(var(--ring)/.2)}
+textarea{height:auto;padding:10px 12px;line-height:1.45;resize:vertical}
+.row{margin-bottom:12px}
+.inline-edit{display:inline-block;border-bottom:1px dashed hsl(var(--border));padding:2px 0;font-size:13px;color:hsl(var(--foreground));cursor:text}
+.empty{font-size:13px;color:hsl(var(--muted-foreground)/.6);font-style:italic}
+</style></head><body>
+<div class="row"><div class="lbl">Text input</div><input placeholder="Venue name" value="The Mohawk"></div>
+<div class="row"><div class="lbl">Mono input (data)</div><input style="font-family:var(--font-mono)" value="(512) 478 0226"></div>
+<div class="row"><div class="lbl">Inline-editable field</div><span class="inline-edit">Load in · 14:30</span> &nbsp; <span class="empty">Tap to add soundcheck</span></div>
+</body></html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Colors — Canvas</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>body{margin:0;padding:20px;background:hsl(var(--background));color:hsl(var(--foreground));font-family:var(--font-sans)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tile{border-radius:10px;border:1px solid hsl(var(--border));padding:14px;min-height:88px;display:flex;flex-direction:column;justify-content:space-between}
+.tag{font:500 10px/1 var(--font-sans);text-transform:uppercase;letter-spacing:.14em;opacity:.7}
+.name{font-size:13px;font-weight:500;margin-top:10px}
+.hex{font:500 11px/1 var(--font-mono);margin-top:2px;opacity:.7}
+.light{background:hsl(40 30% 97%);color:hsl(30 10% 12%)}
+.darkt{background:hsl(30 10% 8%);color:hsl(40 20% 92%);border-color:hsl(30 8% 18%)}
+.cardL{background:hsl(40 25% 99%);color:hsl(30 10% 12%)}
+.cardD{background:hsl(30 10% 10%);color:hsl(40 20% 92%);border-color:hsl(30 8% 18%)}
+</style></head><body>
+<div class="grid">
+  <div class="tile light"><span class="tag">LIGHT · background</span><div><div class="name">Canvas</div><div class="hex">hsl(40 30% 97%)</div></div></div>
+  <div class="tile darkt"><span class="tag">DARK · background</span><div><div class="name">Canvas</div><div class="hex">hsl(30 10% 8%)</div></div></div>
+  <div class="tile cardL"><span class="tag">LIGHT · card</span><div><div class="name">Surface</div><div class="hex">hsl(40 25% 99%)</div></div></div>
+  <div class="tile cardD"><span class="tag">DARK · card</span><div><div class="name">Surface</div><div class="hex">hsl(30 10% 10%)</div></div></div>
+</div>
+</body></html>

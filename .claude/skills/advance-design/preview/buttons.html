@@ -1,0 +1,32 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Buttons</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>body{margin:0;padding:18px 22px;background:hsl(var(--background));color:hsl(var(--foreground));font-family:var(--font-sans)}
+button{font:500 13px/1 var(--font-sans);height:36px;padding:0 14px;border-radius:8px;cursor:pointer;transition:transform 160ms var(--ease-out),background-color 160ms var(--ease-out),border-color 160ms var(--ease-out);display:inline-flex;align-items:center;gap:6px}
+button:active{transform:scale(.97)}
+.primary{background:hsl(var(--primary));color:hsl(var(--primary-foreground));border:1px solid hsl(var(--primary))}
+.outline{background:hsl(var(--background));color:hsl(var(--foreground));border:1px solid hsl(var(--input))}
+.outline:hover{background:hsl(var(--accent))}
+.secondary{background:hsl(var(--secondary));color:hsl(var(--secondary-foreground));border:1px solid transparent}
+.ghost{background:transparent;color:hsl(var(--muted-foreground));border:1px solid transparent}
+.ghost:hover{background:hsl(var(--accent));color:hsl(var(--foreground))}
+.destructive{background:hsl(var(--destructive));color:#fff;border:1px solid hsl(var(--destructive))}
+.settle{background:hsl(var(--success));color:#fff;border:1px solid hsl(var(--success))}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.lbl{font:500 10.5px/1 var(--font-sans);text-transform:uppercase;letter-spacing:.14em;color:hsl(var(--muted-foreground));margin:4px 0}
+</style></head><body>
+<div class="lbl">Variants</div>
+<div class="row">
+  <button class="primary">Save changes</button>
+  <button class="settle">✓ Settle show</button>
+  <button class="outline">Mark as advanced</button>
+  <button class="secondary">Share</button>
+  <button class="ghost">Cancel</button>
+  <button class="destructive">Delete</button>
+</div>
+<div class="lbl">Sizes</div>
+<div class="row">
+  <button class="primary" style="height:44px;padding:0 18px">Mobile · h-11</button>
+  <button class="primary">Desktop · h-9</button>
+  <button class="primary" style="height:32px;padding:0 10px;font-size:12px">Small</button>
+</div>
+</body></html>

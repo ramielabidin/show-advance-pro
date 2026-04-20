@@ -1,0 +1,16 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Colors — Pastel accents</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>body{margin:0;padding:18px 22px;background:hsl(var(--background));color:hsl(var(--foreground));font-family:var(--font-sans)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pair{border:1px solid hsl(var(--border));border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.top{padding:10px 12px;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:500}
+.bottom{padding:8px 12px;border-top:1px solid rgba(0,0,0,0.05);background:hsl(var(--card));display:flex;justify-content:space-between;font:500 10.5px/1 var(--font-mono);color:hsl(var(--muted-foreground))}
+.use{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;font-weight:500;opacity:.75}
+</style></head><body>
+<div class="grid">
+  <div class="pair"><div class="top" style="background:var(--pastel-red-bg);color:var(--pastel-red-fg)"><span>Red</span><span class="use">urgent</span></div><div class="bottom"><span>#fdebec</span><span>#9f2f2d</span></div></div>
+  <div class="pair"><div class="top" style="background:var(--pastel-blue-bg);color:var(--pastel-blue-fg)"><span>Blue</span><span class="use">tour · info</span></div><div class="bottom"><span>#e1f3fe</span><span>#1f6c9f</span></div></div>
+  <div class="pair"><div class="top" style="background:var(--pastel-green-bg);color:var(--pastel-green-fg)"><span>Green</span><span class="use">settled</span></div><div class="bottom"><span>#edf3ec</span><span>#346538</span></div></div>
+  <div class="pair"><div class="top" style="background:var(--pastel-yellow-bg);color:var(--pastel-yellow-fg)"><span>Yellow</span><span class="use">pending</span></div><div class="bottom"><span>#fbf3db</span><span>#956400</span></div></div>
+</div>
+</body></html>

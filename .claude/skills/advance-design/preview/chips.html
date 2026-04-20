@@ -1,0 +1,29 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Chips</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>body{margin:0;padding:18px 22px;background:hsl(var(--background));color:hsl(var(--foreground));font-family:var(--font-sans)}
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 10px;font:500 11px/1.2 var(--font-sans)}
+.lbl{font:500 10.5px/1 var(--font-sans);text-transform:uppercase;letter-spacing:.14em;color:hsl(var(--muted-foreground));margin:4px 0 8px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.dot{width:8px;height:8px;border-radius:999px;display:inline-block;margin-right:8px}
+.inline{display:inline-flex;align-items:center;font-size:12px}
+</style></head><body>
+<div class="lbl">Pastel categorization</div>
+<div class="row">
+  <span class="chip" style="background:var(--pastel-blue-bg);color:var(--pastel-blue-fg)">Spring Routing</span>
+  <span class="chip" style="background:var(--pastel-green-bg);color:var(--pastel-green-fg)">Settled</span>
+  <span class="chip" style="background:var(--pastel-yellow-bg);color:var(--pastel-yellow-fg)">Pending</span>
+  <span class="chip" style="background:var(--pastel-red-bg);color:var(--pastel-red-fg)">Within 7 days</span>
+</div>
+<div class="lbl">Semantic</div>
+<div class="row">
+  <span class="chip" style="background:hsl(var(--badge-new)/.15);color:hsl(var(--badge-new))">✦ New</span>
+  <span class="chip" style="background:hsl(var(--muted));color:hsl(var(--muted-foreground))">Standalone</span>
+  <span class="chip" style="border:1px solid hsl(var(--border));color:hsl(var(--foreground))">Draft</span>
+</div>
+<div class="lbl">Status dots</div>
+<div class="row">
+  <span class="inline"><span class="dot" style="background:var(--pastel-green-fg)"></span>Advanced</span>
+  <span class="inline"><span class="dot" style="background:var(--pastel-yellow-fg)"></span>Pending</span>
+  <span class="inline"><span class="dot" style="background:var(--pastel-red-fg)"></span>Urgent</span>
+</div>
+</body></html>

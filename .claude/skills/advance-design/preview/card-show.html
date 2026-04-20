@@ -1,0 +1,32 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Show card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>body{margin:0;padding:18px 22px;background:hsl(var(--background));color:hsl(var(--foreground));font-family:var(--font-sans)}
+.card{display:flex;align-items:center;justify-content:space-between;border:1px solid hsl(var(--border));background:hsl(var(--card));border-radius:10px;padding:12px 14px}
+.left{display:flex;align-items:center;gap:16px;min-width:0}
+.date{text-align:center;width:52px}
+.date .m{font-size:10.5px;text-transform:uppercase;color:hsl(var(--muted-foreground));font-weight:500}
+.date .d{font-family:var(--font-display);font-size:24px;letter-spacing:-0.03em;line-height:1}
+.date .w{font-size:10.5px;color:hsl(var(--muted-foreground));margin-top:2px}
+.meta{border-left:1px solid hsl(var(--border));padding-left:16px;min-width:0}
+.venue{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.venue h3{font-size:14px;font-weight:500;margin:0}
+.chip{display:inline-flex;align-items:center;border-radius:999px;padding:2px 8px;font:500 11px/1.2 var(--font-sans)}
+.city{display:flex;gap:4px;align-items:center;font-size:12px;color:hsl(var(--muted-foreground));margin-top:2px}
+.dot{width:8px;height:8px;border-radius:999px;display:inline-block}
+.pin{width:10px;height:10px;border-radius:50%;border:1.5px solid currentColor;position:relative}
+.pin::after{content:"";position:absolute;left:50%;top:100%;width:1.5px;height:4px;background:currentColor;transform:translateX(-50%)}
+</style></head><body>
+<div class="card">
+  <div class="left">
+    <div class="date"><div class="m">Mar</div><div class="d">14</div><div class="w">Fri</div></div>
+    <div class="meta">
+      <div class="venue">
+        <h3>The Mohawk</h3>
+        <span class="chip" style="background:var(--pastel-blue-bg);color:var(--pastel-blue-fg)">Spring Routing</span>
+      </div>
+      <div class="city"><span>•</span>Austin, TX</div>
+    </div>
+  </div>
+  <span class="dot" style="background:var(--pastel-green-fg)"></span>
+</div>
+</body></html>
