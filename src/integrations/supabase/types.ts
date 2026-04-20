@@ -91,67 +91,44 @@ export type Database = {
         }
         Relationships: []
       }
-      inbound_parse_events: {
+      guest_links: {
         Row: {
           created_at: string
-          email_subject: string | null
-          from_address: string | null
-          gmail_thread_id: string | null
+          created_by: string
+          expires_at: string
           id: string
-          match_confidence: string | null
-          matched_show_id: string | null
-          raw_email_text: string
-          reviewed_at: string | null
-          reviewed_show_id: string | null
-          status: string
-          team_id: string
+          label: string | null
+          link_type: string
+          revoked_at: string | null
+          show_id: string
+          token: string
         }
         Insert: {
           created_at?: string
-          email_subject?: string | null
-          from_address?: string | null
-          gmail_thread_id?: string | null
+          created_by: string
+          expires_at?: string
           id?: string
-          match_confidence?: string | null
-          matched_show_id?: string | null
-          raw_email_text: string
-          reviewed_at?: string | null
-          reviewed_show_id?: string | null
-          status?: string
-          team_id: string
+          label?: string | null
+          link_type: string
+          revoked_at?: string | null
+          show_id: string
+          token: string
         }
         Update: {
           created_at?: string
-          email_subject?: string | null
-          from_address?: string | null
-          gmail_thread_id?: string | null
+          created_by?: string
+          expires_at?: string
           id?: string
-          match_confidence?: string | null
-          matched_show_id?: string | null
-          raw_email_text?: string
-          reviewed_at?: string | null
-          reviewed_show_id?: string | null
-          status?: string
-          team_id?: string
+          label?: string | null
+          link_type?: string
+          revoked_at?: string | null
+          show_id?: string
+          token?: string
         }
         Relationships: [
           {
-            foreignKeyName: "inbound_parse_events_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inbound_parse_events_reviewed_show_id_fkey"
-            columns: ["reviewed_show_id"]
-            isOneToOne: false
-            referencedRelation: "shows"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inbound_parse_events_matched_show_id_fkey"
-            columns: ["matched_show_id"]
+            foreignKeyName: "guest_links_show_id_fkey"
+            columns: ["show_id"]
             isOneToOne: false
             referencedRelation: "shows"
             referencedColumns: ["id"]
@@ -215,6 +192,100 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      inbound_parse_events: {
+        Row: {
+          created_at: string
+          email_subject: string | null
+          from_address: string | null
+          gmail_message_id: string | null
+          gmail_thread_id: string | null
+          id: string
+          match_confidence: string | null
+          matched_show_id: string | null
+          raw_email_text: string
+          reviewed_at: string | null
+          reviewed_show_id: string | null
+          status: string
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_subject?: string | null
+          from_address?: string | null
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
+          id?: string
+          match_confidence?: string | null
+          matched_show_id?: string | null
+          raw_email_text: string
+          reviewed_at?: string | null
+          reviewed_show_id?: string | null
+          status?: string
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          email_subject?: string | null
+          from_address?: string | null
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
+          id?: string
+          match_confidence?: string | null
+          matched_show_id?: string | null
+          raw_email_text?: string
+          reviewed_at?: string | null
+          reviewed_show_id?: string | null
+          status?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_parse_events_matched_show_id_fkey"
+            columns: ["matched_show_id"]
+            isOneToOne: false
+            referencedRelation: "shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_parse_events_reviewed_show_id_fkey"
+            columns: ["reviewed_show_id"]
+            isOneToOne: false
+            referencedRelation: "shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_parse_events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parse_advance_requests: {
+        Row: {
+          content_hash: string
+          created_at: string
+          id: string
+          input_bytes: number
+          user_id: string
+        }
+        Insert: {
+          content_hash: string
+          created_at?: string
+          id?: string
+          input_bytes: number
+          user_id: string
+        }
+        Update: {
+          content_hash?: string
+          created_at?: string
+          id?: string
+          input_bytes?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       schedule_entries: {
         Row: {
@@ -291,12 +362,9 @@ export type Database = {
           additional_info: string | null
           advance_imported_at: string | null
           advanced_at: string | null
-          age_restriction: string | null
           artist_comps: string | null
           backend_deal: string | null
           backline_provided: string | null
-          catering_details: string | null
-          changeover_time: string | null
           city: string
           created_at: string
           date: string
@@ -343,12 +411,9 @@ export type Database = {
           additional_info?: string | null
           advance_imported_at?: string | null
           advanced_at?: string | null
-          age_restriction?: string | null
           artist_comps?: string | null
           backend_deal?: string | null
           backline_provided?: string | null
-          catering_details?: string | null
-          changeover_time?: string | null
           city: string
           created_at?: string
           date: string
@@ -395,12 +460,9 @@ export type Database = {
           additional_info?: string | null
           advance_imported_at?: string | null
           advanced_at?: string | null
-          age_restriction?: string | null
           artist_comps?: string | null
           backend_deal?: string | null
           backline_provided?: string | null
-          catering_details?: string | null
-          changeover_time?: string | null
           city?: string
           created_at?: string
           date?: string
@@ -631,6 +693,8 @@ export type Database = {
         Args: { _name: string; _team_id: string; _user_id: string }
         Returns: undefined
       }
+      generate_inbound_email_token: { Args: never; Returns: string }
+      get_guest_show: { Args: { p_token: string }; Returns: Json }
       get_team_member_emails: {
         Args: { _team_id: string }
         Returns: {
@@ -645,6 +709,10 @@ export type Database = {
       is_team_owner: {
         Args: { _team_id: string; _user_id: string }
         Returns: boolean
+      }
+      update_guest_list_by_token: {
+        Args: { p_guest_list: string; p_token: string }
+        Returns: undefined
       }
       user_team_ids: { Args: { _user_id: string }; Returns: string[] }
     }
