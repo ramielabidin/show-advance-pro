@@ -175,7 +175,7 @@ export default function CreateShowDialog({ defaultTourId, triggerClassName }: Cr
       <DialogTrigger asChild>
         <Button size="sm" className={cn("gap-1.5 h-11 sm:h-9", triggerClassName)}>
           <Plus className="h-4 w-4" />
-          Add Show
+          Show
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">

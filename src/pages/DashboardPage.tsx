@@ -483,7 +483,7 @@ export default function DashboardPage() {
       {header}
 
       {/* Scope selector */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap pt-2 md:pt-0">
         <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium mr-1">
           View
         </span>
