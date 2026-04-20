@@ -27,12 +27,14 @@ import { useTeam } from "@/components/TeamProvider";
 import { toast } from "sonner";
 import { extractTextFromPdf } from "@/lib/pdfExtract";
 import { saveParsedShow } from "@/lib/saveParsedShow";
+import { cn } from "@/lib/utils";
 
 interface CreateShowDialogProps {
   defaultTourId?: string;
+  triggerClassName?: string;
 }
 
-export default function CreateShowDialog({ defaultTourId }: CreateShowDialogProps) {
+export default function CreateShowDialog({ defaultTourId, triggerClassName }: CreateShowDialogProps) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const { teamId } = useTeam();
@@ -171,7 +173,7 @@ export default function CreateShowDialog({ defaultTourId }: CreateShowDialogProp
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetAll(); }}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gap-1.5 h-11 sm:h-9">
+        <Button size="sm" className={cn("gap-1.5 h-11 sm:h-9", triggerClassName)}>
           <Plus className="h-4 w-4" />
           Add Show
         </Button>
