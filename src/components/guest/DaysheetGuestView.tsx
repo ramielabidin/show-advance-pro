@@ -30,29 +30,33 @@ function Schedule({ show }: { show: GuestShowPayload }) {
   );
   if (entries.length === 0) return null;
   return (
-    <Card className="p-4">
+    <Card className="p-3 sm:p-4">
       {entries.map((entry, i) => {
         const setInline = entry.is_band && show.set_length ? ` (${show.set_length})` : "";
         return (
           <div
             key={entry.id}
             className={cn(
-              "grid grid-cols-[80px_1fr] gap-3 items-center py-2.5 px-1",
+              "grid grid-cols-[68px_1fr] sm:grid-cols-[80px_1fr] gap-2.5 sm:gap-3 items-baseline py-2 sm:py-2.5 px-1",
               i < entries.length - 1 && "border-b border-border/60",
             )}
           >
-            <span className="font-mono text-sm shrink-0 whitespace-nowrap text-muted-foreground">
+            <span className="font-mono text-xs sm:text-sm shrink-0 whitespace-nowrap text-muted-foreground pt-0.5">
               {entry.time ?? ""}
             </span>
             <span
               className={cn(
-                "text-base inline-flex items-center gap-1.5",
+                "text-[15px] sm:text-base inline-flex items-baseline gap-1.5 min-w-0 break-words",
                 entry.is_band ? "text-foreground font-medium" : "text-foreground",
               )}
             >
-              {entry.is_band && <Mic className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-              {entry.label}
-              {setInline}
+              {entry.is_band && (
+                <Mic className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground shrink-0 translate-y-[2px]" />
+              )}
+              <span className="min-w-0 break-words">
+                {entry.label}
+                {setInline}
+              </span>
             </span>
           </div>
         );
@@ -75,10 +79,10 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
         <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
           Day Sheet
         </p>
-        <h1 className="font-display text-3xl sm:text-4xl tracking-[-0.02em]">
+        <h1 className="font-display text-2xl sm:text-3xl md:text-4xl tracking-[-0.02em] break-words">
           {formatDate(show.date)}
         </h1>
-        <p className="text-base text-foreground">
+        <p className="text-sm sm:text-base text-foreground break-words">
           {show.venue_name}
           {city ? <span className="text-muted-foreground"> · {city}</span> : null}
         </p>
@@ -93,7 +97,7 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
 
         {showTwoColumn && (
           <div className="grid grid-cols-1 md:grid-cols-[3fr_auto_2fr] gap-x-6 gap-y-6">
-            <div>
+            <div className="min-w-0">
               {has("schedule") && (
                 <FieldGroup title="Schedule">
                   <Schedule show={show} />
@@ -103,7 +107,7 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
 
             <Separator orientation="vertical" className="hidden md:block h-auto" />
 
-            <div className="space-y-6">
+            <div className="space-y-6 min-w-0">
               {has("contact") && (
                 <FieldGroup title="Day of Show Contact" contentClassName="space-y-2">
                   <FieldRow label="Name" value={show.dos_contact_name} />

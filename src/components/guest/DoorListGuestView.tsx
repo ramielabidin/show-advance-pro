@@ -37,10 +37,12 @@ export default function DoorListGuestView({ show, token }: DoorListGuestViewProp
         <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
           Door List
         </p>
-        <h1 className="font-display text-3xl sm:text-4xl tracking-[-0.02em]">
+        <h1 className="font-display text-2xl sm:text-3xl md:text-4xl tracking-[-0.02em] break-words">
           {formatDate(show.date)}
         </h1>
-        {subtitle ? <p className="text-base text-foreground">{subtitle}</p> : null}
+        {subtitle ? (
+          <p className="text-sm sm:text-base text-foreground break-words">{subtitle}</p>
+        ) : null}
       </header>
 
       <FieldGroup title="Guest List">
