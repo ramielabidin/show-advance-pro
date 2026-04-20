@@ -97,7 +97,7 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
               e.stopPropagation();
               onRemoveFromTour();
             }}
-            className="px-2 py-1 rounded-md text-xs text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all"
+            className="px-2 py-1 rounded-md text-xs text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out),opacity_150ms_var(--ease-out)]"
           >
             Remove
           </button>
@@ -109,7 +109,7 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
               e.stopPropagation();
               onDelete();
             }}
-            className="p-1.5 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all"
+            className="p-1.5 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out),opacity_150ms_var(--ease-out)]"
             aria-label="Delete show"
           >
             <Trash2 className="h-3.5 w-3.5" />

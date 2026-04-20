@@ -75,12 +75,12 @@ export default function PullToRefresh({
             "bg-background border border-border",
             // Shadow grows when the indicator is fully out — subtle depth cue.
             progress >= 1 || isRefreshing ? "shadow-md" : "shadow-sm",
-            "transition-shadow duration-200"
+            "[transition:box-shadow_200ms_var(--ease-out)]"
           )}
         >
           <RefreshCw
             className={cn(
-              "h-3.5 w-3.5 transition-colors duration-150",
+              "h-3.5 w-3.5 [transition:color_150ms_var(--ease-out)]",
               // Icon brightens once the threshold is reached.
               progress >= 1 || isRefreshing
                 ? "text-foreground"
