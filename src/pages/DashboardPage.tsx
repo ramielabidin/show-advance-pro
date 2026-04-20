@@ -60,6 +60,45 @@ function isUpcomingDate(date: string): boolean {
   return isToday(d) || !isPast(d);
 }
 
+function to24Hour(timeStr: string | null | undefined): string | null {
+  if (!timeStr) return null;
+  const s = timeStr.trim();
+  if (!s || /^(tbd|n\/a)$/i.test(s)) return null;
+
+  const withAmPm = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (withAmPm) {
+    let h = parseInt(withAmPm[1], 10);
+    const m = withAmPm[2];
+    const ap = withAmPm[3].toUpperCase();
+    if (ap === "PM" && h < 12) h += 12;
+    if (ap === "AM" && h === 12) h = 0;
+    return `${String(h).padStart(2, "0")}:${m}`;
+  }
+
+  const noAmPm = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (noAmPm) {
+    const h = parseInt(noAmPm[1], 10);
+    if (h < 0 || h > 23) return null;
+    return `${String(h).padStart(2, "0")}:${noAmPm[2]}`;
+  }
+
+  return null;
+}
+
+function formatCurrencyLocal(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const stripped = String(raw).replace(/[\s$,]/g, "");
+  if (!/^\d+(\.\d{1,2})?$/.test(stripped)) return raw;
+  const num = parseFloat(stripped);
+  if (isNaN(num)) return raw;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: num % 1 !== 0 ? 2 : 0,
+  }).format(num);
+}
+
 function parseScope(raw: string | null): Scope | null {
   if (raw === "tour" || raw === "standalone" || raw === "upcoming") return raw;
   return null;
@@ -114,7 +153,7 @@ export default function DashboardPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shows")
-        .select("*, tours(id, name)")
+        .select("*, schedule_entries(*), tours(id, name)")
         .order("date", { ascending: true });
       if (error) throw error;
       return data as ShowWithTour[];
@@ -863,6 +902,39 @@ function FeaturedShowCard({
   const isUrgent = daysAway >= 0 && daysAway < 7;
   const showFinalDate = mode === "final";
 
+  const entries = show.schedule_entries ?? [];
+  const loadInEntry = entries
+    .filter((e) => /load\s*-?\s*in/i.test(e.label))
+    .sort((a, b) => (a.time || "").localeCompare(b.time || ""))[0];
+  const doorsEntry = entries.find((e) => /doors?/i.test(e.label));
+  const bandEntry = entries.find((e) => e.is_band);
+
+  const loadInTime = to24Hour(loadInEntry?.time);
+  const doorsTime = to24Hour(doorsEntry?.time);
+  const setTime = to24Hour(bandEntry?.time);
+
+  const capRaw = show.venue_capacity;
+  const capNum = capRaw ? parseInt(String(capRaw).replace(/[^\d]/g, ""), 10) : NaN;
+  const capDisplay = Number.isFinite(capNum) ? capNum.toLocaleString() : null;
+  const priceDisplay = formatCurrencyLocal(show.ticket_price);
+
+  const setCell =
+    setTime && show.set_length
+      ? `${setTime} · ${show.set_length}`
+      : setTime ?? null;
+  const capCell =
+    capDisplay && priceDisplay
+      ? `${capDisplay} · ${priceDisplay}`
+      : capDisplay ?? null;
+
+  const footerCells: { label: string; value: string | null }[] = [
+    { label: "Load-in", value: loadInTime },
+    { label: "Doors", value: doorsTime },
+    { label: "Set", value: setCell },
+    { label: "Capacity", value: capCell },
+  ];
+  const hasAnyFooterData = footerCells.some((c) => !!c.value);
+
   return (
     <Link to={`/shows/${show.id}`} className="block group card-pressable">
       <Card className="overflow-hidden hover:border-foreground/20 [transition:border-color_160ms_var(--ease-out),box-shadow_200ms_var(--ease-out)]">
@@ -925,6 +997,29 @@ function FeaturedShowCard({
             </div>
           </div>
         </CardContent>
+        {hasAnyFooterData && (
+          <div className="grid grid-cols-4 border-t bg-muted/40">
+            {footerCells.map((cell, i) => (
+              <div
+                key={cell.label}
+                className={cn("py-4 px-5", i < 3 && "border-r")}
+                style={i < 3 ? { borderRightWidth: "0.5px" } : undefined}
+              >
+                <div className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground">
+                  {cell.label}
+                </div>
+                <div
+                  className={cn(
+                    "text-base mt-1",
+                    cell.value ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {cell.value ?? "—"}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
     </Link>
   );
