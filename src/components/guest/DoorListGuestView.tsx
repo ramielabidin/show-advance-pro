@@ -1,12 +1,12 @@
 import { format, parseISO } from "date-fns";
+import { Users } from "lucide-react";
 import FieldGroup from "@/components/FieldGroup";
 import { formatCityState } from "@/lib/utils";
+import { parseGuestList, guestTotal } from "@/components/GuestListEditor";
 import type { GuestShowPayload } from "@/lib/guestLinks";
-import GuestGuestList from "./GuestGuestList";
 
 interface DoorListGuestViewProps {
   show: GuestShowPayload;
-  token: string;
 }
 
 function formatDate(iso: string | null): string {
@@ -18,7 +18,7 @@ function formatDate(iso: string | null): string {
   }
 }
 
-export default function DoorListGuestView({ show, token }: DoorListGuestViewProps) {
+export default function DoorListGuestView({ show }: DoorListGuestViewProps) {
   const city = formatCityState(show.city);
   const subtitleParts: string[] = [];
   if (show.artist_name && show.venue_name) {
@@ -46,11 +46,33 @@ export default function DoorListGuestView({ show, token }: DoorListGuestViewProp
       </header>
 
       <FieldGroup title="Guest List">
-        <GuestGuestList
-          token={token}
-          initialValue={show.guest_list_details}
-          compsAllotment={show.artist_comps}
-        />
+        {(() => {
+          const entries = parseGuestList(show.guest_list_details);
+          if (entries.length === 0) {
+            return <p className="text-sm text-muted-foreground">No guests on the list.</p>;
+          }
+          const total = guestTotal(entries);
+          return (
+            <div className="space-y-2">
+              <ul className="space-y-1">
+                {entries.map((entry, i) => (
+                  <li key={i} className="flex items-baseline gap-2 text-sm">
+                    <span className="text-foreground break-words">{entry.name}</span>
+                    {entry.plusOnes > 0 ? (
+                      <span className="text-xs text-muted-foreground">+{entry.plusOnes}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
+                <Users className="h-3 w-3" />
+                <span>
+                  {total} guest{total !== 1 ? "s" : ""}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
       </FieldGroup>
     </div>
   );
