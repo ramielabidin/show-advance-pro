@@ -524,13 +524,12 @@ export default function DashboardPage() {
             />
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
             <ProgressCard data={dashCards} className="lg:col-span-3" />
             <RevenueCard
               data={dashCards}
               collapsed={false}
               onToggleCollapse={() => setRevenueCollapsed((c) => !c)}
-              className="lg:col-span-2"
             />
           </div>
         )}
@@ -741,72 +740,97 @@ function RevenueCard({
       : `From ${settledCount} settled shows`;
   const earnedSecondary = settledCount > 0 && !isTourScope ? "last 12 months" : null;
 
+  const toggleButtons = (fullWidth: boolean) => (
+    <div className={cn(
+      "grid grid-cols-2 gap-0.5 bg-secondary border border-border/60 p-[3px] rounded-md",
+      fullWidth && "w-full",
+    )}>
+      {(["earned", "upcoming"] as const).map((m) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => setMode(m)}
+          className={cn(
+            "h-7 px-2 text-xs font-medium rounded-[4px] transition-colors flex items-center justify-center",
+            mode === m
+              ? "bg-background text-foreground border border-border/60"
+              : "text-muted-foreground",
+          )}
+        >
+          {m === "earned" ? "Earned" : "Upcoming"}
+        </button>
+      ))}
+    </div>
+  );
+
+  const collapseBtn = (
+    <button
+      type="button"
+      onClick={onToggleCollapse}
+      aria-label="Collapse revenue card"
+      className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent [transition:background-color_150ms_var(--ease-out)]"
+    >
+      <ChevronDown className="h-4 w-4 rotate-180" />
+    </button>
+  );
+
+  const content = (
+    <div key={mode} className="animate-in fade-in-0 duration-150 min-w-0 flex-1">
+      {mode === "earned" ? (
+        <>
+          <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl">
+            {fmtMoney(earnedIncome)}
+          </p>
+          <div className="text-xs text-muted-foreground mt-2 leading-snug">
+            <p className="truncate">{earnedPrimary}</p>
+            {earnedSecondary && <p className="truncate">{earnedSecondary}</p>}
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl">
+            {guaranteedRemaining === 0 ? "—" : fmtMoney(guaranteedRemaining)}
+          </p>
+          {upside > 0 && (
+            <div
+              className="text-xs mt-2 flex items-center gap-1"
+              style={{ color: "var(--pastel-green-fg)" }}
+            >
+              <span>+ {fmtMoney(upside)} upside</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex cursor-help" aria-label="Upside details">
+                    <Info className="h-3 w-3" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{UPSIDE_TOOLTIP}</TooltipContent>
+              </Tooltip>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+
   return (
     <Card className={cn("overflow-hidden shadow-none", className)}>
-      <CardContent className="pt-3 pb-4 px-4">
-        <div className="flex items-start justify-between gap-2">
-          <div key={mode} className="animate-in fade-in-0 duration-150 min-w-0 flex-1">
-            {mode === "earned" ? (
-              <>
-                <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl">
-                  {fmtMoney(earnedIncome)}
-                </p>
-                <div className="text-xs text-muted-foreground mt-2 leading-snug">
-                  <p className="truncate">{earnedPrimary}</p>
-                  {earnedSecondary && <p className="truncate">{earnedSecondary}</p>}
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl">
-                  {guaranteedRemaining === 0 ? "—" : fmtMoney(guaranteedRemaining)}
-                </p>
-                {upside > 0 && (
-                  <div
-                    className="text-xs mt-2 flex items-center gap-1"
-                    style={{ color: "var(--pastel-green-fg)" }}
-                  >
-                    <span>+ {fmtMoney(upside)} upside</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex cursor-help" aria-label="Upside details">
-                          <Info className="h-3 w-3" />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>{UPSIDE_TOOLTIP}</TooltipContent>
-                    </Tooltip>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+      {/* Mobile: number left, toggle+collapse right */}
+      <CardContent className="pt-3 pb-4 px-4 lg:hidden">
+        <div className="flex items-start gap-2">
+          {content}
           <div className="flex items-center gap-1 shrink-0">
-            <div className="grid grid-cols-2 gap-0.5 bg-secondary border border-border/60 p-[3px] rounded-md">
-              {(["earned", "upcoming"] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMode(m)}
-                  className={cn(
-                    "h-7 px-2 text-xs font-medium rounded-[4px] transition-colors flex items-center justify-center",
-                    mode === m
-                      ? "bg-background text-foreground border border-border/60"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {m === "earned" ? "Earned" : "Upcoming"}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              aria-label="Collapse revenue card"
-              className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent [transition:background-color_150ms_var(--ease-out)]"
-            >
-              <ChevronDown className="h-4 w-4 rotate-180" />
-            </button>
+            {toggleButtons(false)}
+            {collapseBtn}
           </div>
+        </div>
+      </CardContent>
+
+      {/* Desktop: number top, full-width toggle at bottom */}
+      <CardContent className="hidden lg:flex flex-col gap-3 pt-3 pb-3 px-4 h-full">
+        {content}
+        <div className="flex items-center gap-1">
+          {toggleButtons(true)}
+          {collapseBtn}
         </div>
       </CardContent>
     </Card>
