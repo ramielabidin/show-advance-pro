@@ -118,7 +118,7 @@ export default function PendingEmailsModal() {
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">No match found</p>
                 <Select value={manualShowId ?? undefined} onValueChange={setManualShowId}>
-                  <SelectTrigger className="h-9">
+                  <SelectTrigger className="h-11 sm:h-9">
                     <SelectValue placeholder="Select a show…" />
                   </SelectTrigger>
                   <SelectContent>

@@ -85,7 +85,7 @@ export default function TimeInput({ value, onChange, autoFocus, hideTbd }: TimeI
             value={hour}
             onValueChange={(h) => { setHour(h); emit(h, minute, ampm); }}
           >
-            <SelectTrigger className="w-16 h-9 text-sm font-mono" autoFocus={autoFocus}>
+            <SelectTrigger className="w-16 h-11 sm:h-9 text-sm font-mono" autoFocus={autoFocus}>
               <SelectValue placeholder="--" />
             </SelectTrigger>
             <SelectContent>
@@ -101,7 +101,7 @@ export default function TimeInput({ value, onChange, autoFocus, hideTbd }: TimeI
             value={minute}
             onValueChange={(m) => { setMinute(m); emit(hour, m, ampm); }}
           >
-            <SelectTrigger className="w-16 h-9 text-sm font-mono">
+            <SelectTrigger className="w-16 h-11 sm:h-9 text-sm font-mono">
               <SelectValue placeholder="00" />
             </SelectTrigger>
             <SelectContent>

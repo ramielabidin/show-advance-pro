@@ -848,7 +848,7 @@ export default function ShowDetailPage() {
       <TabsContent value="show">
           {!(show as any).advance_imported_at && !showManualForm ? (
             <div className="space-y-6 sm:space-y-8">
-              <div className="rounded-xl border border-border bg-card p-6 sm:p-8 text-center animate-fade-in">
+              <div className="rounded-lg border border-border bg-card p-6 sm:p-8 text-center animate-fade-in">
                 <div className="inline-flex items-center justify-center rounded-full bg-muted p-3 mb-4">
                   <Sparkles className="h-5 w-5 text-muted-foreground" />
                 </div>

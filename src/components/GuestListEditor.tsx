@@ -147,7 +147,7 @@ export default function GuestListEditor({ value, compsAllotment, onChange, isInl
             value={entry.name}
             onChange={(e) => update(i, { name: e.target.value })}
             placeholder="Guest name"
-            className="text-sm h-9 flex-1"
+            className="text-sm h-11 sm:h-9 flex-1"
             autoFocus={i === entries.length - 1 && isInline}
           />
           <div className="flex items-center gap-1.5 shrink-0">

@@ -1,9 +1,19 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Upload, FileText, Trash2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -31,6 +41,7 @@ export default function BandDocuments() {
   const { teamId } = useTeam();
   const queryClient = useQueryClient();
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [pendingDeleteDoc, setPendingDeleteDoc] = useState<BandDocument | null>(null);
 
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ["band-documents", teamId],
@@ -171,9 +182,7 @@ export default function BandDocuments() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => {
-                          if (confirm("Remove this document?")) deleteMutation.mutate(doc);
-                        }}
+                        onClick={() => setPendingDeleteDoc(doc)}
                         title="Delete"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -206,6 +215,32 @@ export default function BandDocuments() {
           })}
         </div>
       )}
+
+      <AlertDialog
+        open={!!pendingDeleteDoc}
+        onOpenChange={(open) => { if (!open) setPendingDeleteDoc(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the file from your band documents. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingDeleteDoc) deleteMutation.mutate(pendingDeleteDoc);
+                setPendingDeleteDoc(null);
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

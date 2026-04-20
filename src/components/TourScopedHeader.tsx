@@ -159,7 +159,7 @@ export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: Tou
                 variant="ghost"
                 size="sm"
                 onClick={() => setEditing(false)}
-                className="h-9"
+                className="h-11 sm:h-9"
               >
                 <X className="h-4 w-4 sm:mr-1" />
                 <span className="hidden sm:inline">Cancel</span>
@@ -168,7 +168,7 @@ export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: Tou
                 size="sm"
                 onClick={() => updateMutation.mutate(form)}
                 disabled={!form.name.trim() || updateMutation.isPending}
-                className="h-9"
+                className="h-11 sm:h-9"
               >
                 <Save className="h-4 w-4 sm:mr-1" />
                 <span className="hidden sm:inline">Save</span>
@@ -176,14 +176,14 @@ export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: Tou
             </>
           ) : (
             <>
-              <Button variant="outline" size="sm" onClick={startEdit} className="h-9 gap-1.5">
+              <Button variant="outline" size="sm" onClick={startEdit} className="h-11 sm:h-9 gap-1.5">
                 <Edit className="h-4 w-4" />
                 <span className="hidden sm:inline">Edit tour</span>
               </Button>
               <CreateShowDialog defaultTourId={tour.id} />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Button variant="ghost" size="icon" className="h-11 w-11 sm:h-9 sm:w-9">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>

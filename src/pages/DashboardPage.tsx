@@ -1046,7 +1046,7 @@ function FeaturedShowCard({
         <CardContent className="p-5 sm:p-6">
           <div className="flex items-start gap-4 sm:gap-5">
             {/* Calendar stub */}
-            <div className="shrink-0 flex flex-col items-center justify-center rounded-xl border border-border bg-muted/50 w-14 h-[4.5rem] select-none">
+            <div className="shrink-0 flex flex-col items-center justify-center rounded-lg border border-border bg-muted/50 w-14 h-[4.5rem] select-none">
               <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold leading-none mb-0.5">
                 {format(date, "MMM")}
               </span>
