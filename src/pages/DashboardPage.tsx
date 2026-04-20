@@ -453,7 +453,7 @@ export default function DashboardPage() {
         )}
       </div>
       <div className="flex items-center gap-2 self-start md:self-auto md:shrink-0">
-        <BulkUploadDialog triggerClassName="h-9" />
+        <BulkUploadDialog triggerClassName="h-9" iconOnlyMobile />
         <CreateShowDialog triggerClassName="h-9" />
       </div>
     </div>
