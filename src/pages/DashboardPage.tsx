@@ -12,7 +12,6 @@ import {
 import {
   Calendar,
   MapPin,
-  ChevronRight,
   ChevronDown,
   TrendingUp,
   DollarSign,
@@ -30,6 +29,8 @@ import BulkUploadDialog from "@/components/BulkUploadDialog";
 import TourPicker from "@/components/TourPicker";
 import { useTeam } from "@/components/TeamProvider";
 import { parseDollar } from "@/components/RevenueSimulator";
+import SectionLabel from "@/components/SectionLabel";
+import ShowCard from "@/components/ShowCard";
 import type { Show, Tour } from "@/lib/types";
 
 type Scope = "tour" | "standalone" | "upcoming";
@@ -90,20 +91,6 @@ function to24Hour(timeStr: string | null | undefined): string | null {
   return null;
 }
 
-function formatCurrencyLocal(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const stripped = String(raw).replace(/[\s$,]/g, "");
-  if (!/^\d+(\.\d{1,2})?$/.test(stripped)) return raw;
-  const num = parseFloat(stripped);
-  if (isNaN(num)) return raw;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: num % 1 !== 0 ? 2 : 0,
-  }).format(num);
-}
-
 function parseScope(raw: string | null): Scope | null {
   if (raw === "tour" || raw === "standalone" || raw === "upcoming") return raw;
   return null;
@@ -138,14 +125,6 @@ function projectedUpside(shows: Show[]): number {
     const walkout = parseDollar(s.walkout_potential) ?? 0;
     return acc + walkout * 0.7;
   }, 0);
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mb-3 border-b border-border/60 pb-2">
-      <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">{children}</span>
-    </div>
-  );
 }
 
 export default function DashboardPage() {
@@ -452,8 +431,8 @@ export default function DashboardPage() {
   }
 
   const header = (
-    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
-      <div className="min-w-0 md:flex-1">
+    <div className="flex items-start justify-between gap-3 md:gap-4">
+      <div className="min-w-0 flex-1">
         <h1 className="font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
           {headerLine}
         </h1>
@@ -473,9 +452,9 @@ export default function DashboardPage() {
           </Link>
         )}
       </div>
-      <div className="flex items-center gap-2 self-end md:self-auto md:shrink-0">
-        <BulkUploadDialog />
-        <CreateShowDialog />
+      <div className="flex items-center gap-2 shrink-0">
+        <BulkUploadDialog triggerClassName="h-9" iconOnlyMobile />
+        <CreateShowDialog triggerClassName="h-9" iconOnlyMobile />
       </div>
     </div>
   );
@@ -504,10 +483,7 @@ export default function DashboardPage() {
       {header}
 
       {/* Scope selector */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium mr-1">
-          View
-        </span>
+      <div className="flex items-center gap-2 flex-wrap pt-4 md:pt-6">
         <TourPicker
           selectedTourId={scope === "tour" ? activeTourId : null}
           selectedTourName={scope === "tour" ? activeTour?.name ?? null : null}
@@ -548,8 +524,8 @@ export default function DashboardPage() {
             />
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-            <ProgressCard data={dashCards} className="lg:col-span-2" />
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+            <ProgressCard data={dashCards} className="lg:col-span-3" />
             <RevenueCard
               data={dashCards}
               collapsed={false}
@@ -579,76 +555,27 @@ export default function DashboardPage() {
       {/* List */}
       {listShows.length > 0 && (
         <div key={`list:${scopeKey}`}>
-          <SectionLabel>{listSectionLabel}</SectionLabel>
-          <Card>
-            <CardContent className="pt-4 space-y-1">
-              {listShows.map((show, i) => {
-                const daysAway = differenceInCalendarDays(parseISO(show.date), today);
-                const isAdvanced = !!(show as any).advanced_at;
-                const isPastShow = daysAway < 0;
-                const isWithin7 = daysAway >= 0 && daysAway < 7;
-
-                const dotStyle: React.CSSProperties = isPastShow
-                  ? { backgroundColor: "var(--pastel-green-fg)" }
-                  : isAdvanced
-                    ? { backgroundColor: "var(--pastel-green-fg)" }
-                    : isWithin7
-                      ? { backgroundColor: "var(--pastel-red-fg)" }
-                      : { backgroundColor: "var(--pastel-yellow-fg)" };
-
-                const dateChipStyle: React.CSSProperties | undefined =
-                  isWithin7 && !isAdvanced && !isPastShow
-                    ? { backgroundColor: "var(--pastel-red-bg)", color: "var(--pastel-red-fg)" }
-                    : undefined;
-
-                return (
-                  <Link
-                    key={show.id}
-                    to={`/shows/${show.id}`}
-                    className="stagger-item flex items-center gap-3 rounded-md px-2 py-2 hover:bg-accent group card-pressable [transition:background-color_150ms_var(--ease-out),transform_160ms_var(--ease-out)]"
-                    style={{ animationDelay: `${i * 40}ms` }}
-                  >
-                    <span
-                      className={cn(
-                        "text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 w-14 text-center",
-                        !dateChipStyle && "bg-muted text-muted-foreground",
-                      )}
-                      style={dateChipStyle}
-                    >
-                      {format(parseISO(show.date), "MMM d")}
-                    </span>
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-medium text-foreground truncate">{show.venue_name}</span>
-                        {showTourChip && show.tour_id && show.tours?.name && (
-                          <span
-                            className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium shrink-0 max-w-[200px] truncate"
-                            style={{ backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" }}
-                          >
-                            {show.tours.name}
-                          </span>
-                        )}
-                        {showTourChip && !show.tour_id && (
-                          <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground shrink-0">
-                            Standalone
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground truncate">{formatCityState(show.city)}</span>
-                    </div>
-                    <span className="h-2 w-2 rounded-full shrink-0" style={dotStyle} />
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0 [transition:opacity_150ms_var(--ease-out)]" />
-                  </Link>
-                );
-              })}
+          <SectionLabel
+            action={
               <Link
                 to={viewAllHref}
-                className="block text-xs text-muted-foreground hover:text-foreground pt-2 text-center transition-colors"
+                className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
-                View all shows →
+                View all →
               </Link>
-            </CardContent>
-          </Card>
+            }
+          >
+            {listSectionLabel}
+          </SectionLabel>
+          <div className="stagger-list space-y-2">
+            {listShows.map((show) => (
+              <ShowCard
+                key={show.id}
+                show={show}
+                chip={showTourChip ? (show.tour_id ? "tour" : "standalone") : "none"}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -700,8 +627,8 @@ function ProgressCard({
 
   return (
     <Card className={cn("overflow-hidden shadow-none", className)}>
-      <CardContent className="pt-4 pb-4 px-4">
-        <div className="flex items-center gap-2 mb-1">
+      <CardContent className="pt-3 pb-4 px-4">
+        <div className="flex items-center gap-2 mb-3">
           <div
             className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
             style={{ backgroundColor: "var(--pastel-purple-bg)", color: "var(--pastel-purple-fg)" }}
@@ -711,21 +638,19 @@ function ProgressCard({
           <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium leading-tight">
             {progressLabel}
           </span>
+          {scopeSubtitle && (
+            scopeSubtitleHref ? (
+              <Link
+                to={scopeSubtitleHref}
+                className="ml-auto text-sm font-medium text-foreground hover:text-muted-foreground [transition:color_150ms_var(--ease-out)] truncate min-w-0"
+              >
+                {scopeSubtitle}
+              </Link>
+            ) : (
+              <p className="ml-auto text-sm font-medium text-foreground truncate min-w-0">{scopeSubtitle}</p>
+            )
+          )}
         </div>
-        {scopeSubtitle ? (
-          scopeSubtitleHref ? (
-            <Link
-              to={scopeSubtitleHref}
-              className="block text-sm font-medium text-foreground hover:text-muted-foreground [transition:color_150ms_var(--ease-out)] truncate mb-4"
-            >
-              {scopeSubtitle}
-            </Link>
-          ) : (
-            <p className="text-sm font-medium text-foreground truncate mb-4">{scopeSubtitle}</p>
-          )
-        ) : (
-          <div className="mb-4" />
-        )}
 
         <div className="space-y-3">
           <Tooltip>
@@ -773,17 +698,19 @@ function RevenueCard({
   data,
   collapsed,
   onToggleCollapse,
+  className,
 }: {
   data: ProgressRevenueData;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  className?: string;
 }) {
   const [mode, setMode] = useState<"earned" | "upcoming">("earned");
   const { earnedIncome, settledCount, guaranteedRemaining, upside, isTourScope } = data;
 
   if (collapsed) {
     return (
-      <Card className="overflow-hidden shadow-none">
+      <Card className={cn("overflow-hidden shadow-none", className)}>
         <button
           type="button"
           onClick={onToggleCollapse}
@@ -801,121 +728,109 @@ function RevenueCard({
               Revenue
             </span>
           </div>
-          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0 -rotate-90" />
         </button>
       </Card>
     );
   }
 
-  const earnedSubline =
+  const earnedPrimary =
     settledCount === 0
       ? "No settled shows yet"
-      : isTourScope
-        ? `From ${settledCount} settled shows`
-        : `From ${settledCount} settled shows · last 12 months`;
+      : `From ${settledCount} settled shows`;
+  const earnedSecondary = settledCount > 0 && !isTourScope ? "last 12 months" : null;
+
+  const toggleButtons = (fullWidth: boolean) => (
+    <div className={cn(
+      "grid grid-cols-2 gap-0.5 bg-secondary border border-border/60 p-[3px] rounded-md",
+      fullWidth && "w-full",
+    )}>
+      {(["earned", "upcoming"] as const).map((m) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => setMode(m)}
+          className={cn(
+            "h-7 px-2 text-xs font-medium rounded-[4px] transition-colors flex items-center justify-center",
+            mode === m
+              ? "bg-background text-foreground border border-border/60"
+              : "text-muted-foreground",
+          )}
+        >
+          {m === "earned" ? "Earned" : "Upcoming"}
+        </button>
+      ))}
+    </div>
+  );
 
   const collapseBtn = (
     <button
       type="button"
       onClick={onToggleCollapse}
-      className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)] shrink-0"
       aria-label="Collapse revenue card"
+      className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent [transition:background-color_150ms_var(--ease-out)]"
     >
       <ChevronDown className="h-4 w-4 rotate-180" />
     </button>
   );
 
-  const mobileToggle = (
-    <div className="flex items-center gap-2 lg:hidden mb-3">
-      <div className="grid grid-cols-2 gap-0.5 bg-secondary border border-border/60 p-[3px] rounded-md flex-1">
-        {(["earned", "upcoming"] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setMode(m)}
-            className={cn(
-              "h-10 text-sm font-medium rounded-[4px] transition-colors flex items-center justify-center",
-              mode === m
-                ? "bg-background text-foreground border border-border/60"
-                : "text-muted-foreground",
-            )}
-          >
-            {m === "earned" ? "Earned" : "Upcoming"}
-          </button>
-        ))}
-      </div>
-      {collapseBtn}
-    </div>
-  );
-
-  const desktopToggle = (
-    <div className="hidden lg:flex justify-end items-center gap-2 mb-2">
-      <div className="inline-flex items-center rounded-md border border-border/60 p-[2px]">
-        {(["earned", "upcoming"] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setMode(m)}
-            className={cn(
-              "text-[11px] px-2.5 py-1 rounded-[4px] font-medium transition-colors",
-              mode === m
-                ? "bg-background text-foreground border border-border/60"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {m === "earned" ? "Earned" : "Upcoming"}
-          </button>
-        ))}
-      </div>
-      {collapseBtn}
+  const content = (
+    <div key={mode} className="animate-in fade-in-0 duration-150 min-w-0 flex-1">
+      {mode === "earned" ? (
+        <>
+          <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl">
+            {fmtMoney(earnedIncome)}
+          </p>
+          <div className="text-xs text-muted-foreground mt-2 leading-snug">
+            <p className="truncate">{earnedPrimary}</p>
+            {earnedSecondary && <p className="truncate">{earnedSecondary}</p>}
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl">
+            {guaranteedRemaining === 0 ? "—" : fmtMoney(guaranteedRemaining)}
+          </p>
+          {upside > 0 && (
+            <div
+              className="text-xs mt-2 flex items-center gap-1"
+              style={{ color: "var(--pastel-green-fg)" }}
+            >
+              <span>+ {fmtMoney(upside)} upside</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex cursor-help" aria-label="Upside details">
+                    <Info className="h-3 w-3" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{UPSIDE_TOOLTIP}</TooltipContent>
+              </Tooltip>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 
   return (
-    <Card className="overflow-hidden shadow-none">
-      <CardContent className="pt-4 pb-4 px-4">
-        {mobileToggle}
-        {desktopToggle}
-
-        <div className="relative" style={{ minHeight: 96 }}>
-          <div key={mode} className="animate-in fade-in-0 duration-150">
-            {mode === "earned" ? (
-              <>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
-                  Actual Income
-                </p>
-                <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em] mt-1">
-                  {fmtMoney(earnedIncome)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">{earnedSubline}</p>
-              </>
-            ) : (
-              <>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
-                  Upcoming Revenue
-                </p>
-                <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em] mt-1">
-                  {guaranteedRemaining === 0 ? "—" : fmtMoney(guaranteedRemaining)}
-                </p>
-                {upside > 0 && (
-                  <div
-                    className="text-xs mt-1 flex items-center gap-1"
-                    style={{ color: "var(--pastel-green-fg)" }}
-                  >
-                    <span>+ {fmtMoney(upside)} upside</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex cursor-help" aria-label="Upside details">
-                          <Info className="h-3 w-3" />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>{UPSIDE_TOOLTIP}</TooltipContent>
-                    </Tooltip>
-                  </div>
-                )}
-              </>
-            )}
+    <Card className={cn("overflow-hidden shadow-none", className)}>
+      {/* Mobile: number left, toggle+collapse right */}
+      <CardContent className="pt-3 pb-4 px-4 lg:hidden">
+        <div className="flex items-start gap-2">
+          {content}
+          <div className="flex items-center gap-1 shrink-0">
+            {toggleButtons(false)}
+            {collapseBtn}
           </div>
+        </div>
+      </CardContent>
+
+      {/* Desktop: number top, full-width toggle at bottom */}
+      <CardContent className="hidden lg:flex flex-col gap-3 pt-3 pb-3 px-4 h-full">
+        {content}
+        <div className="flex items-center gap-1">
+          {toggleButtons(true)}
+          {collapseBtn}
         </div>
       </CardContent>
     </Card>
@@ -1021,22 +936,17 @@ function FeaturedShowCard({
   const capRaw = show.venue_capacity;
   const capNum = capRaw ? parseInt(String(capRaw).replace(/[^\d]/g, ""), 10) : NaN;
   const capDisplay = Number.isFinite(capNum) ? capNum.toLocaleString() : null;
-  const priceDisplay = formatCurrencyLocal(show.ticket_price);
 
   const setCell =
     setTime && show.set_length
       ? `${setTime} · ${show.set_length}`
       : setTime ?? null;
-  const capCell =
-    capDisplay && priceDisplay
-      ? `${capDisplay} · ${priceDisplay}`
-      : capDisplay ?? null;
 
   const footerCells: { label: string; value: string | null }[] = [
     { label: "Load-in", value: loadInTime },
     { label: "Doors", value: doorsTime },
     { label: "Set", value: setCell },
-    { label: "Capacity", value: capCell },
+    { label: "Capacity", value: capDisplay },
   ];
   const hasAnyFooterData = footerCells.some((c) => !!c.value);
 

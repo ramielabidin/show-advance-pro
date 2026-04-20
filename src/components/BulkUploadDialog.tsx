@@ -32,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 const TEMPLATE_COLUMNS = [
   "date",
@@ -296,7 +297,7 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
-export default function BulkUploadDialog({ defaultTourId, externalOpen, onExternalOpenChange }: { defaultTourId?: string; externalOpen?: boolean; onExternalOpenChange?: (open: boolean) => void }) {
+export default function BulkUploadDialog({ defaultTourId, externalOpen, onExternalOpenChange, triggerClassName, iconOnlyMobile }: { defaultTourId?: string; externalOpen?: boolean; onExternalOpenChange?: (open: boolean) => void; triggerClassName?: string; iconOnlyMobile?: boolean }) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = externalOpen ?? internalOpen;
   const setOpen = onExternalOpenChange ?? setInternalOpen;
@@ -577,8 +578,14 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
       {onExternalOpenChange == null && (
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="h-11 sm:h-9">
-            <Upload className="h-4 w-4 mr-1" /> Import CSV
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn("h-11 sm:h-9", iconOnlyMobile && "w-9 px-0 sm:w-auto sm:px-3", triggerClassName)}
+            aria-label={iconOnlyMobile ? "Import CSV" : undefined}
+          >
+            <Upload className={cn("h-4 w-4", iconOnlyMobile ? "sm:mr-1" : "mr-1")} />
+            <span className={cn(iconOnlyMobile && "hidden sm:inline")}>Import CSV</span>
           </Button>
         </DialogTrigger>
       )}
