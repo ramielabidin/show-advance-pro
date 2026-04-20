@@ -7,9 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ShowCard from "@/components/ShowCard";
 import CreateShowDialog from "@/components/CreateShowDialog";
-import PasteAdvanceDialog from "@/components/PasteAdvanceDialog";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
 import EmptyState from "@/components/EmptyState";
+import PageTitle from "@/components/PageTitle";
 import TourPicker from "@/components/TourPicker";
 import TourScopedHeader from "@/components/TourScopedHeader";
 import TourRevenueSimulator from "@/components/TourRevenueSimulator";
@@ -174,45 +174,20 @@ export default function ShowsPage() {
         />
       ) : (
         <div className="flex items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl tracking-tight">Shows</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              {upcoming.length} upcoming · {past.length} past
-            </p>
-          </div>
+          <PageTitle subline={`${upcoming.length} upcoming · ${past.length} past`}>
+            All shows
+          </PageTitle>
           <div className="flex items-center gap-2 shrink-0">
             <div className="hidden sm:flex items-center gap-2">
               <BulkUploadDialog />
-              <PasteAdvanceDialog />
             </div>
             <CreateShowDialog />
           </div>
         </div>
       )}
 
-      {/* View toggle + upcoming/past tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
-            View
-          </span>
-          <ViewPill label="All" active={view === "all"} onClick={() => setView("all")} />
-          <TourPicker
-            selectedTourId={view === "tour" ? tourId : null}
-            selectedTourName={view === "tour" ? selectedTourName : null}
-            onSelect={(id) => setTourId(id)}
-            onClear={clearTour}
-            onOpen={() => {
-              if (view !== "tour") setView("tour");
-            }}
-          />
-          <ViewPill
-            label="Standalone"
-            active={view === "standalone"}
-            onClick={() => setView("standalone")}
-          />
-        </div>
-
+      {/* Upcoming/past tabs + view pills */}
+      <div className="flex flex-wrap items-center gap-3 mb-5">
         <div className="flex items-center gap-1 rounded-md border p-0.5 bg-card">
           {(["upcoming", "past"] as const).map((t) => (
             <button
@@ -228,6 +203,26 @@ export default function ShowsPage() {
               {t}
             </button>
           ))}
+        </div>
+
+        <div className="flex-1" />
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <ViewPill label="All" active={view === "all"} onClick={() => setView("all")} />
+          <TourPicker
+            selectedTourId={view === "tour" ? tourId : null}
+            selectedTourName={view === "tour" ? selectedTourName : null}
+            onSelect={(id) => setTourId(id)}
+            onClear={clearTour}
+            onOpen={() => {
+              if (view !== "tour") setView("tour");
+            }}
+          />
+          <ViewPill
+            label="Standalone"
+            active={view === "standalone"}
+            onClick={() => setView("standalone")}
+          />
         </div>
       </div>
 

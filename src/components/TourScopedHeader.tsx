@@ -130,15 +130,16 @@ export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: Tou
     <div className="mb-6">
       <div className="flex items-start sm:items-center justify-between gap-4 mb-2">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium mb-0.5">Tour</p>
           {editing ? (
             <Input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="text-xl sm:text-2xl font-display h-11 sm:h-10"
+              className="font-display text-3xl md:text-4xl tracking-[-0.02em] h-12 sm:h-14"
             />
           ) : (
-            <h1 className="text-2xl sm:text-3xl tracking-tight truncate">{tour.name}</h1>
+            <h1 className="font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground truncate">
+              {tour.name}
+            </h1>
           )}
           <p className="text-muted-foreground text-sm mt-1">
             {start && end && start !== end ? (

@@ -747,19 +747,16 @@ function RevenueCard({
       <CardContent className="pt-3 pb-4 px-4">
         <div className="flex items-start justify-between gap-2">
           <div key={mode} className="animate-in fade-in-0 duration-150 min-w-0 flex-1">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium leading-tight">
-              {mode === "earned" ? "Earned" : "Upcoming"}
-            </p>
             {mode === "earned" ? (
               <>
-                <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl mt-1">
+                <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl">
                   {fmtMoney(earnedIncome)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2 truncate">{earnedSubline}</p>
               </>
             ) : (
               <>
-                <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl mt-1">
+                <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl">
                   {guaranteedRemaining === 0 ? "—" : fmtMoney(guaranteedRemaining)}
                 </p>
                 {upside > 0 && (
