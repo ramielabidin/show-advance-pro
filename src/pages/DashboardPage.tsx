@@ -431,8 +431,8 @@ export default function DashboardPage() {
   }
 
   const header = (
-    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
-      <div className="min-w-0 md:flex-1">
+    <div className="flex items-start justify-between gap-3 md:gap-4">
+      <div className="min-w-0 flex-1">
         <h1 className="font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
           {headerLine}
         </h1>
@@ -452,9 +452,9 @@ export default function DashboardPage() {
           </Link>
         )}
       </div>
-      <div className="flex items-center gap-2 self-start md:self-auto md:shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         <BulkUploadDialog triggerClassName="h-9" iconOnlyMobile />
-        <CreateShowDialog triggerClassName="h-9" />
+        <CreateShowDialog triggerClassName="h-9" iconOnlyMobile />
       </div>
     </div>
   );
@@ -483,7 +483,7 @@ export default function DashboardPage() {
       {header}
 
       {/* Scope selector */}
-      <div className="flex items-center gap-2 flex-wrap pt-2 md:pt-0">
+      <div className="flex items-center gap-2 flex-wrap">
         <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium mr-1">
           View
         </span>

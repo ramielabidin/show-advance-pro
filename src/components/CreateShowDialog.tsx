@@ -32,9 +32,10 @@ import { cn } from "@/lib/utils";
 interface CreateShowDialogProps {
   defaultTourId?: string;
   triggerClassName?: string;
+  iconOnlyMobile?: boolean;
 }
 
-export default function CreateShowDialog({ defaultTourId, triggerClassName }: CreateShowDialogProps) {
+export default function CreateShowDialog({ defaultTourId, triggerClassName, iconOnlyMobile }: CreateShowDialogProps) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const { teamId } = useTeam();
@@ -173,9 +174,13 @@ export default function CreateShowDialog({ defaultTourId, triggerClassName }: Cr
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetAll(); }}>
       <DialogTrigger asChild>
-        <Button size="sm" className={cn("gap-1.5 h-11 sm:h-9", triggerClassName)}>
+        <Button
+          size="sm"
+          className={cn("gap-1.5 h-11 sm:h-9", iconOnlyMobile && "w-9 px-0 sm:w-auto sm:px-3", triggerClassName)}
+          aria-label={iconOnlyMobile ? "Add show" : undefined}
+        >
           <Plus className="h-4 w-4" />
-          Show
+          <span className={cn(iconOnlyMobile && "hidden sm:inline")}>Show</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
