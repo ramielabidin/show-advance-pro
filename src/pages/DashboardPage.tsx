@@ -15,6 +15,7 @@ import {
   ChevronRight,
   ChevronDown,
   TrendingUp,
+  DollarSign,
   CheckCircle2,
   Circle,
   Info,
@@ -152,6 +153,7 @@ export default function DashboardPage() {
   const requestedScope = parseScope(searchParams.get("scope"));
   const requestedTourId = searchParams.get("tourId");
   const { team } = useTeam();
+  const [revenueCollapsed, setRevenueCollapsed] = useState(false);
 
   const { data: shows = [], isLoading: showsLoading } = useQuery<ShowWithTour[]>({
     queryKey: ["shows"],
@@ -536,10 +538,23 @@ export default function DashboardPage() {
             totalEarned={dashCards.totalEarned}
             totalGuarantee={dashCards.totalGuarantee}
           />
+        ) : revenueCollapsed ? (
+          <div className="space-y-3">
+            <ProgressCard data={dashCards} />
+            <RevenueCard
+              data={dashCards}
+              collapsed
+              onToggleCollapse={() => setRevenueCollapsed((c) => !c)}
+            />
+          </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             <ProgressCard data={dashCards} className="lg:col-span-2" />
-            <RevenueCard data={dashCards} />
+            <RevenueCard
+              data={dashCards}
+              collapsed={false}
+              onToggleCollapse={() => setRevenueCollapsed((c) => !c)}
+            />
           </div>
         )}
       </div>
@@ -754,10 +769,43 @@ function ProgressCard({
   );
 }
 
-function RevenueCard({ data }: { data: ProgressRevenueData }) {
+function RevenueCard({
+  data,
+  collapsed,
+  onToggleCollapse,
+}: {
+  data: ProgressRevenueData;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+}) {
   const [mode, setMode] = useState<"earned" | "upcoming">("earned");
-  const [collapsed, setCollapsed] = useState(false);
   const { earnedIncome, settledCount, guaranteedRemaining, upside, isTourScope } = data;
+
+  if (collapsed) {
+    return (
+      <Card className="overflow-hidden shadow-none">
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-accent/40 [transition:background-color_150ms_var(--ease-out)]"
+          aria-label="Expand revenue card"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <div
+              className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
+              style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+            >
+              <DollarSign className="h-3.5 w-3.5" />
+            </div>
+            <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
+              Revenue
+            </span>
+          </div>
+          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+        </button>
+      </Card>
+    );
+  }
 
   const earnedSubline =
     settledCount === 0
@@ -766,24 +814,14 @@ function RevenueCard({ data }: { data: ProgressRevenueData }) {
         ? `From ${settledCount} settled shows`
         : `From ${settledCount} settled shows · last 12 months`;
 
-  function selectMode(m: "earned" | "upcoming") {
-    setMode(m);
-    setCollapsed(false);
-  }
-
   const collapseBtn = (
     <button
       type="button"
-      onClick={() => setCollapsed((c) => !c)}
+      onClick={onToggleCollapse}
       className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)] shrink-0"
-      aria-label={collapsed ? "Expand revenue card" : "Collapse revenue card"}
+      aria-label="Collapse revenue card"
     >
-      <ChevronDown
-        className={cn(
-          "h-4 w-4 [transition:transform_200ms_var(--ease-out)]",
-          collapsed && "rotate-180",
-        )}
-      />
+      <ChevronDown className="h-4 w-4 rotate-180" />
     </button>
   );
 
@@ -794,7 +832,7 @@ function RevenueCard({ data }: { data: ProgressRevenueData }) {
           <button
             key={m}
             type="button"
-            onClick={() => selectMode(m)}
+            onClick={() => setMode(m)}
             className={cn(
               "h-10 text-sm font-medium rounded-[4px] transition-colors flex items-center justify-center",
               mode === m
@@ -817,7 +855,7 @@ function RevenueCard({ data }: { data: ProgressRevenueData }) {
           <button
             key={m}
             type="button"
-            onClick={() => selectMode(m)}
+            onClick={() => setMode(m)}
             className={cn(
               "text-[11px] px-2.5 py-1 rounded-[4px] font-medium transition-colors",
               mode === m
@@ -839,48 +877,46 @@ function RevenueCard({ data }: { data: ProgressRevenueData }) {
         {mobileToggle}
         {desktopToggle}
 
-        {!collapsed && (
-          <div className="relative" style={{ minHeight: 96 }}>
-            <div key={mode} className="animate-in fade-in-0 duration-150">
-              {mode === "earned" ? (
-                <>
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
-                    Actual Income
-                  </p>
-                  <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em] mt-1">
-                    {fmtMoney(earnedIncome)}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">{earnedSubline}</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
-                    Upcoming Revenue
-                  </p>
-                  <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em] mt-1">
-                    {guaranteedRemaining === 0 ? "—" : fmtMoney(guaranteedRemaining)}
-                  </p>
-                  {upside > 0 && (
-                    <div
-                      className="text-xs mt-1 flex items-center gap-1"
-                      style={{ color: "var(--pastel-green-fg)" }}
-                    >
-                      <span>+ {fmtMoney(upside)} upside</span>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-flex cursor-help" aria-label="Upside details">
-                            <Info className="h-3 w-3" />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>{UPSIDE_TOOLTIP}</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+        <div className="relative" style={{ minHeight: 96 }}>
+          <div key={mode} className="animate-in fade-in-0 duration-150">
+            {mode === "earned" ? (
+              <>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                  Actual Income
+                </p>
+                <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em] mt-1">
+                  {fmtMoney(earnedIncome)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{earnedSubline}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                  Upcoming Revenue
+                </p>
+                <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em] mt-1">
+                  {guaranteedRemaining === 0 ? "—" : fmtMoney(guaranteedRemaining)}
+                </p>
+                {upside > 0 && (
+                  <div
+                    className="text-xs mt-1 flex items-center gap-1"
+                    style={{ color: "var(--pastel-green-fg)" }}
+                  >
+                    <span>+ {fmtMoney(upside)} upside</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex cursor-help" aria-label="Upside details">
+                          <Info className="h-3 w-3" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{UPSIDE_TOOLTIP}</TooltipContent>
+                    </Tooltip>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );
