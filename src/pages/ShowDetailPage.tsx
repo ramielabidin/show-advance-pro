@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock, Sparkles, Mic, DollarSign, Ticket, Users, TrendingUp } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock, Sparkles, Mic, DollarSign, Ticket, Users, TrendingUp, Plus } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -928,7 +928,7 @@ export default function ShowDetailPage() {
 
             {/* Departure — first chronologically */}
             <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
-              {editField("departure_time", "Departure Time", { alwaysShow: true, structuredTime: true })}
+              {editField("departure_time", "Time", { alwaysShow: true, structuredTime: true })}
               {recommendedDeparture && inlineField !== "departure_time" && !show.departure_time && !driveCardDismissed && !suggestionDismissed && (
                 <div className="-mt-2 flex items-center gap-1.5">
                   <Button
@@ -955,7 +955,7 @@ export default function ShowDetailPage() {
                   </button>
                 </div>
               )}
-              {editField("departure_notes", "Departure Notes", { multiline: true, alwaysShow: true, placeholder: "e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am" })}
+              {editField("departure_notes", "Notes", { multiline: true, alwaysShow: true, placeholder: "e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am" })}
             </FieldGroup>
 
             <Separator />
@@ -1017,10 +1017,17 @@ export default function ShowDetailPage() {
                     </Card>
                   </button>
                 ) : (
-                  <EmptyFieldPrompt label="schedule" onClick={() => {
-                    scheduleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    setEditingSchedule(true);
-                  }} />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      scheduleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      setEditingSchedule(true);
+                    }}
+                    className="w-full rounded-[10px] border border-dashed border-border px-4 py-5 flex items-center gap-2.5 text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors"
+                  >
+                    <Plus className="h-4 w-4 shrink-0" />
+                    <span className="text-sm">Add schedule items (load-in, doors, set…)</span>
+                  </button>
                 )}
                 {editField("set_length", "Set Length", { alwaysShow: true })}
                 {(inlineField === "changeover_time" || show.changeover_time) ? editField("changeover_time", "Changeover Time", { structuredTime: true }) : null}
@@ -1168,7 +1175,7 @@ export default function ShowDetailPage() {
                   { key: "guarantee", label: "Guarantee", icon: DollarSign, tone: "green", currency: true },
                   { key: "ticket_price", label: "Ticket Price", icon: Ticket, tone: "blue", currency: true, placeholder: "e.g. $20 or $18/$20/$25" },
                   { key: "venue_capacity", label: "Capacity", icon: Users, tone: "blue" },
-                  { key: "walkout_potential", label: "Walkout", icon: TrendingUp, tone: "yellow", currency: true },
+                  { key: "walkout_potential", label: "Walkout Potential", icon: TrendingUp, tone: "yellow", currency: true },
                 ];
                 const anyEditing = tiles.some(({ key }) => inlineField === key);
                 if (anyEditing) {
