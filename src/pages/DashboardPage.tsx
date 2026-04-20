@@ -13,6 +13,7 @@ import {
   Calendar,
   MapPin,
   ChevronRight,
+  ChevronDown,
   TrendingUp,
   CheckCircle2,
   Circle,
@@ -755,6 +756,7 @@ function ProgressCard({
 
 function RevenueCard({ data }: { data: ProgressRevenueData }) {
   const [mode, setMode] = useState<"earned" | "upcoming">("earned");
+  const [collapsed, setCollapsed] = useState(false);
   const { earnedIncome, settledCount, guaranteedRemaining, upside, isTourScope } = data;
 
   const earnedSubline =
@@ -764,92 +766,121 @@ function RevenueCard({ data }: { data: ProgressRevenueData }) {
         ? `From ${settledCount} settled shows`
         : `From ${settledCount} settled shows · last 12 months`;
 
-  const desktopToggle = (
-    <div className="hidden lg:inline-flex items-center rounded-md border border-border/60 p-[2px]">
-      {(["earned", "upcoming"] as const).map((m) => (
-        <button
-          key={m}
-          type="button"
-          onClick={() => setMode(m)}
-          className={cn(
-            "text-[11px] px-2.5 py-1 rounded-[4px] font-medium transition-colors",
-            mode === m
-              ? "bg-background text-foreground border border-border/60"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {m === "earned" ? "Earned" : "Upcoming"}
-        </button>
-      ))}
-    </div>
+  function selectMode(m: "earned" | "upcoming") {
+    setMode(m);
+    setCollapsed(false);
+  }
+
+  const collapseBtn = (
+    <button
+      type="button"
+      onClick={() => setCollapsed((c) => !c)}
+      className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)] shrink-0"
+      aria-label={collapsed ? "Expand revenue card" : "Collapse revenue card"}
+    >
+      <ChevronDown
+        className={cn(
+          "h-4 w-4 [transition:transform_200ms_var(--ease-out)]",
+          collapsed && "rotate-180",
+        )}
+      />
+    </button>
   );
 
   const mobileToggle = (
-    <div className="grid grid-cols-2 gap-0.5 bg-secondary border border-border/60 p-[3px] rounded-md lg:hidden">
-      {(["earned", "upcoming"] as const).map((m) => (
-        <button
-          key={m}
-          type="button"
-          onClick={() => setMode(m)}
-          className={cn(
-            "h-10 text-sm font-medium rounded-[4px] transition-colors flex items-center justify-center",
-            mode === m
-              ? "bg-background text-foreground border border-border/60"
-              : "text-muted-foreground",
-          )}
-        >
-          {m === "earned" ? "Earned" : "Upcoming"}
-        </button>
-      ))}
+    <div className="flex items-center gap-2 lg:hidden mb-3">
+      <div className="grid grid-cols-2 gap-0.5 bg-secondary border border-border/60 p-[3px] rounded-md flex-1">
+        {(["earned", "upcoming"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => selectMode(m)}
+            className={cn(
+              "h-10 text-sm font-medium rounded-[4px] transition-colors flex items-center justify-center",
+              mode === m
+                ? "bg-background text-foreground border border-border/60"
+                : "text-muted-foreground",
+            )}
+          >
+            {m === "earned" ? "Earned" : "Upcoming"}
+          </button>
+        ))}
+      </div>
+      {collapseBtn}
+    </div>
+  );
+
+  const desktopToggle = (
+    <div className="hidden lg:flex justify-end items-center gap-2 mb-2">
+      <div className="inline-flex items-center rounded-md border border-border/60 p-[2px]">
+        {(["earned", "upcoming"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => selectMode(m)}
+            className={cn(
+              "text-[11px] px-2.5 py-1 rounded-[4px] font-medium transition-colors",
+              mode === m
+                ? "bg-background text-foreground border border-border/60"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {m === "earned" ? "Earned" : "Upcoming"}
+          </button>
+        ))}
+      </div>
+      {collapseBtn}
     </div>
   );
 
   return (
     <Card className="overflow-hidden shadow-none">
       <CardContent className="pt-4 pb-4 px-4">
-        <div className="lg:hidden mb-3">{mobileToggle}</div>
-        <div className="hidden lg:flex justify-end mb-2">{desktopToggle}</div>
+        {mobileToggle}
+        {desktopToggle}
 
-        <div className="relative" style={{ minHeight: 96 }}>
-          <div key={mode} className="animate-in fade-in-0 duration-150">
-            {mode === "earned" ? (
-              <>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
-                  Actual Income
-                </p>
-                <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em] mt-1">
-                  {fmtMoney(earnedIncome)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">{earnedSubline}</p>
-              </>
-            ) : (
-              <>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
-                  Upcoming Revenue
-                </p>
-                <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em] mt-1">
-                  {guaranteedRemaining === 0 ? "—" : fmtMoney(guaranteedRemaining)}
-                </p>
-                {upside > 0 && (
-                  <div
-                    className="text-xs mt-1 flex items-center gap-1"
-                    style={{ color: "var(--pastel-green-fg)" }}
-                  >
-                    <span>+ {fmtMoney(upside)} upside</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex cursor-help" aria-label="Upside details">
-                          <Info className="h-3 w-3" />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>{UPSIDE_TOOLTIP}</TooltipContent>
-                    </Tooltip>
-                  </div>
-                )}
-              </>
-            )}
+        {!collapsed && (
+          <div className="relative" style={{ minHeight: 96 }}>
+            <div key={mode} className="animate-in fade-in-0 duration-150">
+              {mode === "earned" ? (
+                <>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                    Actual Income
+                  </p>
+                  <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em] mt-1">
+                    {fmtMoney(earnedIncome)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{earnedSubline}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                    Upcoming Revenue
+                  </p>
+                  <p className="text-3xl font-display text-foreground leading-none tracking-[-0.03em] mt-1">
+                    {guaranteedRemaining === 0 ? "—" : fmtMoney(guaranteedRemaining)}
+                  </p>
+                  {upside > 0 && (
+                    <div
+                      className="text-xs mt-1 flex items-center gap-1"
+                      style={{ color: "var(--pastel-green-fg)" }}
+                    >
+                      <span>+ {fmtMoney(upside)} upside</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex cursor-help" aria-label="Upside details">
+                            <Info className="h-3 w-3" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>{UPSIDE_TOOLTIP}</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
