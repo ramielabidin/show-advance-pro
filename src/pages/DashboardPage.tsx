@@ -483,7 +483,7 @@ export default function DashboardPage() {
       {header}
 
       {/* Scope selector */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap pt-4 md:pt-6">
         <TourPicker
           selectedTourId={scope === "tour" ? activeTourId : null}
           selectedTourName={scope === "tour" ? activeTour?.name ?? null : null}
