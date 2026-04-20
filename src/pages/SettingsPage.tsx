@@ -878,7 +878,16 @@ export default function SettingsPage() {
           {teamMembers.map((m, i) => {
             const isSelf = m.user_id === session?.user.id;
             const email = emailMap[m.user_id] || (isSelf ? session?.user.email ?? undefined : undefined);
-            const display = isSelf ? "You" : (email || m.user_id.slice(0, 8) + "…");
+            const metadata = isSelf ? session?.user.user_metadata : undefined;
+            const selfName =
+              typeof metadata?.full_name === "string" ? metadata.full_name :
+              typeof metadata?.name === "string" ? metadata.name :
+              undefined;
+            const avatarUrl =
+              typeof metadata?.avatar_url === "string" ? metadata.avatar_url :
+              typeof metadata?.picture === "string" ? metadata.picture :
+              undefined;
+            const display = isSelf ? (selfName ?? "You") : (email || m.user_id.slice(0, 8) + "…");
             return (
               <div
                 key={m.id}
@@ -887,9 +896,18 @@ export default function SettingsPage() {
                   i < teamMembers.length - 1 && "border-b border-border/60",
                 )}
               >
-                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0 text-[11px] font-medium text-muted-foreground">
-                  {initialsFor(email || display)}
-                </div>
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt=""
+                    className="h-8 w-8 rounded-full object-cover shrink-0"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0 text-[11px] font-medium text-muted-foreground">
+                    {initialsFor(selfName || email || display)}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-foreground truncate">{display}</div>
                   {isSelf && email && (
