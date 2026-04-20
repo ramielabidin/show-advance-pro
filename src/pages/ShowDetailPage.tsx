@@ -45,6 +45,7 @@ import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
 import EmailAttachments from "@/components/EmailAttachments";
 import ExportPdfDialog from "@/components/ExportPdfDialog";
+import CopyGuestLinkButton, { GuestLinkMenuItems } from "@/components/CopyGuestLinkButton";
 import GuestListEditor, { GuestListView, parseGuestList, guestTotal, parseComps } from "@/components/GuestListEditor";
 import ScheduleEditor, { type ScheduleRow } from "@/components/ScheduleEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
@@ -802,6 +803,12 @@ export default function ShowDetailPage() {
                 <SlackPushDialog showId={id!} show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
                 <EmailBandDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email Band</DropdownMenuItem>} />
                 <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
+                <GuestLinkMenuItems
+                  showId={id!}
+                  linkType="daysheet"
+                  copyLabel="Copy Day Sheet Link"
+                  regenerateLabel="Regenerate Day Sheet Link"
+                />
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -1152,6 +1159,9 @@ export default function ShowDetailPage() {
             {/* Guest List */}
             <FieldGroup title="Guest List" incomplete={!!show.artist_comps && !show.guest_list_details && inlineField !== "guest_list_details"}>
               {renderGuestList()}
+              <div className="pt-1">
+                <CopyGuestLinkButton showId={id!} linkType="guestlist" />
+              </div>
             </FieldGroup>
 
             <Separator />
