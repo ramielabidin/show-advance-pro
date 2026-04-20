@@ -715,25 +715,11 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
-
-          {/* Google Maps */}
-          <div className="rounded-lg border bg-card p-4 sm:p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="text-sm font-medium text-foreground">Google Maps</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Drive-time auto-calc between shows.</p>
-              </div>
-              <Chip tone="green">Connected</Chip>
-            </div>
-          </div>
         </div>
       </section>
 
       {/* ── Band Documents (full width) ── */}
       <BandDocuments />
-
-      {/* ── Two-column grid: Touring Party + Team Members ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-start">
 
       {/* ── Touring Party ── */}
       <section>
@@ -891,8 +877,8 @@ export default function SettingsPage() {
         <div className="rounded-lg border bg-card overflow-hidden">
           {teamMembers.map((m, i) => {
             const isSelf = m.user_id === session?.user.id;
-            const display = isSelf ? "You" : (emailMap[m.user_id] || m.user_id.slice(0, 8) + "…");
-            const email = emailMap[m.user_id];
+            const email = emailMap[m.user_id] || (isSelf ? session?.user.email ?? undefined : undefined);
+            const display = isSelf ? "You" : (email || m.user_id.slice(0, 8) + "…");
             return (
               <div
                 key={m.id}
@@ -906,7 +892,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-foreground truncate">{display}</div>
-                  {email && !isSelf && (
+                  {isSelf && email && (
                     <div className="text-xs font-mono text-muted-foreground truncate">{email}</div>
                   )}
                 </div>
@@ -984,8 +970,6 @@ export default function SettingsPage() {
           </div>
         )}
       </section>
-
-      </div>{/* end 2-column grid */}
 
       <AlertDialog open={slackDisconnectOpen} onOpenChange={setSlackDisconnectOpen}>
         <AlertDialogContent>
