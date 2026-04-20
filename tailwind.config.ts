@@ -92,6 +92,10 @@ export default {
           DEFAULT: "var(--pastel-yellow-bg)",
           foreground: "var(--pastel-yellow-fg)",
         },
+        "pastel-purple": {
+          DEFAULT: "var(--pastel-purple-bg)",
+          foreground: "var(--pastel-purple-fg)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -703,16 +703,16 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
                   </span>
                 )}
                 {counts.review > 0 && (
-                  <span className="flex items-center gap-1 text-amber-600">
+                  <span className="flex items-center gap-1 text-[var(--pastel-yellow-fg)]">
                     <HelpCircle className="h-3.5 w-3.5" /> {counts.review} review
                   </span>
                 )}
                 {counts.update > 0 && (
-                  <span className="flex items-center gap-1 text-green-600">
+                  <span className="flex items-center gap-1 text-[var(--pastel-green-fg)]">
                     <RefreshCw className="h-3.5 w-3.5" /> {counts.update} update
                   </span>
                 )}
-                <span className="flex items-center gap-1 text-green-600">
+                <span className="flex items-center gap-1 text-[var(--pastel-green-fg)]">
                   <CheckCircle2 className="h-3.5 w-3.5" /> {counts.insert} new
                 </span>
                 <Button variant="ghost" size="sm" onClick={reset}>
@@ -739,7 +739,7 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
                       action === "invalid"
                         ? "bg-destructive/5"
                         : action === "review"
-                        ? "bg-amber-500/5"
+                        ? "bg-pastel-yellow/30"
                         : "";
                     return (
                       <TableRow key={i} className={rowClass}>
@@ -757,7 +757,7 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
                             </span>
                           ) : action === "update" ? (
                             <div className="flex flex-col gap-0.5">
-                              <span className="flex items-center gap-1 text-xs text-green-600">
+                              <span className="flex items-center gap-1 text-xs text-[var(--pastel-green-fg)]">
                                 <RefreshCw className="h-3.5 w-3.5" /> Update
                               </span>
                               {r.match.kind !== "insert" && (
@@ -768,7 +768,7 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
                             </div>
                           ) : action === "review" && r.match.kind === "review" ? (
                             <div className="flex flex-col gap-1">
-                              <span className="flex items-center gap-1 text-xs text-amber-600">
+                              <span className="flex items-center gap-1 text-xs text-[var(--pastel-yellow-fg)]">
                                 <HelpCircle className="h-3.5 w-3.5" /> Probable match — review
                               </span>
                               <span className="text-[11px] text-muted-foreground">
@@ -802,7 +802,7 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
                               </div>
                             </div>
                           ) : (
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <CheckCircle2 className="h-4 w-4 text-[var(--pastel-green-fg)]" />
                           )}
                         </TableCell>
                       </TableRow>

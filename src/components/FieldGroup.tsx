@@ -15,7 +15,7 @@ export default function FieldGroup({ title, children, className, contentClassNam
         <div className="w-0.5 h-3.5 rounded-full bg-foreground/25 shrink-0" />
         <h3 className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
           {title}
-          {incomplete && <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />}
+          {incomplete && <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--pastel-yellow-fg)]" />}
         </h3>
       </div>
       <div className={cn("space-y-3", contentClassName)}>{children}</div>

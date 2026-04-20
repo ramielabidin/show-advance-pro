@@ -24,11 +24,11 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
   let dotColor: string | null = null;
   if (isUpcoming) {
     if ((show as any).advanced_at) {
-      dotColor = "bg-green-500";
+      dotColor = "bg-[var(--pastel-green-fg)]";
     } else if (isWithin7) {
-      dotColor = "bg-red-500";
+      dotColor = "bg-[var(--pastel-red-fg)]";
     } else {
-      dotColor = "bg-amber-400";
+      dotColor = "bg-[var(--pastel-yellow-fg)]";
     }
   }
 
@@ -73,7 +73,10 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
               </span>
             )}
             {(show as any).is_settled && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:text-green-400 shrink-0">
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0"
+                style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+              >
                 <CheckCircle2 className="h-3 w-3" />
                 Settled
               </span>
