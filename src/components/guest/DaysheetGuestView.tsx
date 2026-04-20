@@ -1,9 +1,11 @@
 import { format, parseISO } from "date-fns";
+import { Mic } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
-import { Separator } from "@/components/ui/separator";
+import { cn, formatCityState } from "@/lib/utils";
 import { hasData, type SectionKey } from "@/lib/daysheetSections";
-import { formatCityState } from "@/lib/utils";
 import type { Show } from "@/lib/types";
 import type { GuestShowPayload } from "@/lib/guestLinks";
 import GuestGuestList from "./GuestGuestList";
@@ -28,24 +30,34 @@ function Schedule({ show }: { show: GuestShowPayload }) {
   );
   if (entries.length === 0) return null;
   return (
-    <div className="space-y-1.5">
-      {entries.map((e) => {
-        const setInline = e.is_band && show.set_length ? ` (${show.set_length})` : "";
-        const isBand = !!e.is_band;
+    <Card className="p-4">
+      {entries.map((entry, i) => {
+        const setInline = entry.is_band && show.set_length ? ` (${show.set_length})` : "";
         return (
           <div
-            key={e.id}
-            className="grid grid-cols-[88px_1fr] gap-3 text-sm items-baseline"
+            key={entry.id}
+            className={cn(
+              "grid grid-cols-[80px_1fr] gap-3 items-center py-2.5 px-1",
+              i < entries.length - 1 && "border-b border-border/60",
+            )}
           >
-            <span className="font-mono text-muted-foreground">{e.time ?? ""}</span>
-            <span className={isBand ? "text-foreground font-medium" : "text-foreground"}>
-              {e.label}
+            <span className="font-mono text-sm shrink-0 whitespace-nowrap text-muted-foreground">
+              {entry.time ?? ""}
+            </span>
+            <span
+              className={cn(
+                "text-base inline-flex items-center gap-1.5",
+                entry.is_band ? "text-foreground font-medium" : "text-foreground",
+              )}
+            >
+              {entry.is_band && <Mic className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+              {entry.label}
               {setInline}
             </span>
           </div>
         );
       })}
-    </div>
+    </Card>
   );
 }
 
@@ -55,6 +67,7 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
   const has = (k: SectionKey) => hasData(show as unknown as Show, k);
   const city = formatCityState(show.city);
   const rawAddr = show.venue_address?.replace(/,?\s*United States$/i, "") ?? "";
+  const showTwoColumn = has("schedule") || has("contact") || has("loadIn") || has("parking");
 
   return (
     <div className="space-y-8">
@@ -72,41 +85,51 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
       </header>
 
       <div className="space-y-6">
-        {has("contact") && (
-          <FieldGroup title="Day of Show Contact">
-            <FieldRow label="Name" value={show.dos_contact_name} />
-            <FieldRow label="Phone" value={show.dos_contact_phone} mono />
-          </FieldGroup>
-        )}
-
-        {has("venue") && (
+        {has("venue") && rawAddr ? (
           <FieldGroup title="Venue">
-            {rawAddr ? <FieldRow label="Address" value={rawAddr} /> : null}
+            <FieldRow label="Address" value={rawAddr} />
           </FieldGroup>
-        )}
+        ) : null}
 
-        {has("schedule") && (
-          <FieldGroup title="Schedule">
-            <Schedule show={show} />
-          </FieldGroup>
+        {showTwoColumn && (
+          <div className="grid grid-cols-1 md:grid-cols-[3fr_auto_2fr] gap-x-6 gap-y-6">
+            <div>
+              {has("schedule") && (
+                <FieldGroup title="Schedule">
+                  <Schedule show={show} />
+                </FieldGroup>
+              )}
+            </div>
+
+            <Separator orientation="vertical" className="hidden md:block h-auto" />
+
+            <div className="space-y-6">
+              {has("contact") && (
+                <FieldGroup title="Day of Show Contact" contentClassName="space-y-2">
+                  <FieldRow label="Name" value={show.dos_contact_name} />
+                  <FieldRow label="Phone" value={show.dos_contact_phone} mono />
+                </FieldGroup>
+              )}
+
+              {has("loadIn") && (
+                <FieldGroup title="Load In">
+                  <FieldRow label="" value={show.load_in_details} noLabel />
+                </FieldGroup>
+              )}
+
+              {has("parking") && (
+                <FieldGroup title="Parking">
+                  <FieldRow label="" value={show.parking_notes} noLabel />
+                </FieldGroup>
+              )}
+            </div>
+          </div>
         )}
 
         {has("departure") && (
           <FieldGroup title="Departure">
             <FieldRow label="Time" value={show.departure_time} mono />
             <FieldRow label="Notes" value={show.departure_notes} />
-          </FieldGroup>
-        )}
-
-        {has("parking") && (
-          <FieldGroup title="Parking">
-            <FieldRow label="" value={show.parking_notes} noLabel />
-          </FieldGroup>
-        )}
-
-        {has("loadIn") && (
-          <FieldGroup title="Load In">
-            <FieldRow label="" value={show.load_in_details} noLabel />
           </FieldGroup>
         )}
 
