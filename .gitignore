@@ -21,7 +21,9 @@ dist-ssr
 supabase/.temp/
 
 # Claude Code local settings (may contain secrets)
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/skills/**
 
 # Editor directories and files
 .vscode/*
