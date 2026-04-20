@@ -154,10 +154,6 @@
        gesture is the only thing that responds to a downward overscroll. */
     overscroll-behavior-y: contain;
   }
-
-  h1, h2, h3, h4 {
-    @apply font-display;
-  }
 }
 
 @layer utilities {
