@@ -735,12 +735,11 @@ function RevenueCard({
     );
   }
 
-  const earnedSubline =
+  const earnedPrimary =
     settledCount === 0
       ? "No settled shows yet"
-      : isTourScope
-        ? `From ${settledCount} settled shows`
-        : `From ${settledCount} settled shows · last 12 months`;
+      : `From ${settledCount} settled shows`;
+  const earnedSecondary = settledCount > 0 && !isTourScope ? "last 12 months" : null;
 
   return (
     <Card className={cn("overflow-hidden shadow-none", className)}>
@@ -752,7 +751,10 @@ function RevenueCard({
                 <p className="font-display text-foreground leading-none tracking-[-0.03em] text-3xl">
                   {fmtMoney(earnedIncome)}
                 </p>
-                <p className="text-xs text-muted-foreground mt-2 truncate">{earnedSubline}</p>
+                <div className="text-xs text-muted-foreground mt-2 leading-snug">
+                  <p className="truncate">{earnedPrimary}</p>
+                  {earnedSecondary && <p className="truncate">{earnedSecondary}</p>}
+                </div>
               </>
             ) : (
               <>
