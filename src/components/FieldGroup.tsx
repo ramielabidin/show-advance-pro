@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { ChevronRight } from "lucide-react";
 
 interface FieldGroupProps {
   title: string;
@@ -30,6 +29,18 @@ export default function FieldGroup({
     </h3>
   );
 
+  const marker = (openState: boolean) => (
+    <span
+      aria-hidden
+      className={cn(
+        "w-0.5 rounded-full shrink-0 [transition:height_200ms_var(--ease-out),background-color_150ms_var(--ease-out)]",
+        openState
+          ? "h-5 bg-foreground/50 group-hover:bg-foreground/70"
+          : "h-3.5 bg-foreground/25 group-hover:bg-foreground/45"
+      )}
+    />
+  );
+
   if (collapsible) {
     return (
       <div className={className}>
@@ -37,17 +48,21 @@ export default function FieldGroup({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="relative mb-3 w-full text-left group"
+          className="mb-3 w-full text-left group flex items-center gap-2"
         >
-          <ChevronRight
-            className={cn(
-              "absolute -left-4 top-1/2 -translate-y-1/2 h-3 w-3 shrink-0 text-muted-foreground/60 group-hover:text-foreground [transition:transform_160ms_var(--ease-out),color_150ms_var(--ease-out)]",
-              open && "rotate-90"
-            )}
-          />
+          {marker(open)}
           {header}
         </button>
-        {open && <div className={cn("space-y-3", contentClassName)}>{children}</div>}
+        <div
+          className={cn(
+            "grid [transition:grid-template-rows_220ms_var(--ease-out),opacity_180ms_var(--ease-out)]",
+            open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          )}
+        >
+          <div className="overflow-hidden">
+            <div className={cn("space-y-3", contentClassName)}>{children}</div>
+          </div>
+        </div>
       </div>
     );
   }
