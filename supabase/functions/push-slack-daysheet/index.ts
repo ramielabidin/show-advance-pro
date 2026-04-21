@@ -45,7 +45,6 @@ function formatDate(dateStr: string): string {
   });
 }
 
-const GUEST_LINK_BASE_URL = "https://advancetouring.com";
 const NANOID_ALPHABET =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
 
@@ -59,15 +58,16 @@ function nanoid(size = 17): string {
 
 /**
  * Returns the URL of an active daysheet guest link for this show, minting one
- * if none exists. Mirrors the client-side `getActiveGuestLink` / `generateGuestLink`
- * pair in src/lib/guestLinks.ts. Returns null on failure — the caller should
- * send the day sheet without a link rather than fail the whole push.
+ * if none exists. `baseUrl` must be the origin that actually serves the app
+ * (e.g. the browser's `window.location.origin`) — otherwise the Slack button
+ * will land on a domain without the SPA routes and redirect to auth.
  */
 async function ensureDaySheetGuestUrl(
   // deno-lint-ignore no-explicit-any
   supabase: any,
   showId: string,
-  userId: string
+  userId: string,
+  baseUrl: string
 ): Promise<string | null> {
   try {
     const { data: existing } = await supabase
@@ -80,7 +80,7 @@ async function ensureDaySheetGuestUrl(
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (existing?.token) return `${GUEST_LINK_BASE_URL}/guest/${existing.token}`;
+    if (existing?.token) return `${baseUrl}/guest/${existing.token}`;
 
     const token = nanoid(17);
     const { error: insertError } = await supabase.from("guest_links").insert({
@@ -93,9 +93,20 @@ async function ensureDaySheetGuestUrl(
       console.error("Failed to mint guest daysheet link:", insertError);
       return null;
     }
-    return `${GUEST_LINK_BASE_URL}/guest/${token}`;
+    return `${baseUrl}/guest/${token}`;
   } catch (e) {
     console.error("ensureDaySheetGuestUrl error:", e);
+    return null;
+  }
+}
+
+function sanitizeAppUrl(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+    return `${u.protocol}//${u.host}`;
+  } catch {
     return null;
   }
 }
@@ -274,13 +285,14 @@ serve(async (req) => {
       });
     }
 
-    const { showId } = await req.json();
+    const { showId, appUrl } = await req.json();
     if (!showId || typeof showId !== "string") {
       return new Response(JSON.stringify({ error: "showId is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const baseUrl = sanitizeAppUrl(appUrl);
 
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -313,7 +325,9 @@ serve(async (req) => {
       );
     }
 
-    const guestUrl = await ensureDaySheetGuestUrl(supabase, show.id, user.id);
+    const guestUrl = baseUrl
+      ? await ensureDaySheetGuestUrl(supabase, show.id, user.id, baseUrl)
+      : null;
     const blocks = buildDaySheetBlocks(show, guestUrl);
     const fallback = `Day sheet — ${show.venue_name} — ${formatDate(show.date)}`;
 
