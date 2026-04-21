@@ -18,7 +18,7 @@ export default function SlackPushDialog({ showId, trigger }: SlackPushDialogProp
     setPushing(true);
     try {
       const { data, error } = await supabase.functions.invoke("push-slack-daysheet", {
-        body: { showId },
+        body: { showId, appUrl: window.location.origin },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
