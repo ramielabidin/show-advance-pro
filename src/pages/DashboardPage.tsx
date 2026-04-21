@@ -24,6 +24,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn, formatCityState } from "@/lib/utils";
 import { to24Hour } from "@/lib/timeFormat";
+import { isLoadInLabel, isDoorsLabel } from "@/lib/scheduleMatch";
 import CreateShowDialog from "@/components/CreateShowDialog";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
 import TourPicker from "@/components/TourPicker";
@@ -903,9 +904,9 @@ function FeaturedShowCard({
 
   const entries = show.schedule_entries ?? [];
   const loadInEntry = entries
-    .filter((e) => /load\s*-?\s*in/i.test(e.label))
+    .filter((e) => isLoadInLabel(e.label))
     .sort((a, b) => (to24Hour(a.time) ?? "").localeCompare(to24Hour(b.time) ?? ""))[0];
-  const doorsEntry = entries.find((e) => /doors?/i.test(e.label));
+  const doorsEntry = entries.find((e) => isDoorsLabel(e.label));
   const bandEntry = entries.find((e) => e.is_band);
 
   const loadInTime = to24Hour(loadInEntry?.time);

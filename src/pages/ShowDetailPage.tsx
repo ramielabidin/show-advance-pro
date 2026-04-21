@@ -53,6 +53,7 @@ import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
 import { toast } from "sonner";
 import { cn, formatCityState, normalizePhone } from "@/lib/utils";
 import { normalizeTime } from "@/lib/timeFormat";
+import { isLoadInLabel } from "@/lib/scheduleMatch";
 import TimeInput from "@/components/TimeInput";
 import type { Show } from "@/lib/types";
 import RevenueSimulator, { parseDollar } from "@/components/RevenueSimulator";
@@ -218,7 +219,7 @@ export default function ShowDetailPage() {
   // Parse load-in time from schedule entries into minutes since midnight
   const loadInMinutes = useMemo(() => {
     const entries = (show as any)?.schedule_entries ?? [];
-    const loadIn = entries.find((e: any) => /load\s*-?\s*in/i.test(e.label));
+    const loadIn = entries.find((e: any) => isLoadInLabel(e.label));
     if (!loadIn?.time) return null;
     const match = (loadIn.time as string).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
     if (!match) return null;
