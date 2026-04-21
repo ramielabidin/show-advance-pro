@@ -511,7 +511,7 @@ export default function ShowDetailPage() {
 
       return (
         <div ref={inlineRef} className="space-y-1">
-          <Label className="text-xs text-muted-foreground">{label}</Label>
+          {!opts?.labelHidden && <Label className="text-xs text-muted-foreground">{label}</Label>}
           {opts?.multiline ? (
             <div className="relative">
               <Textarea
