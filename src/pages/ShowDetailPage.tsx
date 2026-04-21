@@ -961,13 +961,73 @@ export default function ShowDetailPage() {
               />
             )}
 
-            {/* Departure — first chronologically (group editor: time + notes) */}
-            <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
-              {(() => {
-                const DEPARTURE_KEYS: (keyof Show)[] = ["departure_time", "departure_notes"];
-                const isEditing = inlineField === "departure_group";
-                const empty = !show.departure_time && !show.departure_notes;
-                const startEdit = () => startGroupEdit("departure_group", DEPARTURE_KEYS);
+            {/* Day of Show Contact + Departure — paired two-column */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone}>
+                {(() => {
+                  const DOS_KEYS: (keyof Show)[] = ["dos_contact_name", "dos_contact_phone"];
+                  const isEditing = inlineField === "dos_group";
+                  const empty = !show.dos_contact_name && !show.dos_contact_phone;
+                  const startEdit = () => startGroupEdit("dos_group", DOS_KEYS);
+
+                  if (isEditing) {
+                    return (
+                      <div ref={inlineRef} className="space-y-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Name</Label>
+                          <Input
+                            value={groupForm.dos_contact_name ?? ""}
+                            onChange={(e) => setGroupForm(p => ({ ...p, dos_contact_name: e.target.value }))}
+                            className="text-sm h-9"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Phone</Label>
+                          <Input
+                            value={groupForm.dos_contact_phone ?? ""}
+                            onChange={(e) => setGroupForm(p => ({ ...p, dos_contact_phone: e.target.value }))}
+                            className="text-sm h-9 font-mono"
+                            inputMode="tel"
+                          />
+                        </div>
+                        <InlineActions
+                          onSave={() => saveGroup(DOS_KEYS, { dos_contact_phone: normalizePhone })}
+                          onCancel={cancelInline}
+                        />
+                      </div>
+                    );
+                  }
+
+                  if (empty) {
+                    return <EmptyFieldPrompt label="day of show contact" onClick={startEdit} />;
+                  }
+
+                  return (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={startEdit}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
+                      }}
+                      className="w-full text-left space-y-2 card-pressable cursor-pointer"
+                    >
+                      <FieldRow label="Name" value={show.dos_contact_name} compact />
+                      <FieldRow label="Phone" value={show.dos_contact_phone} mono compact />
+                    </div>
+                  );
+                })()}
+              </FieldGroup>
+
+              <Separator className="md:hidden" />
+
+              <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
+                {(() => {
+                  const DEPARTURE_KEYS: (keyof Show)[] = ["departure_time", "departure_notes"];
+                  const isEditing = inlineField === "departure_group";
+                  const empty = !show.departure_time && !show.departure_notes;
+                  const startEdit = () => startGroupEdit("departure_group", DEPARTURE_KEYS);
 
                 if (isEditing) {
                   return (
@@ -1047,13 +1107,12 @@ export default function ShowDetailPage() {
                 );
               })()}
             </FieldGroup>
+            </div>
 
             <Separator />
 
-            {/* Schedule + Day-of Logistics — two-column layout */}
-            <div className="grid grid-cols-1 md:grid-cols-[3fr_auto_2fr] gap-x-6 gap-y-6">
-              {/* Schedule — dominant left column */}
-              <div ref={scheduleRef}>
+            {/* Schedule — full width */}
+            <div ref={scheduleRef}>
               <FieldGroup title="Schedule" incomplete={!editingSchedule && scheduleEntries.length === 0}>
                 {editingSchedule ? (
                   <ScheduleEditor
@@ -1121,305 +1180,241 @@ export default function ShowDetailPage() {
                 )}
                 {editField("set_length", "Set Length", { alwaysShow: true })}
               </FieldGroup>
-              </div>
-
-              {/* Vertical divider (desktop only) */}
-              <Separator orientation="vertical" className="hidden md:block h-auto" />
-
-              {/* Right column: Day of Show Contact + Arrival (load in + parking) */}
-              <div className="space-y-6">
-                <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone}>
-                  {(() => {
-                    const DOS_KEYS: (keyof Show)[] = ["dos_contact_name", "dos_contact_phone"];
-                    const isEditing = inlineField === "dos_group";
-                    const empty = !show.dos_contact_name && !show.dos_contact_phone;
-                    const startEdit = () => startGroupEdit("dos_group", DOS_KEYS);
-
-                    if (isEditing) {
-                      return (
-                        <div ref={inlineRef} className="space-y-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Name</Label>
-                            <Input
-                              value={groupForm.dos_contact_name ?? ""}
-                              onChange={(e) => setGroupForm(p => ({ ...p, dos_contact_name: e.target.value }))}
-                              className="text-sm h-9"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Phone</Label>
-                            <Input
-                              value={groupForm.dos_contact_phone ?? ""}
-                              onChange={(e) => setGroupForm(p => ({ ...p, dos_contact_phone: e.target.value }))}
-                              className="text-sm h-9 font-mono"
-                              inputMode="tel"
-                            />
-                          </div>
-                          <InlineActions
-                            onSave={() => saveGroup(DOS_KEYS, { dos_contact_phone: normalizePhone })}
-                            onCancel={cancelInline}
-                          />
-                        </div>
-                      );
-                    }
-
-                    if (empty) {
-                      return <EmptyFieldPrompt label="day of show contact" onClick={startEdit} />;
-                    }
-
-                    return (
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={startEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
-                        }}
-                        className="w-full text-left space-y-2 card-pressable cursor-pointer"
-                      >
-                        <FieldRow label="Name" value={show.dos_contact_name} compact />
-                        <FieldRow label="Phone" value={show.dos_contact_phone} mono compact />
-                      </div>
-                    );
-                  })()}
-                </FieldGroup>
-
-                <FieldGroup title="Arrival" incomplete={!show.load_in_details && !show.parking_notes}>
-                  {(() => {
-                    const ARRIVAL_KEYS: (keyof Show)[] = ["load_in_details", "parking_notes"];
-                    const isEditing = inlineField === "arrival_group";
-                    const empty = !show.load_in_details && !show.parking_notes;
-                    const startEdit = () => startGroupEdit("arrival_group", ARRIVAL_KEYS);
-
-                    if (isEditing) {
-                      return (
-                        <div ref={inlineRef} className="space-y-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Load In</Label>
-                            <Textarea
-                              value={groupForm.load_in_details ?? ""}
-                              onChange={(e) => setGroupForm(p => ({ ...p, load_in_details: e.target.value }))}
-                              className="text-sm min-h-[44px]"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Parking</Label>
-                            <Textarea
-                              value={groupForm.parking_notes ?? ""}
-                              onChange={(e) => setGroupForm(p => ({ ...p, parking_notes: e.target.value }))}
-                              className="text-sm min-h-[44px]"
-                            />
-                          </div>
-                          <InlineActions onSave={() => saveGroup(ARRIVAL_KEYS)} onCancel={cancelInline} />
-                        </div>
-                      );
-                    }
-
-                    if (empty) {
-                      return <EmptyFieldPrompt label="arrival (load in / parking)" onClick={startEdit} />;
-                    }
-
-                    return (
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={startEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
-                        }}
-                        className="w-full text-left space-y-2 card-pressable cursor-pointer"
-                      >
-                        <FieldRow label="Load In" value={show.load_in_details} />
-                        <FieldRow label="Parking" value={show.parking_notes} />
-                      </div>
-                    );
-                  })()}
-                </FieldGroup>
-              </div>
             </div>
 
-            <Separator />
+            {/* Arrival — full width, below schedule */}
+            <FieldGroup title="Arrival" incomplete={!show.load_in_details && !show.parking_notes}>
+              {(() => {
+                const ARRIVAL_KEYS: (keyof Show)[] = ["load_in_details", "parking_notes"];
+                const isEditing = inlineField === "arrival_group";
+                const empty = !show.load_in_details && !show.parking_notes;
+                const startEdit = () => startGroupEdit("arrival_group", ARRIVAL_KEYS);
 
-            {/* At The Venue + Accommodations — paired two-column */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <FieldGroup
-                title="At The Venue"
-                collapsible
-                defaultOpen={!!(show.green_room_info || show.wifi_network || show.wifi_password)}
-              >
-                {(() => {
-                  const VENUE_KEYS: (keyof Show)[] = ["green_room_info", "wifi_network", "wifi_password"];
-                  const isEditing = inlineField === "venue_group";
-                  const empty = !show.green_room_info && !show.wifi_network && !show.wifi_password;
-                  const startEdit = () => startGroupEdit("venue_group", VENUE_KEYS);
-
-                  if (isEditing) {
-                    return (
-                      <div ref={inlineRef} className="space-y-2">
+                if (isEditing) {
+                  return (
+                    <div ref={inlineRef} className="space-y-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Green Room</Label>
+                          <Label className="text-xs text-muted-foreground">Load In</Label>
                           <Textarea
-                            value={groupForm.green_room_info ?? ""}
-                            onChange={(e) => setGroupForm(p => ({ ...p, green_room_info: e.target.value }))}
+                            value={groupForm.load_in_details ?? ""}
+                            onChange={(e) => setGroupForm(p => ({ ...p, load_in_details: e.target.value }))}
                             className="text-sm min-h-[44px]"
                             autoFocus
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">WiFi Network</Label>
-                            <Input
-                              value={groupForm.wifi_network ?? ""}
-                              onChange={(e) => setGroupForm(p => ({ ...p, wifi_network: e.target.value }))}
-                              className="text-sm h-9 font-mono"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">WiFi Password</Label>
-                            <Input
-                              value={groupForm.wifi_password ?? ""}
-                              onChange={(e) => setGroupForm(p => ({ ...p, wifi_password: e.target.value }))}
-                              className="text-sm h-9 font-mono"
-                            />
-                          </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Parking</Label>
+                          <Textarea
+                            value={groupForm.parking_notes ?? ""}
+                            onChange={(e) => setGroupForm(p => ({ ...p, parking_notes: e.target.value }))}
+                            className="text-sm min-h-[44px]"
+                          />
                         </div>
-                        <InlineActions onSave={() => saveGroup(VENUE_KEYS)} onCancel={cancelInline} />
                       </div>
-                    );
-                  }
-
-                  if (empty) {
-                    return <EmptyFieldPrompt label="venue details" onClick={startEdit} />;
-                  }
-
-                  return (
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={startEdit}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
-                      }}
-                      className="w-full text-left space-y-2 card-pressable cursor-pointer"
-                    >
-                      <FieldRow label="Green Room" value={show.green_room_info} />
-                      {(show.wifi_network || show.wifi_password) ? (
-                        <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                          <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">WiFi</span>
-                          <span className="text-sm text-foreground font-mono text-[13px]">
-                            {show.wifi_network || "—"} <span className="text-muted-foreground/60 px-1">/</span> {show.wifi_password || "—"}
-                          </span>
-                        </div>
-                      ) : null}
+                      <InlineActions onSave={() => saveGroup(ARRIVAL_KEYS)} onCancel={cancelInline} />
                     </div>
                   );
-                })()}
-              </FieldGroup>
+                }
 
-              <Separator className="md:hidden" />
+                if (empty) {
+                  return <EmptyFieldPrompt label="arrival (load in / parking)" onClick={startEdit} />;
+                }
 
-              <FieldGroup
-                title="Accommodations"
-                collapsible
-                defaultOpen={!!(show.hotel_name || show.hotel_address || show.hotel_confirmation || show.hotel_checkin || show.hotel_checkout)}
-              >
-                {(() => {
-                  const hotelEmpty = !show.hotel_name && !show.hotel_address && !show.hotel_confirmation && !show.hotel_checkin && !show.hotel_checkout;
-                  const isHotelInline = inlineField === "hotel_group";
-                  const HOTEL_KEYS: (keyof Show)[] = ["hotel_name", "hotel_address", "hotel_confirmation", "hotel_checkin", "hotel_checkout"];
-                  const startHotelEdit = () => startGroupEdit("hotel_group", HOTEL_KEYS);
-
-                  if (isHotelInline) {
-                    return (
-                      <div ref={inlineRef} className="space-y-2">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Name</Label>
-                          <Input value={groupForm.hotel_name ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_name: e.target.value }))} className="text-sm h-9" autoFocus />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Address</Label>
-                          <Input value={groupForm.hotel_address ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_address: e.target.value }))} className="text-sm h-9" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Confirmation #</Label>
-                          <Input value={groupForm.hotel_confirmation ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_confirmation: e.target.value }))} className="text-sm h-9 font-mono" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Check In</Label>
-                            <Input value={groupForm.hotel_checkin ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_checkin: e.target.value }))} className="text-sm h-9 font-mono" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Check Out</Label>
-                            <Input value={groupForm.hotel_checkout ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_checkout: e.target.value }))} className="text-sm h-9 font-mono" />
-                          </div>
-                        </div>
-                        <InlineActions onSave={() => saveGroup(HOTEL_KEYS)} onCancel={cancelInline} />
-                      </div>
-                    );
-                  }
-
-                  if (hotelEmpty) {
-                    return <EmptyFieldPrompt label="accommodations" onClick={startHotelEdit} />;
-                  }
-
-                  return (
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={startHotelEdit}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          startHotelEdit();
-                        }
-                      }}
-                      className="w-full text-left space-y-3 card-pressable cursor-pointer"
-                    >
-                      <FieldRow label="Name" value={show.hotel_name} />
-                      {show.hotel_address ? (
-                        <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                          <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Address</span>
-                          <a
-                            href={`https://maps.google.com/?q=${encodeURIComponent(show.hotel_address)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-sm text-foreground inline-flex items-start gap-1 hover:underline hover:text-foreground/80 transition-colors"
-                          >
-                            <MapPin className="h-3 w-3 shrink-0 mt-1" />
-                            <span>{show.hotel_address.replace(/,?\s*United States$/i, "")}</span>
-                          </a>
-                        </div>
-                      ) : null}
-                      <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
-                      {(show.hotel_checkin || show.hotel_checkout) ? (
-                        <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                          <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Check In / Out</span>
-                          <span className="text-sm text-foreground font-mono text-[13px]">
-                            {show.hotel_checkin || "—"} <span className="text-muted-foreground/60 px-1">→</span> {show.hotel_checkout || "—"}
-                          </span>
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })()}
-              </FieldGroup>
-            </div>
+                return (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={startEdit}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
+                    }}
+                    className="w-full text-left grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 card-pressable cursor-pointer"
+                  >
+                    <FieldRow label="Load In" value={show.load_in_details} />
+                    <FieldRow label="Parking" value={show.parking_notes} />
+                  </div>
+                );
+              })()}
+            </FieldGroup>
 
             <Separator />
 
-            {/* Extras — collapsible by default unless populated */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-              <FieldGroup title="Hospitality" collapsible defaultOpen={!!show.hospitality}>
-                {editField("hospitality", "Hospitality", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add hospitality notes" })}
-              </FieldGroup>
-              <FieldGroup title="Backline" collapsible defaultOpen={!!show.backline_provided}>
-                {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add backline notes" })}
-              </FieldGroup>
-            </div>
+            {/* At The Venue + Accommodations — paired two-column */}
+            <FieldGroup
+              title="At The Venue"
+              collapsible
+              defaultOpen={!!(show.green_room_info || show.wifi_network || show.wifi_password || show.hospitality)}
+            >
+              {(() => {
+                const VENUE_KEYS: (keyof Show)[] = ["green_room_info", "wifi_network", "wifi_password", "hospitality"];
+                const isEditing = inlineField === "venue_group";
+                const empty = !show.green_room_info && !show.wifi_network && !show.wifi_password && !show.hospitality;
+                const startEdit = () => startGroupEdit("venue_group", VENUE_KEYS);
+
+                if (isEditing) {
+                  return (
+                    <div ref={inlineRef} className="space-y-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Green Room</Label>
+                        <Textarea
+                          value={groupForm.green_room_info ?? ""}
+                          onChange={(e) => setGroupForm(p => ({ ...p, green_room_info: e.target.value }))}
+                          className="text-sm min-h-[44px]"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">WiFi Network</Label>
+                          <Input
+                            value={groupForm.wifi_network ?? ""}
+                            onChange={(e) => setGroupForm(p => ({ ...p, wifi_network: e.target.value }))}
+                            className="text-sm h-9 font-mono"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">WiFi Password</Label>
+                          <Input
+                            value={groupForm.wifi_password ?? ""}
+                            onChange={(e) => setGroupForm(p => ({ ...p, wifi_password: e.target.value }))}
+                            className="text-sm h-9 font-mono"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Hospitality</Label>
+                        <Textarea
+                          value={groupForm.hospitality ?? ""}
+                          onChange={(e) => setGroupForm(p => ({ ...p, hospitality: e.target.value }))}
+                          className="text-sm min-h-[44px]"
+                        />
+                      </div>
+                      <InlineActions onSave={() => saveGroup(VENUE_KEYS)} onCancel={cancelInline} />
+                    </div>
+                  );
+                }
+
+                if (empty) {
+                  return <EmptyFieldPrompt label="venue details" onClick={startEdit} />;
+                }
+
+                return (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={startEdit}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
+                    }}
+                    className="w-full text-left space-y-2 card-pressable cursor-pointer"
+                  >
+                    <FieldRow label="Green Room" value={show.green_room_info} />
+                    {(show.wifi_network || show.wifi_password) ? (
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+                        <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">WiFi</span>
+                        <span className="text-sm text-foreground font-mono text-[13px]">
+                          {show.wifi_network || "—"} <span className="text-muted-foreground/60 px-1">/</span> {show.wifi_password || "—"}
+                        </span>
+                      </div>
+                    ) : null}
+                    <FieldRow label="Hospitality" value={show.hospitality} />
+                  </div>
+                );
+              })()}
+            </FieldGroup>
+
+            <FieldGroup
+              title="Accommodations"
+              collapsible
+              defaultOpen={!!(show.hotel_name || show.hotel_address || show.hotel_confirmation || show.hotel_checkin || show.hotel_checkout)}
+            >
+              {(() => {
+                const hotelEmpty = !show.hotel_name && !show.hotel_address && !show.hotel_confirmation && !show.hotel_checkin && !show.hotel_checkout;
+                const isHotelInline = inlineField === "hotel_group";
+                const HOTEL_KEYS: (keyof Show)[] = ["hotel_name", "hotel_address", "hotel_confirmation", "hotel_checkin", "hotel_checkout"];
+                const startHotelEdit = () => startGroupEdit("hotel_group", HOTEL_KEYS);
+
+                if (isHotelInline) {
+                  return (
+                    <div ref={inlineRef} className="space-y-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Name</Label>
+                        <Input value={groupForm.hotel_name ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_name: e.target.value }))} className="text-sm h-9" autoFocus />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Address</Label>
+                        <Input value={groupForm.hotel_address ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_address: e.target.value }))} className="text-sm h-9" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Confirmation #</Label>
+                        <Input value={groupForm.hotel_confirmation ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_confirmation: e.target.value }))} className="text-sm h-9 font-mono" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Check In</Label>
+                          <Input value={groupForm.hotel_checkin ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_checkin: e.target.value }))} className="text-sm h-9 font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Check Out</Label>
+                          <Input value={groupForm.hotel_checkout ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_checkout: e.target.value }))} className="text-sm h-9 font-mono" />
+                        </div>
+                      </div>
+                      <InlineActions onSave={() => saveGroup(HOTEL_KEYS)} onCancel={cancelInline} />
+                    </div>
+                  );
+                }
+
+                if (hotelEmpty) {
+                  return <EmptyFieldPrompt label="accommodations" onClick={startHotelEdit} />;
+                }
+
+                return (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={startHotelEdit}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        startHotelEdit();
+                      }
+                    }}
+                    className="w-full text-left space-y-3 card-pressable cursor-pointer"
+                  >
+                    <FieldRow label="Name" value={show.hotel_name} />
+                    {show.hotel_address ? (
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+                        <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Address</span>
+                        <a
+                          href={`https://maps.google.com/?q=${encodeURIComponent(show.hotel_address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-sm text-foreground inline-flex items-start gap-1 hover:underline hover:text-foreground/80 transition-colors"
+                        >
+                          <MapPin className="h-3 w-3 shrink-0 mt-1" />
+                          <span>{show.hotel_address.replace(/,?\s*United States$/i, "")}</span>
+                        </a>
+                      </div>
+                    ) : null}
+                    <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
+                    {(show.hotel_checkin || show.hotel_checkout) ? (
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+                        <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Check In / Out</span>
+                        <span className="text-sm text-foreground font-mono text-[13px]">
+                          {show.hotel_checkin || "—"} <span className="text-muted-foreground/60 px-1">→</span> {show.hotel_checkout || "—"}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })()}
+            </FieldGroup>
+
+            <FieldGroup title="Backline" collapsible defaultOpen={!!show.backline_provided}>
+              {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add backline notes" })}
+            </FieldGroup>
 
             <Separator />
 
