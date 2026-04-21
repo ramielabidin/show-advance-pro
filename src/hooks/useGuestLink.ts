@@ -14,16 +14,10 @@ const SUCCESS_COPY: Record<GuestLinkType, string> = {
   guestlist: "Door list link copied",
 };
 
-const SUCCESS_REGENERATE: Record<GuestLinkType, string> = {
-  daysheet: "New day sheet link copied — old one revoked",
-  guestlist: "New door list link copied — old one revoked",
-};
-
 export interface GuestLinkActions {
   activeLink: GuestLinkRow | null | undefined;
   isLoading: boolean;
   copyOrCreate: () => Promise<void>;
-  regenerate: () => Promise<void>;
   isPending: boolean;
 }
 
@@ -36,43 +30,58 @@ export function useGuestLink(showId: string, linkType: GuestLinkType): GuestLink
     queryFn: () => getActiveGuestLink(showId, linkType),
   });
 
-  const copyToClipboard = async (token: string, message: string) => {
-    try {
-      await navigator.clipboard.writeText(buildGuestUrl(token));
-      toast.success(message);
-    } catch {
-      toast.error("Could not copy to clipboard");
-    }
-  };
-
-  const mutation = useMutation({
-    mutationFn: async (opts: { regenerate: boolean }) => {
+  const createMutation = useMutation({
+    mutationFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
       if (!userId) throw new Error("You must be signed in to create a share link");
-
-      if (!opts.regenerate && activeLink) {
-        await copyToClipboard(activeLink.token, SUCCESS_COPY[linkType]);
-        return activeLink;
-      }
-      const created = await generateGuestLink(showId, linkType, userId);
-      const message = opts.regenerate || activeLink
-        ? SUCCESS_REGENERATE[linkType]
-        : SUCCESS_COPY[linkType];
-      await copyToClipboard(created.token, message);
-      return created;
+      return generateGuestLink(showId, linkType, userId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
     },
-    onError: (err: Error) => toast.error(err.message),
   });
+
+  // Safari restricts `navigator.clipboard.writeText` to code paths that run
+  // synchronously within a user gesture. React Query's `mutateAsync` plus any
+  // `await` before the write drops that gesture, producing "Could not copy to
+  // clipboard" errors. Two code paths keep the gesture alive:
+  //   1. When an active link already exists, call `writeText` directly inside
+  //      the click handler — no `await` before it.
+  //   2. When the link must be generated first, use `clipboard.write` with a
+  //      `ClipboardItem` whose payload is a Promise. Safari holds the user
+  //      activation window until that promise resolves.
+  const copyOrCreate = async () => {
+    try {
+      if (activeLink) {
+        await navigator.clipboard.writeText(buildGuestUrl(activeLink.token));
+        toast.success(SUCCESS_COPY[linkType]);
+        return;
+      }
+
+      const textPromise = (async () => {
+        const created = await createMutation.mutateAsync();
+        return new Blob([buildGuestUrl(created.token)], { type: "text/plain" });
+      })();
+
+      if (typeof ClipboardItem !== "undefined" && navigator.clipboard.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({ "text/plain": textPromise }),
+        ]);
+      } else {
+        const blob = await textPromise;
+        await navigator.clipboard.writeText(await blob.text());
+      }
+      toast.success(SUCCESS_COPY[linkType]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not copy to clipboard");
+    }
+  };
 
   return {
     activeLink,
     isLoading,
-    copyOrCreate: () => mutation.mutateAsync({ regenerate: false }).then(() => undefined),
-    regenerate: () => mutation.mutateAsync({ regenerate: true }).then(() => undefined),
-    isPending: mutation.isPending,
+    copyOrCreate,
+    isPending: createMutation.isPending,
   };
 }
