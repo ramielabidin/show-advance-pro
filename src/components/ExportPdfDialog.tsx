@@ -30,20 +30,30 @@ interface Props {
 // intentionally omitted — load in, parking, hotel, guest list, etc. live in
 // the email and Slack day sheet where people have time to read them.
 //
+// Typography and layout mirror `DaysheetGuestView` so this artifact reads as
+// part of the same product family. jsPDF's built-in faces are a best-effort
+// stand-in for the web fonts:
+//   • times (bold)   ← DM Serif Display (display venue name)
+//   • helvetica      ← DM Sans           (eyebrow, body, labels)
+//   • courier        ← JetBrains Mono    (schedule times, phones, wifi pw)
+//
 // Colors mirror the app's light-mode palette:
-//   –background:       #F5F3EF
-//   –foreground:       #1A1714
-//   –muted-foreground: #8B7E76
-//   –border:           #E2DAD4
-//   –accent-green:     #3D7A5C
+//   --background       → canvas
+//   --card             → card
+//   --foreground       → ink
+//   --muted-foreground → muted
+//   --border           → border
+//   pastel-green-fg    → accent
 
 const T = {
   canvas:      [245, 243, 239] as [number, number, number],
+  card:        [252, 250, 246] as [number, number, number],
   ink:         [26,  23,  20]  as [number, number, number],
   muted:       [139, 126, 118] as [number, number, number],
+  mutedSoft:   [176, 166, 158] as [number, number, number],
   border:      [220, 213, 207] as [number, number, number],
-  accent:      [61,  122, 92]  as [number, number, number],
-  accentLight: [237, 243, 240] as [number, number, number],
+  borderSoft:  [232, 226, 219] as [number, number, number],
+  accent:      [52,  101, 56]  as [number, number, number],
 } as const;
 
 // ─── Main component ─────────────────────────────────────────────────────────
@@ -70,222 +80,237 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       doc.rect(0, 0, PW, PH, "F");
 
       // ════════════════════════════════════════════════════════════════════
-      // HEADER — wordmark + tour pill
+      // HEADER — display venue name + date + address
+      // Matches the in-app show detail header: large serif title, date on
+      // its own line in muted, address with pin below.
       // ════════════════════════════════════════════════════════════════════
-      let y = MT;
+      let y = MT + 36;
 
+      // Venue name — big serif display (approximates DM Serif Display)
       doc.setFont("times", "bold");
-      doc.setFontSize(11);
-      doc.setTextColor(...T.ink);
-      doc.text("Advance", ML, y);
-
-      const tourName = (show as any).tours?.name;
-      if (tourName) {
-        const tourLabel = tourName.toUpperCase();
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(7);
-        const tourW = doc.getTextWidth(tourLabel);
-        const pillPad = 9;
-        const pillW = tourW + pillPad * 2 + 6; // room for charSpace
-        const pillX = PW - MR - pillW;
-        const pillY = y - 9;
-
-        doc.setFillColor(...T.accentLight);
-        doc.roundedRect(pillX, pillY, pillW, 13, 6.5, 6.5, "F");
-
-        doc.setCharSpace(1.2);
-        doc.setTextColor(...T.accent);
-        doc.text(tourLabel, pillX + pillPad, y);
-        doc.setCharSpace(0);
-      }
-
-      y += 40;
-
-      // ════════════════════════════════════════════════════════════════════
-      // VENUE + DATE
-      // ════════════════════════════════════════════════════════════════════
-      doc.setFont("times", "bold");
-      doc.setFontSize(38);
+      doc.setFontSize(42);
       doc.setTextColor(...T.ink);
       const venueLines = doc.splitTextToSize(show.venue_name, CW);
       doc.text(venueLines, ML, y);
-      y += venueLines.length * 40;
+      y += venueLines.length * 42 - 4;
 
+      // Date — muted, just below the title (matches screenshot order)
       const dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
-      const cityStr = formatCityState(show.city);
-      const metaStr = cityStr ? `${cityStr}  ·  ${dateStr}` : dateStr;
+      y += 10;
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.setTextColor(...T.muted);
-      doc.text(metaStr, ML, y);
-      y += 48;
+      doc.text(dateStr, ML, y);
+      y += 16;
+
+      // Address (or city fallback) with a small pin glyph — below date
+      const rawAddr = val(show.venue_address)?.replace(/,?\s*United States$/i, "") ?? null;
+      const cityStr = formatCityState(show.city);
+      const locLine = rawAddr ?? cityStr ?? null;
+      if (locLine) {
+        y += 4;
+        const pinX = ML + 2;
+        const pinY = y - 4.5;
+        doc.setDrawColor(...T.muted);
+        doc.setLineWidth(0.8);
+        doc.circle(pinX, pinY, 3, "S");
+        doc.setFillColor(...T.muted);
+        doc.circle(pinX, pinY, 0.9, "F");
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(...T.muted);
+        const locLines = doc.splitTextToSize(locLine, CW - 14);
+        doc.text(locLines, ML + 10, y);
+        y += locLines.length * 12;
+      }
+
+      y += 28;
 
       // ════════════════════════════════════════════════════════════════════
-      // SCHEDULE — the hero of this page
+      // SCHEDULE — bordered card with mono times + subtle dividers
       //
-      // Layout plan:
-      //   - Reserve bottom strip (contact + wifi + footer) so schedule has
-      //     a bounded area to fit in.
-      //   - Start at a large font (22pt) and auto-shrink by 0.5pt steps
-      //     until the schedule fits the available height, with an absolute
-      //     floor of 13pt. This guarantees one page without ever going
-      //     so small the wall poster becomes useless.
-      //   - Vertically center the schedule block in the available space so
-      //     short schedules don't leave a huge empty bottom half.
-      //   - Times left (muted, tabular), events right (ink).
-      //   - The band's set row (entry.is_band === true) gets accent green.
-      //     Set length shown inline as muted suffix ("Juice · 75 min").
+      // Mirrors the `Schedule` card in `DaysheetGuestView.tsx`:
+      //   - Card with rounded border
+      //   - Two columns: [mono time | event label]
+      //   - Hairline divider between rows
+      //   - Band's set row: accent green + bold + set length inline
+      //
+      // Auto-shrinks from ~21pt down to a readable floor so a reasonable
+      // number of schedule entries always fits on one page.
       // ════════════════════════════════════════════════════════════════════
 
       const entries = (show.schedule_entries ?? [])
         .slice()
         .sort((a, b) => a.sort_order - b.sort_order);
 
-      // Calculate bottom strip height so we know how much room the
-      // schedule has. Bottom strip = hairline + padding + label + 2 lines,
-      // ~64pt tall. Footer brand = 16pt.
-      const BOTTOM_STRIP_H = 64;
+      // Bottom area reserves: contact/wifi strip + footer brand.
+      const BOTTOM_STRIP_H = 88;
       const FOOTER_H = 16;
       const availableH = PH - MB - FOOTER_H - BOTTOM_STRIP_H - y;
 
       const setLenVal = val(show.set_length);
-
-      // Band's set row is whichever entry is flagged is_band.
       const bandIdx = entries.findIndex((e) => e.is_band);
 
-      // Auto-size: try 22pt → 13pt in 0.5pt steps
-      let fontSize = 22;
-      const FONT_MIN = 13;
+      // Row auto-sizing. Each row is `fontSize * 1.6` tall (generous for
+      // divider breathing room).
+      const FONT_MAX = 21;
+      const FONT_MIN = 12;
       const STEP = 0.5;
-      const lineGap = 1.45; // line-height multiplier
+      const LINE_GAP = 1.6;
+      const CARD_PAD_Y = 14;
+      const CARD_PAD_X = 18;
 
-      const calcHeight = (fs: number) => entries.length * fs * lineGap;
+      const rowCount = entries.length;
+      const cardHeightAt = (fs: number) =>
+        rowCount === 0
+          ? 0
+          : CARD_PAD_Y * 2 + rowCount * fs * LINE_GAP;
 
-      while (fontSize > FONT_MIN && calcHeight(fontSize) > availableH) {
+      let fontSize = FONT_MAX;
+      while (fontSize > FONT_MIN && cardHeightAt(fontSize) > availableH) {
         fontSize -= STEP;
       }
-      // If it STILL doesn't fit at the floor, accept overflow gracefully —
-      // 13pt is readable, and the footer will still render on page 1.
-      // In practice this only happens with 20+ schedule entries, which
-      // is extremely rare for a band daysheet.
 
-      const rowH = fontSize * lineGap;
-      // Time column width scales with font size so it stays proportional.
-      const timeColW = fontSize * 4.8;
+      if (rowCount > 0) {
+        const rowH = fontSize * LINE_GAP;
+        const cardH = cardHeightAt(fontSize);
+        const cardW = CW;
+        const cardX = ML;
 
-      if (entries.length > 0) {
-        // Vertical centering: offset y by half the leftover space so the
-        // schedule block sits in the middle of the available area. Clamped
-        // to 0 so long schedules just start at the top as before.
-        const blockH = calcHeight(fontSize);
-        const centerOffset = Math.max(0, (availableH - blockH) / 2);
-        y += centerOffset;
+        // Gently center the card — capped at 40pt so medium-length schedules
+        // don't produce a distracting gap between the header and the card.
+        const centerOffset = Math.min(Math.max(0, (availableH - cardH) / 2), 40);
+        const cardY = y + centerOffset;
 
-        for (let i = 0; i < entries.length; i++) {
+        // Card surface — subtle card fill + hairline border, rounded-lg (~8pt)
+        doc.setFillColor(...T.card);
+        doc.setDrawColor(...T.border);
+        doc.setLineWidth(0.6);
+        doc.roundedRect(cardX, cardY, cardW, cardH, 8, 8, "FD");
+
+        // Time column width scales with type size (mono is wider)
+        const timeColX = cardX + CARD_PAD_X;
+        const labelColX = timeColX + fontSize * 4.6;
+
+        // First row baseline (optical alignment: baseline sits ~70% down the row)
+        let rowY = cardY + CARD_PAD_Y + rowH * 0.7;
+
+        for (let i = 0; i < rowCount; i++) {
           const entry = entries[i];
           const isBand = i === bandIdx;
 
-          // Time — muted
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(fontSize);
+          // Time — mono, muted (matches `font-mono text-muted-foreground`)
+          doc.setFont("courier", "normal");
+          doc.setFontSize(fontSize * 0.85);
           doc.setTextColor(...T.muted);
-          doc.text(entry.time, ML, y);
+          doc.text(entry.time, timeColX, rowY);
 
-          // Event label — ink normally, accent green + bold for band's set
+          // Event label — ink normally; band row gets accent green + bold.
+          // The color + weight combination is enough visual differentiation
+          // without a drawn glyph (which renders poorly at poster scale).
           doc.setFont("helvetica", isBand ? "bold" : "normal");
+          doc.setFontSize(fontSize);
           doc.setTextColor(...(isBand ? T.accent : T.ink));
-          doc.text(entry.label, ML + timeColW, y);
 
-          // Set length suffix on band's row — muted, smaller inline
-          if (isBand && setLenVal) {
-            const labelW = doc.getTextWidth(entry.label);
-            const suffixFs = Math.max(fontSize * 0.65, 10);
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(suffixFs);
-            doc.setTextColor(...T.muted);
-            doc.text(`  ·  ${setLenVal}`, ML + timeColW + labelW, y);
+          const suffix = isBand && setLenVal ? ` (${setLenVal})` : "";
+          doc.text(`${entry.label}${suffix}`, labelColX, rowY);
+
+          // Divider below each row except the last
+          if (i < rowCount - 1) {
+            const divY = cardY + CARD_PAD_Y + (i + 1) * rowH;
+            doc.setDrawColor(...T.borderSoft);
+            doc.setLineWidth(0.4);
+            doc.line(cardX + CARD_PAD_X, divY, cardX + cardW - CARD_PAD_X, divY);
           }
 
-          y += rowH;
+          rowY += rowH;
         }
       }
 
       // ════════════════════════════════════════════════════════════════════
-      // BOTTOM STRIP — Contact + WiFi
-      // Positioned absolutely at the bottom so it's always anchored.
+      // BOTTOM STRIP — Day of show contact + WiFi
+      // Styled like `FieldGroup`: small dot accent + uppercase label,
+      // labelled rows underneath.
       // ════════════════════════════════════════════════════════════════════
-      const stripY = PH - MB - FOOTER_H - BOTTOM_STRIP_H + 12;
+      const stripY = PH - MB - FOOTER_H - BOTTOM_STRIP_H + 14;
+      const colGap = 24;
+      const colW = (CW - colGap) / 2;
 
-      // Hairline above the strip
-      doc.setDrawColor(...T.border);
-      doc.setLineWidth(0.5);
-      doc.line(ML, stripY, ML + CW, stripY);
+      const drawSectionHeader = (x: number, labelY: number, label: string) => {
+        // Small rounded dot accent (matches FieldGroup's `w-0.5 h-3.5`)
+        doc.setFillColor(...T.ink);
+        doc.roundedRect(x, labelY - 7, 1.5, 9, 0.75, 0.75, "F");
 
-      const colW = CW / 2;
-      const stripLabelY = stripY + 18;
-      const stripLine1Y = stripY + 34;
-      const stripLine2Y = stripY + 50;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7);
+        doc.setTextColor(...T.muted);
+        doc.setCharSpace(1.6);
+        doc.text(label, x + 8, labelY);
+        doc.setCharSpace(0);
+      };
 
-      // Left column — Day of Show Contact
+      const drawKeyValueRow = (
+        x: number,
+        rowY: number,
+        label: string,
+        value: string,
+        mono = false,
+      ) => {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(...T.muted);
+        doc.text(label, x, rowY);
+
+        doc.setFont(mono ? "courier" : "helvetica", "normal");
+        doc.setFontSize(mono ? 10 : 11);
+        doc.setTextColor(...T.ink);
+        doc.text(value, x + 58, rowY);
+      };
+
       const contactName = val(show.dos_contact_name);
       const contactPhone = val(show.dos_contact_phone);
-      if (contactName || contactPhone) {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(7);
-        doc.setTextColor(...T.muted);
-        doc.setCharSpace(1.4);
-        doc.text("DAY OF SHOW CONTACT", ML, stripLabelY);
-        doc.setCharSpace(0);
-
-        if (contactName) {
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(12);
-          doc.setTextColor(...T.ink);
-          doc.text(contactName, ML, stripLine1Y);
-        }
-        if (contactPhone) {
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(11);
-          doc.setTextColor(...T.ink);
-          doc.text(contactPhone, ML, stripLine2Y);
-        }
-      }
-
-      // Right column — WiFi
       const wifiNet = val(show.wifi_network);
       const wifiPw = val(show.wifi_password);
-      if (wifiNet || wifiPw) {
-        const wifiX = ML + colW;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(7);
-        doc.setTextColor(...T.muted);
-        doc.setCharSpace(1.4);
-        doc.text("WIFI", wifiX, stripLabelY);
-        doc.setCharSpace(0);
 
-        if (wifiNet) {
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(12);
-          doc.setTextColor(...T.ink);
-          doc.text(wifiNet, wifiX, stripLine1Y);
-        }
-        if (wifiPw) {
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(11);
-          doc.setTextColor(...T.muted);
-          doc.text(wifiPw, wifiX, stripLine2Y);
-        }
+      const hasContact = contactName || contactPhone;
+      const hasWifi = wifiNet || wifiPw;
+
+      // Hairline above the strip (section break)
+      if (hasContact || hasWifi) {
+        doc.setDrawColor(...T.border);
+        doc.setLineWidth(0.5);
+        doc.line(ML, stripY - 16, ML + CW, stripY - 16);
+      }
+
+      const labelY = stripY + 4;
+      const row1Y = stripY + 30;
+      const row2Y = stripY + 50;
+
+      if (hasContact) {
+        drawSectionHeader(ML, labelY, "DAY OF SHOW CONTACT");
+        if (contactName) drawKeyValueRow(ML, row1Y, "Name", contactName);
+        if (contactPhone) drawKeyValueRow(ML, row2Y, "Phone", contactPhone, true);
+      }
+
+      if (hasWifi) {
+        const wifiX = ML + colW + colGap;
+        drawSectionHeader(wifiX, labelY, "WIFI");
+        if (wifiNet) drawKeyValueRow(wifiX, row1Y, "Network", wifiNet, true);
+        if (wifiPw) drawKeyValueRow(wifiX, row2Y, "Password", wifiPw, true);
       }
 
       // ════════════════════════════════════════════════════════════════════
-      // FOOTER — brand only, bottom right
+      // FOOTER — small brand mark, bottom right
       // ════════════════════════════════════════════════════════════════════
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7.5);
-      doc.setTextColor(...T.muted);
-      const brandStr = "advancetouring.com";
+      doc.setTextColor(...T.mutedSoft);
+      doc.setCharSpace(1);
+      const brandStr = "ADVANCE";
       const brandW = doc.getTextWidth(brandStr);
       doc.text(brandStr, PW - MR - brandW, PH - MB + 6);
+      doc.setCharSpace(0);
 
       // ────────────────────────────────────────────────────────────────────
       // Save
