@@ -115,7 +115,8 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
         doc.setCharSpace(0);
       }
 
-      y += 26;
+      // Gap must clear the 42pt venue ascenders (~30pt) + eyebrow descenders + breathing room.
+      y += 46;
 
       // Venue name — big serif display (approximates DM Serif Display)
       doc.setFont("times", "bold");
@@ -165,7 +166,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       //   - Card with rounded border
       //   - Two columns: [mono time | event label]
       //   - Hairline divider between rows
-      //   - Band's set row: slight accent + mic indicator + set length inline
+      //   - Band's set row: accent green + bold + set length inline
       //
       // Auto-shrinks from ~21pt down to a readable floor so a reasonable
       // number of schedule entries always fits on one page.
@@ -209,9 +210,9 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
         const cardW = CW;
         const cardX = ML;
 
-        // Vertically center the card in the available area so short
-        // schedules don't feel abandoned at the top.
-        const centerOffset = Math.max(0, (availableH - cardH) / 2);
+        // Gently center the card — capped at 40pt so medium-length schedules
+        // don't produce a distracting gap between the header and the card.
+        const centerOffset = Math.min(Math.max(0, (availableH - cardH) / 2), 40);
         const cardY = y + centerOffset;
 
         // Card surface — subtle card fill + hairline border, rounded-lg (~8pt)
@@ -237,28 +238,15 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
           doc.setTextColor(...T.muted);
           doc.text(entry.time, timeColX, rowY);
 
-          // Event label — ink; band row gets accent color + bold + mic glyph
+          // Event label — ink normally; band row gets accent green + bold.
+          // The color + weight combination is enough visual differentiation
+          // without a drawn glyph (which renders poorly at poster scale).
           doc.setFont("helvetica", isBand ? "bold" : "normal");
           doc.setFontSize(fontSize);
           doc.setTextColor(...(isBand ? T.accent : T.ink));
 
-          let labelX = labelColX;
-          if (isBand) {
-            // Tiny "mic" glyph: small filled circle + short stem, echoing
-            // the Mic icon in the guest view without needing font glyphs.
-            const micCx = labelX + 2;
-            const micCy = rowY - fontSize * 0.32;
-            const micR = fontSize * 0.16;
-            doc.setFillColor(...T.accent);
-            doc.circle(micCx, micCy, micR, "F");
-            doc.setDrawColor(...T.accent);
-            doc.setLineWidth(0.9);
-            doc.line(micCx, micCy + micR, micCx, micCy + micR + micR * 1.2);
-            labelX += fontSize * 0.7;
-          }
-
           const suffix = isBand && setLenVal ? ` (${setLenVal})` : "";
-          doc.text(`${entry.label}${suffix}`, labelX, rowY);
+          doc.text(`${entry.label}${suffix}`, labelColX, rowY);
 
           // Divider below each row except the last
           if (i < rowCount - 1) {
