@@ -1322,6 +1322,8 @@ export default function ShowDetailPage() {
               })()}
             </FieldGroup>
 
+            <Separator />
+
             <FieldGroup
               title="Accommodations"
               collapsible
@@ -1409,6 +1411,8 @@ export default function ShowDetailPage() {
                 );
               })()}
             </FieldGroup>
+
+            <Separator />
 
             <FieldGroup title="Backline" collapsible defaultOpen={!!show.backline_provided}>
               {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add backline notes" })}
