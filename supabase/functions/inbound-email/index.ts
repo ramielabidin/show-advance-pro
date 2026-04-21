@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 // SendGrid Inbound Parse webhook.
 // Accepts multipart/form-data, extracts the routing token from the `to`
@@ -14,6 +15,12 @@ const corsHeaders = {
 const MAX_ATTACHMENTS = 10;
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 const BUCKET = "inbound-attachments";
+
+// Per-team rate limit. A leaked or guessed routing token would otherwise let
+// an attacker flood inbound_parse_events + the attachments bucket; this caps
+// legitimate teams to a generous 50 inbound emails / hour.
+const RATE_LIMIT_MAX = 50;
+const RATE_LIMIT_WINDOW_SEC = 60 * 60;
 
 function ok(body: unknown = { ok: true }) {
   return new Response(JSON.stringify(body), {
@@ -194,6 +201,21 @@ serve(async (req) => {
     }
     if (!settings?.team_id) return ok();
     const teamId: string = settings.team_id;
+
+    // Silently drop (still 200) when a team is over its hourly inbound budget.
+    // Returning non-200 would make SendGrid retry the message and amplify the
+    // very thing we're trying to suppress.
+    const rl = await checkRateLimit({
+      admin,
+      bucket: "inbound-email",
+      key: `team:${teamId}`,
+      maxRequests: RATE_LIMIT_MAX,
+      windowSeconds: RATE_LIMIT_WINDOW_SEC,
+    });
+    if (!rl.allowed) {
+      console.error("inbound-email rate limited:", teamId);
+      return ok({ ok: true, rate_limited: true });
+    }
 
     const text = String(form.get("text") ?? "").trim();
     const html = String(form.get("html") ?? "").trim();
