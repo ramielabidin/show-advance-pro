@@ -65,12 +65,13 @@ function Schedule({ show }: { show: GuestShowPayload }) {
 }
 
 export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProps) {
-  // `hasData` types its argument as `Show`; our payload is a subset of Show's
-  // non-financial fields — safe to cast for the gating read.
   const has = (k: SectionKey) => hasData(show as unknown as Show, k);
   const city = formatCityState(show.city);
   const rawAddr = show.venue_address?.replace(/,?\s*United States$/i, "") ?? "";
-  const showTwoColumn = has("schedule") || has("contact") || has("loadIn") || has("parking");
+
+  const showTwoColumn = has("schedule") || has("contact");
+  const hasArrival = has("loadIn") || has("parking");
+  const hasAtVenue = has("greenRoom") || has("wifi");
 
   let artistVenue = "";
   if (show.artist_name && show.venue_name) {
@@ -123,23 +124,11 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
 
             <Separator orientation="vertical" className="hidden md:block h-auto" />
 
-            <div className="space-y-6 min-w-0">
+            <div className="min-w-0">
               {has("contact") && (
                 <FieldGroup title="Day of Show Contact" contentClassName="space-y-2">
                   <FieldRow label="Name" value={show.dos_contact_name} />
                   <FieldRow label="Phone" value={show.dos_contact_phone} mono />
-                </FieldGroup>
-              )}
-
-              {has("loadIn") && (
-                <FieldGroup title="Load In">
-                  <FieldRow label="" value={show.load_in_details} noLabel />
-                </FieldGroup>
-              )}
-
-              {has("parking") && (
-                <FieldGroup title="Parking">
-                  <FieldRow label="" value={show.parking_notes} noLabel />
                 </FieldGroup>
               )}
             </div>
@@ -147,16 +136,55 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
         )}
 
         {has("departure") && (
-          <FieldGroup title="Departure">
-            <FieldRow label="Time" value={show.departure_time} mono />
-            <FieldRow label="Notes" value={show.departure_notes} />
-          </FieldGroup>
+          <>
+            <Separator />
+            <FieldGroup title="Departure" contentClassName="space-y-2">
+              <FieldRow label="Time" value={show.departure_time} mono />
+              <FieldRow label="Notes" value={show.departure_notes} />
+            </FieldGroup>
+          </>
         )}
 
-        {has("greenRoom") && (
-          <FieldGroup title="Green Room">
-            <FieldRow label="" value={show.green_room_info} noLabel />
-          </FieldGroup>
+        {hasArrival && (
+          <>
+            <Separator />
+            <FieldGroup title="Arrival" contentClassName="space-y-2">
+              {has("loadIn") && <FieldRow label="Load In" value={show.load_in_details} />}
+              {has("parking") && <FieldRow label="Parking" value={show.parking_notes} />}
+            </FieldGroup>
+          </>
+        )}
+
+        {hasAtVenue && (
+          <>
+            <Separator />
+            <FieldGroup title="At The Venue" contentClassName="space-y-2">
+              {has("greenRoom") && <FieldRow label="Green Room" value={show.green_room_info} />}
+              {has("wifi") && (
+                <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+                  <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">WiFi</span>
+                  <span className="text-sm text-foreground font-mono text-[13px]">
+                    {show.wifi_network || "—"}
+                    <span className="text-muted-foreground/60 px-1">/</span>
+                    {show.wifi_password || "—"}
+                  </span>
+                </div>
+              )}
+            </FieldGroup>
+          </>
+        )}
+
+        {has("hotel") && (
+          <>
+            <Separator />
+            <FieldGroup title="Accommodations" contentClassName="space-y-2">
+              <FieldRow label="Name" value={show.hotel_name} />
+              <FieldRow label="Address" value={show.hotel_address} />
+              <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
+              <FieldRow label="Check In" value={show.hotel_checkin} mono />
+              <FieldRow label="Check Out" value={show.hotel_checkout} mono />
+            </FieldGroup>
+          </>
         )}
 
         <Separator />
@@ -168,29 +196,6 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
             compsAllotment={show.artist_comps}
           />
         </FieldGroup>
-
-        {has("wifi") && (
-          <>
-            <Separator />
-            <FieldGroup title="WiFi">
-              <FieldRow label="Network" value={show.wifi_network} mono />
-              <FieldRow label="Password" value={show.wifi_password} mono />
-            </FieldGroup>
-          </>
-        )}
-
-        {has("hotel") && (
-          <>
-            <Separator />
-            <FieldGroup title="Accommodations">
-              <FieldRow label="Name" value={show.hotel_name} />
-              <FieldRow label="Address" value={show.hotel_address} />
-              <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
-              <FieldRow label="Check In" value={show.hotel_checkin} mono />
-              <FieldRow label="Check Out" value={show.hotel_checkout} mono />
-            </FieldGroup>
-          </>
-        )}
       </div>
     </div>
   );
