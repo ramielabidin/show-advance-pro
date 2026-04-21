@@ -16,7 +16,6 @@ import {
   TrendingUp,
   DollarSign,
   CheckCircle2,
-  Circle,
   Info,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +30,8 @@ import { useTeam } from "@/components/TeamProvider";
 import { parseDollar } from "@/components/RevenueSimulator";
 import SectionLabel from "@/components/SectionLabel";
 import ShowCard from "@/components/ShowCard";
+import StatusDot from "@/components/StatusDot";
+import StatusLegend from "@/components/StatusLegend";
 import type { Show, Tour } from "@/lib/types";
 
 type Scope = "tour" | "standalone" | "upcoming";
@@ -557,12 +558,15 @@ export default function DashboardPage() {
         <div key={`list:${scopeKey}`}>
           <SectionLabel
             action={
-              <Link
-                to={viewAllHref}
-                className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                View all →
-              </Link>
+              <div className="flex items-center gap-2">
+                <StatusLegend />
+                <Link
+                  to={viewAllHref}
+                  className="text-[11px] uppercase tracking-widest font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  View all →
+                </Link>
+              </div>
             }
           >
             {listSectionLabel}
@@ -906,7 +910,6 @@ function FeaturedShowCard({
 }) {
   const date = parseISO(show.date);
   const daysAway = differenceInCalendarDays(date, new Date());
-  const isAdvanced = !!(show as any).advanced_at;
 
   const daysLabel =
     daysAway <= 0
@@ -971,43 +974,29 @@ function FeaturedShowCard({
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{formatCityState(show.city)}</span>
               </div>
-              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                {showFinalDate ? (
-                  <span className="inline-flex items-center text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                    {format(date, "MMM d, yyyy")}
-                  </span>
-                ) : (
-                  <span
-                    className={cn(
-                      "inline-flex items-center text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full",
-                      !isUrgent && "bg-secondary text-muted-foreground",
-                    )}
-                    style={
-                      isUrgent
-                        ? { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
-                        : undefined
-                    }
-                  >
-                    {daysLabel}
-                  </span>
-                )}
+              {showFinalDate ? (
+                <span className="inline-flex items-center mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                  {format(date, "MMM d, yyyy")}
+                </span>
+              ) : (
                 <span
-                  className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full"
+                  className={cn(
+                    "inline-flex items-center mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full",
+                    !isUrgent && "bg-secondary text-muted-foreground",
+                  )}
                   style={
-                    isAdvanced
-                      ? { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }
-                      : { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
+                    isUrgent
+                      ? { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
+                      : undefined
                   }
                 >
-                  {isAdvanced ? (
-                    <CheckCircle2 className="h-3 w-3" />
-                  ) : (
-                    <Circle className="h-3 w-3" />
-                  )}
-                  {isAdvanced ? "Advanced" : "Not Advanced"}
+                  {daysLabel}
                 </span>
-              </div>
+              )}
             </div>
+
+            {/* Advance status dot */}
+            <StatusDot show={show} className="mt-1.5" />
           </div>
         </CardContent>
         {hasAnyFooterData && (
