@@ -1,3 +1,50 @@
+/**
+ * Parse a free-text time into `"HH:MM"` 24-hour format, or `null` if unparseable.
+ *
+ * Accepts a wide range of inputs so display code doesn't have to babysit
+ * differences between user-typed, AI-parsed, and CSV-imported entries:
+ *   "7:00 PM", "7:00pm", "7 PM", "7p", "19:00", "19:00:00", "1900", "7".
+ * Returns `null` for blanks, "TBD", "N/A", or anything else that can't be
+ * coerced into a valid clock time.
+ */
+export function to24Hour(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const s = raw.trim();
+  if (!s || /^(tbd|n\/a)$/i.test(s)) return null;
+
+  let ampm: "AM" | "PM" | null = null;
+  let body = s;
+  const ampmMatch = body.match(/\s*(a\.?m?\.?|p\.?m?\.?)\s*$/i);
+  if (ampmMatch) {
+    ampm = ampmMatch[1][0].toLowerCase() === "a" ? "AM" : "PM";
+    body = body.slice(0, ampmMatch.index).trim();
+  }
+
+  let hours: number | null = null;
+  let minutes = 0;
+
+  const colon = body.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (colon) {
+    hours = parseInt(colon[1], 10);
+    minutes = parseInt(colon[2], 10);
+  } else if (/^\d{3,4}$/.test(body)) {
+    const n = parseInt(body, 10);
+    hours = Math.floor(n / 100);
+    minutes = n % 100;
+  } else if (/^\d{1,2}$/.test(body)) {
+    hours = parseInt(body, 10);
+  }
+
+  if (hours === null) return null;
+  if (minutes < 0 || minutes > 59) return null;
+  if (hours < 0 || hours > 23) return null;
+
+  if (ampm === "PM" && hours < 12) hours += 12;
+  else if (ampm === "AM" && hours === 12) hours = 0;
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
 /** Normalize free-text time. AM/PM is preserved if provided, omitted if not. */
 export function normalizeTime(raw: string): string {
   const s = raw.trim();
