@@ -45,6 +45,20 @@ export function to24Hour(raw: string | null | undefined): string | null {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
+/**
+ * Parse a free-text time and render it as `"H:MM AM/PM"`, or `null` if
+ * unparseable. Accepts the same inputs as {@link to24Hour}.
+ */
+export function to12Hour(raw: string | null | undefined): string | null {
+  const h24 = to24Hour(raw);
+  if (h24 === null) return null;
+  const [hStr, mStr] = h24.split(":");
+  const h = parseInt(hStr, 10);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = ((h + 11) % 12) + 1;
+  return `${h12}:${mStr} ${ampm}`;
+}
+
 /** Normalize free-text time. AM/PM is preserved if provided, omitted if not. */
 export function normalizeTime(raw: string): string {
   const s = raw.trim();

@@ -23,7 +23,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn, formatCityState } from "@/lib/utils";
-import { to24Hour } from "@/lib/timeFormat";
+import { to12Hour, to24Hour } from "@/lib/timeFormat";
 import { isLoadInLabel, isDoorsLabel } from "@/lib/scheduleMatch";
 import CreateShowDialog from "@/components/CreateShowDialog";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
@@ -909,9 +909,9 @@ function FeaturedShowCard({
   const doorsEntry = entries.find((e) => isDoorsLabel(e.label));
   const bandEntry = entries.find((e) => e.is_band);
 
-  const loadInTime = to24Hour(loadInEntry?.time);
-  const doorsTime = to24Hour(doorsEntry?.time);
-  const setTime = to24Hour(bandEntry?.time);
+  const loadInTime = to12Hour(loadInEntry?.time);
+  const doorsTime = to12Hour(doorsEntry?.time);
+  const setTime = to12Hour(bandEntry?.time);
 
   const capRaw = show.venue_capacity;
   const capNum = capRaw ? parseInt(String(capRaw).replace(/[^\d]/g, ""), 10) : NaN;

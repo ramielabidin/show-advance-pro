@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { to24Hour } from "@/lib/timeFormat";
+import { to12Hour, to24Hour } from "@/lib/timeFormat";
 
 describe("to24Hour", () => {
   it("parses H:MM AM/PM", () => {
@@ -44,5 +44,39 @@ describe("to24Hour", () => {
     expect(to24Hour("around 7ish")).toBeNull();
     expect(to24Hour("25:00")).toBeNull();
     expect(to24Hour("7:75")).toBeNull();
+  });
+});
+
+describe("to12Hour", () => {
+  it("renders afternoon hours as PM", () => {
+    expect(to12Hour("19:00")).toBe("7:00 PM");
+    expect(to12Hour("13:30")).toBe("1:30 PM");
+    expect(to12Hour("23:00")).toBe("11:00 PM");
+  });
+
+  it("renders morning hours as AM", () => {
+    expect(to12Hour("07:30")).toBe("7:30 AM");
+    expect(to12Hour("6")).toBe("6:00 AM");
+  });
+
+  it("handles noon and midnight edges", () => {
+    expect(to12Hour("12:00")).toBe("12:00 PM");
+    expect(to12Hour("12:30 AM")).toBe("12:30 AM");
+    expect(to12Hour("00:00")).toBe("12:00 AM");
+    expect(to12Hour("00:30")).toBe("12:30 AM");
+  });
+
+  it("round-trips common input formats", () => {
+    expect(to12Hour("7:00 PM")).toBe("7:00 PM");
+    expect(to12Hour("7pm")).toBe("7:00 PM");
+    expect(to12Hour("1900")).toBe("7:00 PM");
+    expect(to12Hour("19:00:00")).toBe("7:00 PM");
+  });
+
+  it("returns null for unparseable input", () => {
+    expect(to12Hour("TBD")).toBeNull();
+    expect(to12Hour("")).toBeNull();
+    expect(to12Hour(null)).toBeNull();
+    expect(to12Hour("around 7ish")).toBeNull();
   });
 });
