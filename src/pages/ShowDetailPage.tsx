@@ -1097,7 +1097,14 @@ export default function ShowDetailPage() {
                     className="w-full text-left space-y-2 card-pressable cursor-pointer"
                   >
                     <FieldRow label="Time" value={show.departure_time} mono />
-                    <FieldRow label="Notes" value={show.departure_notes} />
+                    {show.departure_notes ? (
+                      <FieldRow label="Notes" value={show.departure_notes} />
+                    ) : (
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+                        <span className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">Notes</span>
+                        <span className="text-sm text-muted-foreground/50">Add notes…</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </FieldGroup>
