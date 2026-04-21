@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock, Sparkles, Mic, DollarSign, Ticket, Users, TrendingUp, Plus, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Plus, Check } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -1154,8 +1154,14 @@ export default function ShowDetailPage() {
                           <span className="font-mono text-sm shrink-0 whitespace-nowrap text-muted-foreground">
                             {entry.time}
                           </span>
-                          <span className="text-sm text-foreground inline-flex items-center gap-1.5">
-                            {entry.is_band && <Mic className="h-3 w-3 text-muted-foreground shrink-0" />}
+                          <span
+                            className={cn(
+                              "text-sm",
+                              entry.is_band
+                                ? "font-semibold text-[var(--pastel-green-fg)]"
+                                : "text-foreground",
+                            )}
+                          >
                             {entry.label}
                           </span>
                         </div>
@@ -1178,9 +1184,17 @@ export default function ShowDetailPage() {
               </FieldGroup>
             </div>
 
-            <FieldGroup title="Set Length">
-              {editField("set_length", "Set Length", { alwaysShow: true, labelHidden: true, placeholder: "e.g. 75 min" })}
-            </FieldGroup>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="w-0.5 h-3.5 rounded-full bg-foreground/25" />
+                <h3 className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+                  Set Length
+                </h3>
+              </div>
+              <div className="flex-1 min-w-0">
+                {editField("set_length", "Set Length", { alwaysShow: true, labelHidden: true, placeholder: "e.g. 75 min" })}
+              </div>
+            </div>
 
             {/* Arrival — full width, below schedule */}
             <FieldGroup

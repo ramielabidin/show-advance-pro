@@ -27,7 +27,7 @@ export default function ScheduleEditor({ initial, onSave, onCancel, saving }: Sc
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
   };
 
-  // Only one row can be the band's set — toggling one on clears the rest.
+  // Only one row can be the artist's set — toggling one on clears the rest.
   const toggleBand = (idx: number) => {
     setRows((prev) =>
       prev.map((r, i) => ({ ...r, is_band: i === idx ? !r.is_band : false }))
@@ -75,8 +75,8 @@ export default function ScheduleEditor({ initial, onSave, onCancel, saving }: Sc
                   : "text-muted-foreground/50 hover:text-foreground"
               )}
               onClick={() => toggleBand(i)}
-              aria-label={row.is_band ? "Unmark band's set" : "Mark as band's set"}
-              title={row.is_band ? "Band's set" : "Mark as band's set"}
+              aria-label={row.is_band ? "Unmark artist's set" : "Mark as artist's set"}
+              title={row.is_band ? "Artist's set" : "Mark as artist's set"}
             >
               <Mic className="h-3.5 w-3.5" />
             </Button>
