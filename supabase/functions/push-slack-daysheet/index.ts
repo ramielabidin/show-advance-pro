@@ -255,7 +255,7 @@ function buildDaySheetBlocks(show: any, guestUrl: string | null): Block[] {
   blocks.push({
     type: "context",
     elements: [
-      { type: "mrkdwn", text: "Sent with <https://advancetouring.com|Advance>" },
+      { type: "mrkdwn", text: "Sent with <https://app.advancetouring.com|Advance>" },
     ],
   });
 
