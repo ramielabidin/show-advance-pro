@@ -971,44 +971,42 @@ function FeaturedShowCard({
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{formatCityState(show.city)}</span>
               </div>
-              {showFinalDate ? (
-                <span className="inline-block mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                  {format(date, "MMM d, yyyy")}
-                </span>
-              ) : (
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                {showFinalDate ? (
+                  <span className="inline-flex items-center text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                    {format(date, "MMM d, yyyy")}
+                  </span>
+                ) : (
+                  <span
+                    className={cn(
+                      "inline-flex items-center text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full",
+                      !isUrgent && "bg-secondary text-muted-foreground",
+                    )}
+                    style={
+                      isUrgent
+                        ? { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
+                        : undefined
+                    }
+                  >
+                    {daysLabel}
+                  </span>
+                )}
                 <span
-                  className={cn(
-                    "inline-block mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full",
-                    !isUrgent && "bg-secondary text-muted-foreground",
-                  )}
+                  className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full"
                   style={
-                    isUrgent
-                      ? { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
-                      : undefined
+                    isAdvanced
+                      ? { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }
+                      : { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
                   }
                 >
-                  {daysLabel}
+                  {isAdvanced ? (
+                    <CheckCircle2 className="h-3 w-3" />
+                  ) : (
+                    <Circle className="h-3 w-3" />
+                  )}
+                  {isAdvanced ? "Advanced" : "Not Advanced"}
                 </span>
-              )}
-            </div>
-
-            {/* Advance status */}
-            <div className="text-right shrink-0">
-              <span
-                className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-medium px-2 py-1 rounded-full"
-                style={
-                  isAdvanced
-                    ? { backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }
-                    : { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
-                }
-              >
-                {isAdvanced ? (
-                  <CheckCircle2 className="h-3 w-3" />
-                ) : (
-                  <Circle className="h-3 w-3" />
-                )}
-                {isAdvanced ? "Advanced" : "Not Advanced"}
-              </span>
+              </div>
             </div>
           </div>
         </CardContent>
