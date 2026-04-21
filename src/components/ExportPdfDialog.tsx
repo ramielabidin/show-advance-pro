@@ -82,21 +82,19 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       doc.rect(0, 0, PW, PH, "F");
 
       // ════════════════════════════════════════════════════════════════════
-      // HEADER — display venue name + date + address
-      // Matches the in-app show detail header: large serif title, date on
-      // its own line in muted, address with pin below.
+      // HEADER — venue name + date + address
       // ════════════════════════════════════════════════════════════════════
       let y = MT + 36;
 
-      // Venue name — big serif display (approximates DM Serif Display)
+      // Venue name — serif display (Times approximates DM Serif Display)
       doc.setFont("times", "bold");
-      doc.setFontSize(42);
+      doc.setFontSize(38);
       doc.setTextColor(...T.ink);
       const venueLines = doc.splitTextToSize(show.venue_name, CW);
       doc.text(venueLines, ML, y);
-      y += venueLines.length * 42 - 4;
+      y += venueLines.length * 38 - 4;
 
-      // Date — muted, just below the title (matches screenshot order)
+      // Date — muted metadata, one line below
       const dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
       y += 10;
       doc.setFont("helvetica", "normal");
@@ -105,57 +103,62 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       doc.text(dateStr, ML, y);
       y += 16;
 
-      // Address (or city fallback) with a small pin glyph — below date
+      // Address with a Lucide-style teardrop pin glyph
       const rawAddr = val(show.venue_address)?.replace(/,?\s*United States$/i, "") ?? null;
       const cityStr = formatCityState(show.city);
       const locLine = rawAddr ?? cityStr ?? null;
       if (locLine) {
         y += 4;
-        const pinX = ML + 2;
-        const pinY = y - 4.5;
+        // Teardrop: thin-stroked circle + two converging lines to a point below
+        const pinCX = ML + 3;
+        const pinCY = y - 4.5;
+        const pinR = 2.8;
+        const pinTipY = pinCY + pinR + 4.2;
         doc.setDrawColor(...T.muted);
-        doc.setLineWidth(0.8);
-        doc.circle(pinX, pinY, 3, "S");
-        doc.setFillColor(...T.muted);
-        doc.circle(pinX, pinY, 0.9, "F");
+        doc.setLineWidth(0.75);
+        doc.circle(pinCX, pinCY, pinR, "S");
+        const tailStartY = pinCY + pinR * 0.76;
+        doc.line(pinCX - pinR * 0.65, tailStartY, pinCX, pinTipY);
+        doc.line(pinCX + pinR * 0.65, tailStartY, pinCX, pinTipY);
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
         doc.setTextColor(...T.muted);
         const locLines = doc.splitTextToSize(locLine, CW - 14);
-        doc.text(locLines, ML + 10, y);
+        doc.text(locLines, ML + 11, y);
         y += locLines.length * 12;
       }
 
       y += 28;
 
       // ════════════════════════════════════════════════════════════════════
-      // SCHEDULE — bordered card with mono times + subtle dividers
+      // SCHEDULE — section label + bordered card
       //
-      // Mirrors the `Schedule` card in `DaysheetGuestView.tsx`:
-      //   - Card with rounded border
+      // The SCHEDULE label above the card follows the FieldGroup pattern:
+      // a slim vertical bar accent + uppercase tracking label.
+      //
+      // Inside the card:
       //   - Two columns: [mono time | event label]
-      //   - Hairline divider between rows
-      //   - Band's set row: accent green + bold + set length inline
+      //   - Hairline dividers between rows
+      //   - Band row: pastel-green row fill + accent-green label + bold
       //
-      // Auto-shrinks from ~21pt down to a readable floor so a reasonable
-      // number of schedule entries always fits on one page.
+      // Auto-shrinks from 21pt down to 12pt to keep everything on one page.
       // ════════════════════════════════════════════════════════════════════
 
       const entries = (show.schedule_entries ?? [])
         .slice()
         .sort((a, b) => a.sort_order - b.sort_order);
 
-      // Bottom area reserves: contact/wifi strip + footer brand.
+      // Reserve space for the SCHEDULE section label above the card
+      const SCHEDULE_LABEL_RESERVE = 26;
       const BOTTOM_STRIP_H = 88;
       const FOOTER_H = 16;
-      const availableH = PH - MB - FOOTER_H - BOTTOM_STRIP_H - y;
+      const availableH = PH - MB - FOOTER_H - BOTTOM_STRIP_H - y - SCHEDULE_LABEL_RESERVE;
 
       const setLenVal = val(show.set_length);
       const bandIdx = entries.findIndex((e) => e.is_band);
 
-      // Row auto-sizing. Each row is `fontSize * 1.6` tall (generous for
-      // divider breathing room).
+      // Row auto-sizing: each row is fontSize * 1.6 tall
       const FONT_MAX = 21;
       const FONT_MIN = 12;
       const STEP = 0.5;
@@ -165,9 +168,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
 
       const rowCount = entries.length;
       const cardHeightAt = (fs: number) =>
-        rowCount === 0
-          ? 0
-          : CARD_PAD_Y * 2 + rowCount * fs * LINE_GAP;
+        rowCount === 0 ? 0 : CARD_PAD_Y * 2 + rowCount * fs * LINE_GAP;
 
       let fontSize = FONT_MAX;
       while (fontSize > FONT_MIN && cardHeightAt(fontSize) > availableH) {
@@ -180,37 +181,54 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
         const cardW = CW;
         const cardX = ML;
 
-        // Gently center the card — capped at 40pt so medium-length schedules
-        // don't produce a distracting gap between the header and the card.
+        // Gently center; capped so a sparse schedule doesn't float too far down
         const centerOffset = Math.min(Math.max(0, (availableH - cardH) / 2), 40);
-        const cardY = y + centerOffset;
+        const cardY = y + SCHEDULE_LABEL_RESERVE + centerOffset;
 
-        // Card surface — subtle card fill + hairline border, rounded-lg (~8pt)
+        // SCHEDULE section label (FieldGroup: slim bar + uppercase tracking label)
+        // Bar color: foreground/25 blended on canvas → (196, 194, 191)
+        const schedLabelY = cardY - 12;
+        doc.setFillColor(196, 194, 191);
+        doc.roundedRect(ML, schedLabelY - 8, 2, 10, 1, 1, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(...T.muted);
+        doc.setCharSpace(1.8);
+        doc.text("SCHEDULE", ML + 8, schedLabelY);
+        doc.setCharSpace(0);
+
+        // Card: draw fill first, then content, then stroke on top so the
+        // border is never obscured by band-row fill rects drawn inside.
         doc.setFillColor(...T.card);
-        doc.setDrawColor(...T.border);
-        doc.setLineWidth(0.6);
-        doc.roundedRect(cardX, cardY, cardW, cardH, 8, 8, "FD");
+        doc.roundedRect(cardX, cardY, cardW, cardH, 10, 10, "F");
 
-        // Time column width scales with type size (mono is wider)
+        // Time column width scales with type size (mono glyphs are wider)
         const timeColX = cardX + CARD_PAD_X;
         const labelColX = timeColX + fontSize * 4.6;
 
-        // First row baseline (optical alignment: baseline sits ~70% down the row)
+        // Baseline sits ~70% down the first row (optical alignment)
         let rowY = cardY + CARD_PAD_Y + rowH * 0.7;
 
         for (let i = 0; i < rowCount; i++) {
           const entry = entries[i];
           const isBand = i === bandIdx;
 
-          // Time — mono, muted (matches `font-mono text-muted-foreground`)
+          // Band row: pastel-green-bg fill spanning the full row width.
+          // CARD_PAD_Y (14pt) > corner radius (10pt) so the fill rect
+          // never overlaps the card's rounded corners on first/last rows.
+          if (isBand) {
+            const rowTop = cardY + CARD_PAD_Y + i * rowH;
+            doc.setFillColor(...T.accentSoft);
+            doc.rect(cardX + 1, rowTop, cardW - 2, rowH, "F");
+          }
+
+          // Time — mono, muted
           doc.setFont("courier", "normal");
           doc.setFontSize(fontSize * 0.85);
           doc.setTextColor(...T.muted);
           doc.text(entry.time, timeColX, rowY);
 
-          // Event label — ink normally; band row gets accent green + bold.
-          // The color + weight combination is enough visual differentiation
-          // without a drawn glyph (which renders poorly at poster scale).
+          // Label — ink normally; band row gets accent green + bold weight
           doc.setFont("helvetica", isBand ? "bold" : "normal");
           doc.setFontSize(fontSize);
           doc.setTextColor(...(isBand ? T.accent : T.ink));
@@ -218,7 +236,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
           const suffix = isBand && setLenVal ? ` (${setLenVal})` : "";
           doc.text(`${entry.label}${suffix}`, labelColX, rowY);
 
-          // Divider below each row except the last
+          // Hairline divider between rows
           if (i < rowCount - 1) {
             const divY = cardY + CARD_PAD_Y + (i + 1) * rowH;
             doc.setDrawColor(...T.borderSoft);
@@ -228,22 +246,24 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
 
           rowY += rowH;
         }
+
+        // Card border drawn last so it sits on top of band-row fill rects
+        doc.setDrawColor(...T.border);
+        doc.setLineWidth(0.6);
+        doc.roundedRect(cardX, cardY, cardW, cardH, 10, 10, "S");
       }
 
       // ════════════════════════════════════════════════════════════════════
       // BOTTOM STRIP — Day of show contact + WiFi
-      // Styled like `FieldGroup`: small dot accent + uppercase label,
-      // labelled rows underneath.
       // ════════════════════════════════════════════════════════════════════
       const stripY = PH - MB - FOOTER_H - BOTTOM_STRIP_H + 14;
       const colGap = 24;
       const colW = (CW - colGap) / 2;
 
       const drawSectionHeader = (x: number, labelY: number, label: string) => {
-        // Small rounded dot accent (matches FieldGroup's `w-0.5 h-3.5`)
+        // Slim vertical bar accent — 2pt × 10pt, matching FieldGroup's w-0.5 h-3.5
         doc.setFillColor(...T.ink);
-        doc.roundedRect(x, labelY - 7, 1.5, 9, 0.75, 0.75, "F");
-
+        doc.roundedRect(x, labelY - 8, 2, 10, 1, 1, "F");
         doc.setFont("helvetica", "bold");
         doc.setFontSize(7);
         doc.setTextColor(...T.muted);
@@ -278,7 +298,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       const hasContact = contactName || contactPhone;
       const hasWifi = wifiNet || wifiPw;
 
-      // Hairline above the strip (section break)
+      // Hairline section break above strip
       if (hasContact || hasWifi) {
         doc.setDrawColor(...T.border);
         doc.setLineWidth(0.5);
@@ -303,16 +323,14 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       }
 
       // ════════════════════════════════════════════════════════════════════
-      // FOOTER — small brand mark, bottom right
+      // FOOTER — serif wordmark, bottom right
       // ════════════════════════════════════════════════════════════════════
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7.5);
+      doc.setFont("times", "italic");
+      doc.setFontSize(9);
       doc.setTextColor(...T.mutedSoft);
-      doc.setCharSpace(1);
-      const brandStr = "ADVANCE";
+      const brandStr = "Advance";
       const brandW = doc.getTextWidth(brandStr);
       doc.text(brandStr, PW - MR - brandW, PH - MB + 6);
-      doc.setCharSpace(0);
 
       // ────────────────────────────────────────────────────────────────────
       // Save
