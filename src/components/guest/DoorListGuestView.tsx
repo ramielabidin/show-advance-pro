@@ -21,28 +21,27 @@ function formatDate(iso: string | null): string {
 
 export default function DoorListGuestView({ show }: DoorListGuestViewProps) {
   const city = formatCityState(show.city);
-  const subtitleParts: string[] = [];
+
+  let artistVenue = "";
   if (show.artist_name && show.venue_name) {
-    subtitleParts.push(`${show.artist_name} at ${show.venue_name}`);
+    artistVenue = `${show.artist_name} at ${show.venue_name}`;
   } else if (show.venue_name) {
-    subtitleParts.push(show.venue_name);
+    artistVenue = show.venue_name;
   } else if (show.artist_name) {
-    subtitleParts.push(show.artist_name);
+    artistVenue = show.artist_name;
   }
-  if (city) subtitleParts.push(city);
-  const subtitle = subtitleParts.join(" · ");
+  const dateCity = [formatDate(show.date), city].filter(Boolean).join(" · ");
 
   return (
     <div className="space-y-8">
       <header className="space-y-1">
-        <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
-          Door List
-        </p>
-        <h1 className="font-display text-2xl sm:text-3xl md:text-4xl tracking-[-0.02em] break-words">
-          {formatDate(show.date)}
-        </h1>
-        {subtitle ? (
-          <p className="text-sm sm:text-base text-foreground break-words">{subtitle}</p>
+        {artistVenue ? (
+          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl tracking-[-0.02em] break-words">
+            {artistVenue}
+          </h1>
+        ) : null}
+        {dateCity ? (
+          <p className="text-sm sm:text-base text-muted-foreground break-words">{dateCity}</p>
         ) : null}
       </header>
 
@@ -60,13 +59,10 @@ export default function DoorListGuestView({ show }: DoorListGuestViewProps) {
                   <div
                     key={i}
                     className={cn(
-                      "grid grid-cols-[32px_1fr_auto] sm:grid-cols-[40px_1fr_auto] gap-3 items-baseline py-3 sm:py-3.5 px-1",
+                      "grid grid-cols-[1fr_auto] gap-3 items-baseline py-3 sm:py-3.5 px-1",
                       i < entries.length - 1 && "border-b border-border/60",
                     )}
                   >
-                    <span className="font-mono text-xs sm:text-sm text-muted-foreground tabular-nums">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
                     <span className="font-display text-xl sm:text-2xl tracking-[-0.01em] leading-tight text-foreground break-words">
                       {entry.name}
                     </span>
