@@ -139,7 +139,7 @@ export type Database = {
         Row: {
           content_type: string | null
           created_at: string
-          event_id: string
+          event_id: string | null
           id: string
           original_filename: string
           show_id: string | null
@@ -150,7 +150,7 @@ export type Database = {
         Insert: {
           content_type?: string | null
           created_at?: string
-          event_id: string
+          event_id?: string | null
           id?: string
           original_filename: string
           show_id?: string | null
@@ -161,7 +161,7 @@ export type Database = {
         Update: {
           content_type?: string | null
           created_at?: string
-          event_id?: string
+          event_id?: string | null
           id?: string
           original_filename?: string
           show_id?: string | null
