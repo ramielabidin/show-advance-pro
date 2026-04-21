@@ -55,7 +55,6 @@ export interface Show {
   set_length: string | null;
   backline_provided: string | null;
   catering_details: string | null;
-  changeover_time: string | null;
   is_reviewed: boolean;
   is_settled: boolean;
   advanced_at: string | null;

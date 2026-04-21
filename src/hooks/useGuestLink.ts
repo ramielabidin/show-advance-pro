@@ -16,16 +16,10 @@ const SUCCESS_COPY: Record<GuestLinkType, string> = {
   guestlist: "Door list link copied",
 };
 
-const SUCCESS_REGENERATE: Record<GuestLinkType, string> = {
-  daysheet: "New day sheet link copied — old one revoked",
-  guestlist: "New door list link copied — old one revoked",
-};
-
 export interface GuestLinkActions {
   activeLink: GuestLinkRow | null | undefined;
   isLoading: boolean;
   copyOrCreate: () => void;
-  regenerate: () => void;
   isPending: boolean;
 }
 
@@ -44,7 +38,7 @@ export function useGuestLink(showId: string, linkType: GuestLinkType): GuestLink
   // synchronously within a user gesture. We must not await anything before
   // invoking `copyTextViaPromise` — instead we hand it a Promise that resolves
   // to the URL once the link has been created.
-  const handleCopy = (shouldRegenerate: boolean) => {
+  const copyOrCreate = () => {
     const userId = session?.user?.id;
     if (!userId) {
       toast.error("You must be signed in to create a share link");
@@ -52,10 +46,7 @@ export function useGuestLink(showId: string, linkType: GuestLinkType): GuestLink
     }
     if (isPending) return;
 
-    const willCreateNew = shouldRegenerate || !activeLink;
-    const successMessage = shouldRegenerate
-      ? SUCCESS_REGENERATE[linkType]
-      : SUCCESS_COPY[linkType];
+    const willCreateNew = !activeLink;
 
     const urlPromise: Promise<string> = willCreateNew
       ? generateGuestLink(showId, linkType, userId).then((created) =>
@@ -80,7 +71,7 @@ export function useGuestLink(showId: string, linkType: GuestLinkType): GuestLink
         toast.error("Could not copy to clipboard");
         return;
       }
-      toast.success(successMessage);
+      toast.success(SUCCESS_COPY[linkType]);
       if (willCreateNew) {
         queryClient.invalidateQueries({ queryKey });
       }
@@ -90,8 +81,7 @@ export function useGuestLink(showId: string, linkType: GuestLinkType): GuestLink
   return {
     activeLink,
     isLoading,
-    copyOrCreate: () => handleCopy(false),
-    regenerate: () => handleCopy(true),
+    copyOrCreate,
     isPending,
   };
 }
