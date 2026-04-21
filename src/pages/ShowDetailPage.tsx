@@ -2,6 +2,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Plus, Check } from "lucide-react";
+import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -1303,9 +1304,20 @@ export default function ShowDetailPage() {
                   {(show.wifi_network || show.wifi_password) ? (
                     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
                       <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">WiFi</span>
-                      <span className="text-sm text-foreground font-mono text-[13px]">
-                        {show.wifi_network || "—"} <span className="text-muted-foreground/60 px-1">/</span> {show.wifi_password || "—"}
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        {show.wifi_network && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm text-foreground font-mono text-[13px]">{show.wifi_network}</span>
+                            <CopyButton value={show.wifi_network} />
+                          </div>
+                        )}
+                        {show.wifi_password && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm text-foreground font-mono text-[13px]">{show.wifi_password}</span>
+                            <CopyButton value={show.wifi_password} />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ) : null}
                   <FieldRow label="Hospitality" value={show.hospitality} />

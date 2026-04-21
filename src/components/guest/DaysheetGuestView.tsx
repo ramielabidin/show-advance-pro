@@ -1,5 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { MapPin } from "lucide-react";
+import CopyButton from "@/components/ui/CopyButton";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import FieldGroup from "@/components/FieldGroup";
@@ -155,11 +156,20 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
               {has("wifi") && (
                 <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
                   <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">WiFi</span>
-                  <span className="text-sm text-foreground font-mono text-[13px]">
-                    {show.wifi_network || "—"}
-                    <span className="text-muted-foreground/60 px-1">/</span>
-                    {show.wifi_password || "—"}
-                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    {show.wifi_network && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm text-foreground font-mono text-[13px]">{show.wifi_network}</span>
+                        <CopyButton value={show.wifi_network} />
+                      </div>
+                    )}
+                    {show.wifi_password && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm text-foreground font-mono text-[13px]">{show.wifi_password}</span>
+                        <CopyButton value={show.wifi_password} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </FieldGroup>
