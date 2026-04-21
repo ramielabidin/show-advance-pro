@@ -116,12 +116,16 @@ function buildDaySheetBlocks(show: any, guestUrl: string | null): Block[] {
     text: { type: "plain_text", text: venue.slice(0, 150), emoji: false },
   });
 
-  const dateAddrLines: string[] = [formatDate(show.date)];
+  const parts: string[] = [formatDate(show.date)];
   const addr = val(show.venue_address);
-  if (addr) dateAddrLines.push(stripCountry(addr));
+  if (addr) {
+    const clean = stripCountry(addr);
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clean)}`;
+    parts.push(`<${mapsUrl}|${clean}>`);
+  }
   blocks.push({
     type: "section",
-    text: { type: "mrkdwn", text: dateAddrLines.join("\n") },
+    text: { type: "mrkdwn", text: parts.join("\n\n") },
   });
 
   const entries = Array.isArray(show.schedule_entries) ? show.schedule_entries : [];
