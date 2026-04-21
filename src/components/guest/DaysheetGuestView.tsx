@@ -69,7 +69,6 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
   const city = formatCityState(show.city);
   const rawAddr = show.venue_address?.replace(/,?\s*United States$/i, "") ?? "";
 
-  const showTwoColumn = has("schedule") || has("contact");
   const hasArrival = has("loadIn") || has("parking");
   const hasAtVenue = has("greenRoom") || has("wifi");
 
@@ -112,27 +111,20 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
       </header>
 
       <div className="space-y-6">
-        {showTwoColumn && (
-          <div className="grid grid-cols-1 md:grid-cols-[3fr_auto_2fr] gap-x-6 gap-y-6">
-            <div className="min-w-0">
-              {has("schedule") && (
-                <FieldGroup title="Schedule">
-                  <Schedule show={show} />
-                </FieldGroup>
-              )}
-            </div>
+        {has("schedule") && (
+          <FieldGroup title="Schedule">
+            <Schedule show={show} />
+          </FieldGroup>
+        )}
 
-            <Separator orientation="vertical" className="hidden md:block h-auto" />
-
-            <div className="min-w-0">
-              {has("contact") && (
-                <FieldGroup title="Day of Show Contact" contentClassName="space-y-2">
-                  <FieldRow label="Name" value={show.dos_contact_name} />
-                  <FieldRow label="Phone" value={show.dos_contact_phone} mono />
-                </FieldGroup>
-              )}
-            </div>
-          </div>
+        {has("contact") && (
+          <>
+            {has("schedule") && <Separator />}
+            <FieldGroup title="Day of Show Contact" contentClassName="space-y-2">
+              <FieldRow label="Name" value={show.dos_contact_name} />
+              <FieldRow label="Phone" value={show.dos_contact_phone} mono />
+            </FieldGroup>
+          </>
         )}
 
         {has("departure") && (
@@ -196,6 +188,15 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
             compsAllotment={show.artist_comps}
           />
         </FieldGroup>
+
+        {show.additional_info && (
+          <>
+            <Separator />
+            <FieldGroup title="Notes">
+              <FieldRow label="" value={show.additional_info} noLabel />
+            </FieldGroup>
+          </>
+        )}
       </div>
     </div>
   );

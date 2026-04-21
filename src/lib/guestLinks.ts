@@ -58,6 +58,7 @@ export interface GuestShowPayload {
   hotel_checkin: string | null;
   hotel_checkout: string | null;
   set_length: string | null;
+  additional_info: string | null;
   schedule_entries: GuestScheduleEntry[];
 }
 
