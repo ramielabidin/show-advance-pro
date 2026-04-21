@@ -1,4 +1,4 @@
-import { Link as LinkIcon, RefreshCw } from "lucide-react";
+import { Link as LinkIcon, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useGuestLink } from "@/hooks/useGuestLink";
@@ -96,5 +96,48 @@ export function GuestLinkMenuItems({
         </DropdownMenuItem>
       ) : null}
     </>
+  );
+}
+
+/**
+ * Round icon-button for copying the show's guest day-sheet ("magic") link.
+ * Sits alongside the Share button on the show detail header.
+ */
+export function CopyMagicLinkButton({ showId }: { showId: string }) {
+  const { copyOrCreate, isPending } = useGuestLink(showId, "daysheet");
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon"
+      className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+      disabled={isPending}
+      onClick={() => void copyOrCreate()}
+      title="Copy Magic Link"
+      aria-label="Copy Magic Link"
+    >
+      <Sparkles className="h-4 w-4" />
+    </Button>
+  );
+}
+
+/**
+ * Dropdown menu item that regenerates the day-sheet magic link. Only renders
+ * when an active link already exists — otherwise the primary copy action
+ * creates a fresh one, so regenerate would be a no-op.
+ */
+export function RegenerateMagicLinkMenuItem({ showId }: { showId: string }) {
+  const { activeLink, regenerate, isPending } = useGuestLink(showId, "daysheet");
+  if (!activeLink) return null;
+  return (
+    <DropdownMenuItem
+      disabled={isPending}
+      onSelect={(e) => {
+        e.preventDefault();
+        void regenerate();
+      }}
+    >
+      Regenerate Magic Link
+    </DropdownMenuItem>
   );
 }

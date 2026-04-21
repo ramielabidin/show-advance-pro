@@ -45,7 +45,7 @@ import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
 import EmailAttachments from "@/components/EmailAttachments";
 import ExportPdfDialog from "@/components/ExportPdfDialog";
-import CopyGuestLinkButton, { GuestLinkMenuItems } from "@/components/CopyGuestLinkButton";
+import CopyGuestLinkButton, { CopyMagicLinkButton, RegenerateMagicLinkMenuItem } from "@/components/CopyGuestLinkButton";
 import GuestListEditor, { GuestListView, parseGuestList, guestTotal, parseComps } from "@/components/GuestListEditor";
 import ScheduleEditor, { type ScheduleRow } from "@/components/ScheduleEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
@@ -820,6 +820,9 @@ export default function ShowDetailPage() {
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Copy Magic Link (guest day sheet link) */}
+            <CopyMagicLinkButton showId={id!} />
+
             {/* Share (paper plane) */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -831,12 +834,7 @@ export default function ShowDetailPage() {
                 <SlackPushDialog showId={id!} show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
                 <EmailBandDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email Band</DropdownMenuItem>} />
                 <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
-                <GuestLinkMenuItems
-                  showId={id!}
-                  linkType="daysheet"
-                  copyLabel="Copy Day Sheet Link"
-                  regenerateLabel="Regenerate Day Sheet Link"
-                />
+                <RegenerateMagicLinkMenuItem showId={id!} />
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -1178,12 +1176,20 @@ export default function ShowDetailPage() {
                     <span className="text-sm">Add schedule items (load-in, doors, set…)</span>
                   </button>
                 )}
-                {editField("set_length", "Set Length", { alwaysShow: true })}
               </FieldGroup>
             </div>
 
+            <FieldGroup title="Set Length">
+              {editField("set_length", "Set Length", { alwaysShow: true, labelHidden: true, placeholder: "e.g. 75 min" })}
+            </FieldGroup>
+
             {/* Arrival — full width, below schedule */}
-            <FieldGroup title="Arrival" incomplete={!show.load_in_details && !show.parking_notes}>
+            <FieldGroup
+              title="Arrival"
+              collapsible
+              defaultOpen={!!(show.load_in_details || show.parking_notes)}
+              incomplete={!show.load_in_details && !show.parking_notes}
+            >
               {(() => {
                 const ARRIVAL_KEYS: (keyof Show)[] = ["load_in_details", "parking_notes"];
                 const isEditing = inlineField === "arrival_group";
@@ -1192,7 +1198,7 @@ export default function ShowDetailPage() {
 
                 if (isEditing) {
                   return (
-                    <div ref={inlineRef} className="space-y-2">
+                    <div ref={inlineRef} className="space-y-4">
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Load In</Label>
                         <Textarea
@@ -1227,7 +1233,7 @@ export default function ShowDetailPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
                     }}
-                    className="w-full text-left space-y-2 card-pressable cursor-pointer"
+                    className="w-full text-left space-y-4 card-pressable cursor-pointer"
                   >
                     <FieldRow label="Load In" value={show.load_in_details} />
                     <FieldRow label="Parking" value={show.parking_notes} />
