@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FileText, Trash2, Loader2, Paperclip } from "lucide-react";
+import { useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileText, Loader2, Paperclip, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTeam } from "@/components/TeamProvider";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const BUCKET = "inbound-attachments";
+const MAX_BYTES = 25 * 1024 * 1024;
 
 function formatSize(bytes: number | null | undefined): string {
   if (!bytes) return "";
@@ -24,14 +26,20 @@ function formatSize(bytes: number | null | undefined): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function sanitizeFilename(name: string): string {
+  return name.replace(/[^\w.-]+/g, "_");
+}
+
 interface Props {
   showId: string;
 }
 
-export default function EmailAttachments({ showId }: Props) {
+export default function ShowAttachments({ showId }: Props) {
+  const { teamId } = useTeam();
   const queryClient = useQueryClient();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: attachments = [], isLoading } = useQuery({
     queryKey: ["inbound-attachments", showId],
@@ -44,6 +52,39 @@ export default function EmailAttachments({ showId }: Props) {
       if (error) throw error;
       return data ?? [];
     },
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      if (!teamId) throw new Error("No team selected");
+      if (file.type !== "application/pdf") throw new Error("Only PDF files are supported");
+      if (file.size > MAX_BYTES) throw new Error("File too large (max 25MB)");
+
+      const storagePath = `${teamId}/manual/${showId}/${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(storagePath, file, { contentType: "application/pdf" });
+      if (uploadError) throw uploadError;
+
+      const { error: insertError } = await supabase.from("inbound_email_attachments").insert({
+        team_id: teamId,
+        show_id: showId,
+        storage_path: storagePath,
+        original_filename: file.name,
+        content_type: file.type,
+        size_bytes: file.size,
+      });
+      if (insertError) {
+        await supabase.storage.from(BUCKET).remove([storagePath]);
+        throw insertError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inbound-attachments", showId] });
+      toast.success("Attachment added");
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const deleteMutation = useMutation({
@@ -77,16 +118,51 @@ export default function EmailAttachments({ showId }: Props) {
     }
   };
 
-  if (!isLoading && attachments.length === 0) return null;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadMutation.mutate(file);
+    e.target.value = "";
+  };
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-        <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-        Email Attachments
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-foreground flex items-center gap-2 font-sans">
+          <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+          Attachments
+        </h3>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploadMutation.isPending || !teamId}
+        >
+          {uploadMutation.isPending ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              Uploading…
+            </>
+          ) : (
+            <>
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Add PDF
+            </>
+          )}
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/pdf"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      </div>
+
       {isLoading ? (
         <div className="h-12 rounded-md bg-muted animate-pulse" />
+      ) : attachments.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No attachments yet.</p>
       ) : (
         <div className="space-y-2">
           {attachments.map((att) => (

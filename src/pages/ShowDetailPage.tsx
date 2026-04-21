@@ -44,7 +44,7 @@ import { Card } from "@/components/ui/card";
 import SlackPushDialog from "@/components/SlackPushDialog";
 import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
-import EmailAttachments from "@/components/EmailAttachments";
+import ShowAttachments from "@/components/ShowAttachments";
 import ExportPdfDialog from "@/components/ExportPdfDialog";
 import CopyGuestLinkButton, { CopyMagicLinkButton } from "@/components/CopyGuestLinkButton";
 import GuestListEditor, { GuestListView, parseGuestList, guestTotal, parseComps } from "@/components/GuestListEditor";
@@ -1429,7 +1429,7 @@ export default function ShowDetailPage() {
 
             <Separator />
 
-            <EmailAttachments showId={show.id} />
+            <ShowAttachments showId={show.id} />
 
             {/* Notes — collapsed by default on fresh shows */}
             <FieldGroup title="Notes" collapsible defaultOpen={!!show.additional_info}>
