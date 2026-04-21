@@ -110,6 +110,7 @@ export function PendingEmailsProvider({ children }: { children: ReactNode }) {
 
   const review = useCallback(
     async (eventId: string, showId: string) => {
+      const event = events.find((e) => e.id === eventId);
       const nowIso = new Date().toISOString();
       const { error: evErr } = await supabase
         .from("inbound_parse_events")
@@ -130,9 +131,15 @@ export function PendingEmailsProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["inbound-events-recent", teamId] });
       queryClient.invalidateQueries({ queryKey: ["inbound-attachments", showId] });
 
-      navigate(`/shows/${showId}`);
+      // Hand the raw email text off to ShowDetailPage via location state so it
+      // can auto-open the Import Advance dialog and trigger the AI parse. The
+      // state is consumed once (cleared via replaceState) so refreshes and
+      // back-nav don't re-trigger the parse.
+      navigate(`/shows/${showId}`, {
+        state: event?.raw_email_text ? { inboundEmailText: event.raw_email_text } : undefined,
+      });
     },
-    [navigate, queryClient, teamId],
+    [events, navigate, queryClient, teamId],
   );
 
   const dismiss = useCallback(
