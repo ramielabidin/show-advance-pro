@@ -73,19 +73,31 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
   const rawAddr = show.venue_address?.replace(/,?\s*United States$/i, "") ?? "";
   const showTwoColumn = has("schedule") || has("contact") || has("loadIn") || has("parking");
 
+  const subtitleParts: string[] = [];
+  if (show.artist_name && show.venue_name) {
+    subtitleParts.push(`${show.artist_name} at ${show.venue_name}`);
+  } else if (show.venue_name) {
+    subtitleParts.push(show.venue_name);
+  } else if (show.artist_name) {
+    subtitleParts.push(show.artist_name);
+  }
+  if (city && !rawAddr) subtitleParts.push(city);
+  const subtitle = subtitleParts.join(" · ");
+
   return (
     <div className="space-y-8">
       <header className="space-y-2">
         <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
           Day Sheet
         </p>
-        {show.venue_name ? (
-          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-[-0.02em] leading-[1.05] break-words">
-            {show.venue_name}
-          </h1>
+        <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-[-0.02em] leading-[1.05] break-words">
+          {formatDate(show.date)}
+        </h1>
+        {subtitle ? (
+          <p className="text-sm sm:text-base text-foreground break-words">{subtitle}</p>
         ) : null}
-        <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1">
-          {rawAddr ? (
+        {rawAddr ? (
+          <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1">
             <a
               href={`https://maps.google.com/?q=${encodeURIComponent(rawAddr)}`}
               target="_blank"
@@ -95,14 +107,8 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
               <MapPin className="h-3 w-3 shrink-0" />
               <span className="break-words">{rawAddr}</span>
             </a>
-          ) : city ? (
-            <span className="inline-flex items-center gap-1">
-              <MapPin className="h-3 w-3 shrink-0" />
-              <span>{city}</span>
-            </span>
-          ) : null}
-        </div>
-        <p className="text-sm sm:text-base text-foreground pt-1">{formatDate(show.date)}</p>
+          </div>
+        ) : null}
       </header>
 
       <div className="space-y-6">
