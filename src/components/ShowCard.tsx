@@ -1,7 +1,8 @@
-import { format, parseISO, isPast, isToday, differenceInCalendarDays } from "date-fns";
+import { format, parseISO, isPast, isToday } from "date-fns";
 import { MapPin, ChevronRight, Sparkles, CheckCircle2, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn, formatCityState } from "@/lib/utils";
+import StatusDot from "@/components/StatusDot";
 import type { Show } from "@/lib/types";
 
 type ShowWithTour = Show & { tours?: { id: string; name: string } | null };
@@ -16,21 +17,6 @@ interface ShowCardProps {
 export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "none" }: ShowCardProps) {
   const date = parseISO(show.date);
   const past = isPast(date) && !isToday(date);
-  const daysAway = differenceInCalendarDays(date, new Date());
-  const isUpcoming = !past;
-  const isWithin7 = isUpcoming && daysAway >= 0 && daysAway < 7;
-
-  // Dot color: green if advanced, red if within 7 days and not advanced, yellow otherwise.
-  let dotColor: string | null = null;
-  if (isUpcoming) {
-    if ((show as any).advanced_at) {
-      dotColor = "bg-[var(--pastel-green-fg)]";
-    } else if (isWithin7) {
-      dotColor = "bg-[var(--pastel-red-fg)]";
-    } else {
-      dotColor = "bg-[var(--pastel-yellow-fg)]";
-    }
-  }
 
   return (
     <Link
@@ -89,7 +75,7 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
-        {dotColor && <span className={cn("h-2 w-2 rounded-full", dotColor)} />}
+        <StatusDot show={show} />
         {onRemoveFromTour && (
           <button
             onClick={(e) => {
