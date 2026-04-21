@@ -79,8 +79,7 @@ export function GuestListView({ value, compsAllotment, onEdit }: GuestListViewPr
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">Guest List</span>
+      <div className="flex items-center justify-end">
         <button
           onClick={onEdit}
           className="text-xs text-muted-foreground hover:text-foreground transition-colors"

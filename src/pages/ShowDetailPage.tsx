@@ -1079,6 +1079,8 @@ export default function ShowDetailPage() {
                 {editField("wifi_password", "WiFi Password", { mono: true, alwaysShow: true })}
               </FieldGroup>
 
+              <Separator className="md:hidden" />
+
               <FieldGroup title="Accommodations">
                 {(() => {
                   const hotelEmpty = !show.hotel_name && !show.hotel_address && !show.hotel_confirmation && !show.hotel_checkin && !show.hotel_checkout;
