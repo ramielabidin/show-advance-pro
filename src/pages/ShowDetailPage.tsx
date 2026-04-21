@@ -1196,6 +1196,8 @@ export default function ShowDetailPage() {
               </div>
             </div>
 
+            <Separator />
+
             {/* Arrival — full width, below schedule */}
             <FieldGroup
               title="Arrival"
