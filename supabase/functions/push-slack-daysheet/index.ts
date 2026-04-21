@@ -45,104 +45,137 @@ function formatDate(dateStr: string): string {
   });
 }
 
+type Block = Record<string, unknown>;
+
+function sectionHeader(text: string): Block {
+  return { type: "section", text: { type: "mrkdwn", text } };
+}
+
+function sectionText(text: string): Block {
+  return { type: "section", text: { type: "mrkdwn", text } };
+}
+
+function fieldsBlock(fields: string[]): Block {
+  return {
+    type: "section",
+    fields: fields.map((text) => ({ type: "mrkdwn", text })),
+  };
+}
+
 /**
- * Render the band day sheet — band-relevant sections only, populated fields only.
- * Mirrors the layout produced by ExportPdfDialog / EmailBandDialog.
+ * Render the band day sheet as Slack Block Kit blocks.
+ * Band-relevant sections only, populated fields only.
  */
-function formatDaySheet(show: any): string {
-  const blocks: string[] = [];
+function buildDaySheetBlocks(show: any): Block[] {
+  const blocks: Block[] = [];
 
-  blocks.push(`📋 *DAY SHEET*`);
-  blocks.push(`*${show.venue_name}* — ${show.city}`);
-  blocks.push(`📅 ${formatDate(show.date)}`);
-  blocks.push("");
+  const pushDivider = () => {
+    if (blocks.length && (blocks[blocks.length - 1] as any).type !== "divider") {
+      blocks.push({ type: "divider" });
+    }
+  };
 
-  if (val(show.dos_contact_name) || val(show.dos_contact_phone)) {
-    blocks.push(`📞 *Day of Show Contact*`);
-    if (val(show.dos_contact_name)) blocks.push(`    ${val(show.dos_contact_name)}`);
-    if (val(show.dos_contact_phone)) blocks.push(`    ${val(show.dos_contact_phone)}`);
-    blocks.push("");
-  }
-
-  if (val(show.venue_address)) {
-    blocks.push(`📍 *Venue*`);
-    blocks.push(`    ${stripCountry(val(show.venue_address)!)}`);
-    blocks.push("");
-  }
+  const artist = val(show.teams?.name);
+  const venue = show.venue_name;
+  const heroLines: string[] = [`*📋 DAY SHEET*`];
+  heroLines.push(artist ? `*${artist} at ${venue}*` : `*${venue}*`);
+  heroLines.push(formatDate(show.date));
+  const addr = val(show.venue_address);
+  if (addr) heroLines.push(stripCountry(addr));
+  blocks.push(sectionText(heroLines.join("\n")));
 
   if (show.schedule_entries?.length > 0) {
-    const sorted = [...show.schedule_entries].sort((a: any, b: any) => a.sort_order - b.sort_order);
-    blocks.push(`🕐 *Schedule*`);
+    pushDivider();
+    blocks.push(sectionHeader("*🕐 SCHEDULE*"));
+    const sorted = [...show.schedule_entries].sort(
+      (a: any, b: any) => a.sort_order - b.sort_order
+    );
+    const fields: string[] = [];
     for (const entry of sorted) {
-      const setInline = entry.is_band && val(show.set_length) ? ` (${val(show.set_length)})` : "";
-      blocks.push(`    \`${entry.time}\`  ${entry.label}${setInline}`);
+      const setInline =
+        entry.is_band && val(show.set_length) ? ` (${val(show.set_length)})` : "";
+      fields.push(`*${entry.time}*`);
+      fields.push(`${entry.label}${setInline}`);
     }
-    blocks.push("");
+    for (let i = 0; i < fields.length; i += 8) {
+      blocks.push(fieldsBlock(fields.slice(i, i + 8)));
+    }
+  }
+
+  if (val(show.dos_contact_name) || val(show.dos_contact_phone)) {
+    pushDivider();
+    blocks.push(sectionHeader("*📞 DAY OF SHOW CONTACT*"));
+    const fields: string[] = [];
+    if (val(show.dos_contact_name)) fields.push(`*Name:* ${val(show.dos_contact_name)}`);
+    if (val(show.dos_contact_phone)) fields.push(`*Phone:* ${val(show.dos_contact_phone)}`);
+    blocks.push(fieldsBlock(fields));
   }
 
   if (val(show.departure_time) || val(show.departure_notes)) {
-    blocks.push(`🚐 *Departure*`);
-    if (val(show.departure_time)) blocks.push(`    ⏰ ${val(show.departure_time)}`);
-    if (val(show.departure_notes)) blocks.push(`    Notes: ${val(show.departure_notes)}`);
-    blocks.push("");
+    pushDivider();
+    blocks.push(sectionHeader("*🚗 DEPARTURE*"));
+    const parts: string[] = [];
+    if (val(show.departure_time)) parts.push(`*Time:* ${val(show.departure_time)}`);
+    if (val(show.departure_notes)) parts.push(`*Notes:* ${val(show.departure_notes)}`);
+    blocks.push(sectionText(parts.join("\n\n")));
   }
 
-  if (val(show.parking_notes)) {
-    blocks.push(`🅿️ *Parking*`);
-    blocks.push(`    ${val(show.parking_notes)}`);
-    blocks.push("");
+  if (val(show.parking_notes) || val(show.load_in_details)) {
+    pushDivider();
+    blocks.push(sectionHeader("*📍 ARRIVAL*"));
+    const parts: string[] = [];
+    if (val(show.parking_notes)) parts.push(`*Parking:* ${val(show.parking_notes)}`);
+    if (val(show.load_in_details)) parts.push(`*Load In:* ${val(show.load_in_details)}`);
+    blocks.push(sectionText(parts.join("\n\n")));
   }
 
-  if (val(show.load_in_details)) {
-    blocks.push(`📦 *Load In*`);
-    blocks.push(`    ${val(show.load_in_details)}`);
-    blocks.push("");
+  const hasGreenRoom = !!val(show.green_room_info);
+  const hasWifi = !!val(show.wifi_network) && !!val(show.wifi_password);
+  const hasHospitality = !!val(show.hospitality);
+  if (hasGreenRoom || hasWifi || hasHospitality) {
+    blocks.push(sectionHeader("*🎸 AT THE VENUE*"));
+    const parts: string[] = [];
+    if (hasGreenRoom) parts.push(`*Green Room:* ${val(show.green_room_info)}`);
+    if (hasWifi)
+      parts.push(
+        `*WiFi:* Network: ${val(show.wifi_network)} · Password: ${val(show.wifi_password)}`
+      );
+    if (hasHospitality) parts.push(`*Hospitality:* ${val(show.hospitality)}`);
+    blocks.push(sectionText(parts.join("\n\n")));
   }
 
-  if (val(show.green_room_info)) {
-    blocks.push(`🛋️ *Green Room*`);
-    blocks.push(`    ${val(show.green_room_info)}`);
-    blocks.push("");
-  }
-
-  {
-    const lines: string[] = [];
-    if (val(show.venue_capacity)) lines.push(`    Capacity: ${val(show.venue_capacity)}`);
-    if (val(show.age_restriction)) lines.push(`    Age Restriction: ${val(show.age_restriction)}`);
-    if (lines.length) {
-      blocks.push(`🏟️ *Venue Details*`);
-      blocks.push(...lines);
-      blocks.push("");
-    }
+  if (val(show.hotel_name)) {
+    pushDivider();
+    blocks.push(sectionHeader("*🏨 ACCOMMODATIONS*"));
+    const parts: string[] = [`*Hotel:* ${val(show.hotel_name)}`];
+    if (val(show.hotel_address)) parts.push(`*Address:* ${val(show.hotel_address)}`);
+    if (val(show.hotel_confirmation))
+      parts.push(`*Confirmation:* ${val(show.hotel_confirmation)}`);
+    const ci = val(show.hotel_checkin);
+    const co = val(show.hotel_checkout);
+    if (ci && co) parts.push(`*Check-in:* ${ci} · *Check-out:* ${co}`);
+    else if (ci) parts.push(`*Check-in:* ${ci}`);
+    else if (co) parts.push(`*Check-out:* ${co}`);
+    blocks.push(sectionText(parts.join("\n\n")));
   }
 
   if (val(show.guest_list_details)) {
     const formatted = formatGuestList(val(show.guest_list_details)!);
     if (formatted) {
-      blocks.push(`📋 *Guest List*`);
-      blocks.push(`    ${formatted}`);
-      blocks.push("");
+      pushDivider();
+      blocks.push(sectionHeader("*📝 GUEST LIST*"));
+      blocks.push(sectionText(formatted));
     }
   }
 
-  if (val(show.wifi_network) || val(show.wifi_password)) {
-    blocks.push(`📶 *WiFi*`);
-    if (val(show.wifi_network)) blocks.push(`    Network: \`${val(show.wifi_network)}\``);
-    if (val(show.wifi_password)) blocks.push(`    Password: \`${val(show.wifi_password)}\``);
-    blocks.push("");
-  }
+  blocks.push({
+    type: "context",
+    elements: [
+      { type: "mrkdwn", text: "Sent with <https://advancetouring.com|Advance>" },
+    ],
+  });
 
-  if (val(show.hotel_name) || val(show.hotel_address) || val(show.hotel_confirmation)) {
-    blocks.push(`🏨 *Accommodations*`);
-    if (val(show.hotel_name)) blocks.push(`    ${val(show.hotel_name)}`);
-    if (val(show.hotel_address)) blocks.push(`    ${val(show.hotel_address)}`);
-    if (val(show.hotel_confirmation)) blocks.push(`    Confirmation: \`${val(show.hotel_confirmation)}\``);
-    if (val(show.hotel_checkin)) blocks.push(`    Check-in: ${val(show.hotel_checkin)}`);
-    if (val(show.hotel_checkout)) blocks.push(`    Check-out: ${val(show.hotel_checkout)}`);
-    blocks.push("");
-  }
-
-  return blocks.join("\n");
+  return blocks;
 }
 
 serve(async (req) => {
@@ -185,7 +218,7 @@ serve(async (req) => {
 
     const { data: show, error: showError } = await supabase
       .from("shows")
-      .select("*, schedule_entries(*)")
+      .select("*, schedule_entries(*), teams(name)")
       .eq("id", showId)
       .single();
 
@@ -211,12 +244,13 @@ serve(async (req) => {
       );
     }
 
-    const message = formatDaySheet(show);
+    const blocks = buildDaySheetBlocks(show);
+    const fallback = `Day sheet — ${show.venue_name} — ${formatDate(show.date)}`;
 
     const slackRes = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: message }),
+      body: JSON.stringify({ blocks, text: fallback }),
     });
 
     if (!slackRes.ok) {
