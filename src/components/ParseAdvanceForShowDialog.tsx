@@ -40,7 +40,6 @@ const FIELD_LABELS: Record<string, string> = {
   hotel_checkout: "Accommodations Check-out",
   set_length: "Set Length",
   backline_provided: "Backline Provided",
-  changeover_time: "Changeover Time",
   venue_capacity: "Venue Capacity",
   ticket_price: "Ticket Price",
   guarantee: "Guarantee",

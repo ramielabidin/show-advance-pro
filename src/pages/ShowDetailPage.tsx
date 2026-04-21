@@ -1119,61 +1119,7 @@ export default function ShowDetailPage() {
                     <span className="text-sm">Add schedule items (load-in, doors, set…)</span>
                   </button>
                 )}
-                {(() => {
-                  const TIMING_KEYS: (keyof Show)[] = ["set_length", "changeover_time"];
-                  const isEditing = inlineField === "timing_group";
-                  const empty = !show.set_length && !show.changeover_time;
-                  const startEdit = () => startGroupEdit("timing_group", TIMING_KEYS);
-
-                  if (isEditing) {
-                    return (
-                      <div ref={inlineRef} className="space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Set Length</Label>
-                            <Input
-                              value={groupForm.set_length ?? ""}
-                              onChange={(e) => setGroupForm(p => ({ ...p, set_length: e.target.value }))}
-                              className="text-sm h-9"
-                              autoFocus
-                              placeholder="e.g. 60 min"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Changeover Time</Label>
-                            <TimeInput
-                              value={groupForm.changeover_time ?? ""}
-                              onChange={(val) => setGroupForm(p => ({ ...p, changeover_time: val }))}
-                            />
-                          </div>
-                        </div>
-                        <InlineActions
-                          onSave={() => saveGroup(TIMING_KEYS, { changeover_time: normalizeTime })}
-                          onCancel={cancelInline}
-                        />
-                      </div>
-                    );
-                  }
-
-                  if (empty) {
-                    return <EmptyFieldPrompt label="set length / changeover" onClick={startEdit} />;
-                  }
-
-                  return (
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={startEdit}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
-                      }}
-                      className="w-full text-left space-y-2 card-pressable cursor-pointer"
-                    >
-                      <FieldRow label="Set Length" value={show.set_length} />
-                      <FieldRow label="Changeover" value={show.changeover_time} mono />
-                    </div>
-                  );
-                })()}
+                {editField("set_length", "Set Length", { alwaysShow: true })}
               </FieldGroup>
               </div>
 
@@ -1298,7 +1244,11 @@ export default function ShowDetailPage() {
 
             {/* At The Venue + Accommodations — paired two-column */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <FieldGroup title="At The Venue">
+              <FieldGroup
+                title="At The Venue"
+                collapsible
+                defaultOpen={!!(show.green_room_info || show.wifi_network || show.wifi_password)}
+              >
                 {(() => {
                   const VENUE_KEYS: (keyof Show)[] = ["green_room_info", "wifi_network", "wifi_password"];
                   const isEditing = inlineField === "venue_group";
@@ -1370,7 +1320,11 @@ export default function ShowDetailPage() {
 
               <Separator className="md:hidden" />
 
-              <FieldGroup title="Accommodations">
+              <FieldGroup
+                title="Accommodations"
+                collapsible
+                defaultOpen={!!(show.hotel_name || show.hotel_address || show.hotel_confirmation || show.hotel_checkin || show.hotel_checkout)}
+              >
                 {(() => {
                   const hotelEmpty = !show.hotel_name && !show.hotel_address && !show.hotel_confirmation && !show.hotel_checkin && !show.hotel_checkout;
                   const isHotelInline = inlineField === "hotel_group";
@@ -1470,7 +1424,12 @@ export default function ShowDetailPage() {
             <Separator />
 
             {/* Guest List */}
-            <FieldGroup title="Guest List" incomplete={!!show.artist_comps && !show.guest_list_details && inlineField !== "guest_list_details"}>
+            <FieldGroup
+              title="Guest List"
+              collapsible
+              defaultOpen={!!(show.guest_list_details || show.artist_comps)}
+              incomplete={!!show.artist_comps && !show.guest_list_details && inlineField !== "guest_list_details"}
+            >
               {renderGuestList()}
               <div className="pt-1">
                 <CopyGuestLinkButton showId={id!} linkType="guestlist" />

@@ -203,7 +203,6 @@ Key rules:
               hotel_checkout: { type: "string", description: "Hotel check-out time" },
               set_length: { type: "string", description: "Duration of the band's set, e.g. '75 min'" },
               backline_provided: { type: "string", description: "Backline/gear provided by the venue" },
-              changeover_time: { type: "string", description: "Changeover time between acts, e.g. '20 min'" },
               venue_capacity: { type: "string", description: "Venue capacity" },
               ticket_price: { type: "string", description: "Ticket price. If multiple tiers exist (e.g. presale/advance/door), preserve them with slash separators exactly as written, e.g. '$18/$20/$25'. Do NOT concatenate digits or omit the slashes." },
               guarantee: { type: "string", description: "Guarantee amount" },
