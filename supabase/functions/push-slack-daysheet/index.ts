@@ -45,6 +45,61 @@ function formatDate(dateStr: string): string {
   });
 }
 
+const GUEST_LINK_BASE_URL = "https://advancetouring.com";
+const NANOID_ALPHABET =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
+
+function nanoid(size = 17): string {
+  const bytes = new Uint8Array(size);
+  crypto.getRandomValues(bytes);
+  let id = "";
+  for (let i = 0; i < size; i++) id += NANOID_ALPHABET[bytes[i] & 63];
+  return id;
+}
+
+/**
+ * Returns the URL of an active daysheet guest link for this show, minting one
+ * if none exists. Mirrors the client-side `getActiveGuestLink` / `generateGuestLink`
+ * pair in src/lib/guestLinks.ts. Returns null on failure — the caller should
+ * send the day sheet without a link rather than fail the whole push.
+ */
+async function ensureDaySheetGuestUrl(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  showId: string,
+  userId: string
+): Promise<string | null> {
+  try {
+    const { data: existing } = await supabase
+      .from("guest_links")
+      .select("token")
+      .eq("show_id", showId)
+      .eq("link_type", "daysheet")
+      .is("revoked_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existing?.token) return `${GUEST_LINK_BASE_URL}/guest/${existing.token}`;
+
+    const token = nanoid(17);
+    const { error: insertError } = await supabase.from("guest_links").insert({
+      token,
+      show_id: showId,
+      link_type: "daysheet",
+      created_by: userId,
+    });
+    if (insertError) {
+      console.error("Failed to mint guest daysheet link:", insertError);
+      return null;
+    }
+    return `${GUEST_LINK_BASE_URL}/guest/${token}`;
+  } catch (e) {
+    console.error("ensureDaySheetGuestUrl error:", e);
+    return null;
+  }
+}
+
 type Block = Record<string, unknown>;
 
 function sectionHeader(text: string): Block {
@@ -66,7 +121,7 @@ function fieldsBlock(fields: string[]): Block {
  * Render the band day sheet as Slack Block Kit blocks.
  * Band-relevant sections only, populated fields only.
  */
-function buildDaySheetBlocks(show: any): Block[] {
+function buildDaySheetBlocks(show: any, guestUrl: string | null): Block[] {
   const blocks: Block[] = [];
 
   const pushDivider = () => {
@@ -77,12 +132,26 @@ function buildDaySheetBlocks(show: any): Block[] {
 
   const artist = val(show.teams?.name);
   const venue = show.venue_name;
-  const heroLines: string[] = [`*📋 DAY SHEET*`];
+  const heroLines: string[] = [];
   heroLines.push(artist ? `*${artist} at ${venue}*` : `*${venue}*`);
   heroLines.push(formatDate(show.date));
   const addr = val(show.venue_address);
   if (addr) heroLines.push(stripCountry(addr));
   blocks.push(sectionText(heroLines.join("\n")));
+
+  if (guestUrl) {
+    blocks.push({
+      type: "actions",
+      elements: [
+        {
+          type: "button",
+          text: { type: "plain_text", text: "Open Day Sheet", emoji: true },
+          url: guestUrl,
+          style: "primary",
+        },
+      ],
+    });
+  }
 
   if (show.schedule_entries?.length > 0) {
     pushDivider();
@@ -244,7 +313,8 @@ serve(async (req) => {
       );
     }
 
-    const blocks = buildDaySheetBlocks(show);
+    const guestUrl = await ensureDaySheetGuestUrl(supabase, show.id, user.id);
+    const blocks = buildDaySheetBlocks(show, guestUrl);
     const fallback = `Day sheet — ${show.venue_name} — ${formatDate(show.date)}`;
 
     const slackRes = await fetch(webhookUrl, {
