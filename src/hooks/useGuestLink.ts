@@ -1,6 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
+import { copyTextViaPromise } from "@/lib/clipboard";
 import {
   buildGuestUrl,
   generateGuestLink,
@@ -22,57 +24,74 @@ const SUCCESS_REGENERATE: Record<GuestLinkType, string> = {
 export interface GuestLinkActions {
   activeLink: GuestLinkRow | null | undefined;
   isLoading: boolean;
-  copyOrCreate: () => Promise<void>;
-  regenerate: () => Promise<void>;
+  copyOrCreate: () => void;
+  regenerate: () => void;
   isPending: boolean;
 }
 
 export function useGuestLink(showId: string, linkType: GuestLinkType): GuestLinkActions {
   const queryClient = useQueryClient();
+  const { session } = useAuth();
   const queryKey = ["guest-link", showId, linkType];
+  const [isPending, setIsPending] = useState(false);
 
   const { data: activeLink, isLoading } = useQuery({
     queryKey,
     queryFn: () => getActiveGuestLink(showId, linkType),
   });
 
-  const copyToClipboard = async (token: string, message: string) => {
-    try {
-      await navigator.clipboard.writeText(buildGuestUrl(token));
-      toast.success(message);
-    } catch {
-      toast.error("Could not copy to clipboard");
+  // Safari strictly enforces that `navigator.clipboard.write` be called
+  // synchronously within a user gesture. We must not await anything before
+  // invoking `copyTextViaPromise` — instead we hand it a Promise that resolves
+  // to the URL once the link has been created.
+  const handleCopy = (shouldRegenerate: boolean) => {
+    const userId = session?.user?.id;
+    if (!userId) {
+      toast.error("You must be signed in to create a share link");
+      return;
     }
-  };
+    if (isPending) return;
 
-  const mutation = useMutation({
-    mutationFn: async (opts: { regenerate: boolean }) => {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
-      if (!userId) throw new Error("You must be signed in to create a share link");
+    const willCreateNew = shouldRegenerate || !activeLink;
+    const successMessage = shouldRegenerate
+      ? SUCCESS_REGENERATE[linkType]
+      : SUCCESS_COPY[linkType];
 
-      if (!opts.regenerate && activeLink) {
-        await copyToClipboard(activeLink.token, SUCCESS_COPY[linkType]);
-        return activeLink;
+    const urlPromise: Promise<string> = willCreateNew
+      ? generateGuestLink(showId, linkType, userId).then((created) =>
+          buildGuestUrl(created.token),
+        )
+      : Promise.resolve(buildGuestUrl(activeLink!.token));
+
+    setIsPending(true);
+
+    // Kick off the clipboard write synchronously so Safari sees it under the
+    // same user gesture that triggered the click.
+    const clipboardPromise = copyTextViaPromise(urlPromise);
+
+    Promise.allSettled([urlPromise, clipboardPromise]).then(([urlResult, clipResult]) => {
+      setIsPending(false);
+      if (urlResult.status === "rejected") {
+        const err = urlResult.reason as Error;
+        toast.error(err?.message ?? "Could not create share link");
+        return;
       }
-      const created = await generateGuestLink(showId, linkType, userId);
-      const message = opts.regenerate || activeLink
-        ? SUCCESS_REGENERATE[linkType]
-        : SUCCESS_COPY[linkType];
-      await copyToClipboard(created.token, message);
-      return created;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
+      if (clipResult.status === "rejected") {
+        toast.error("Could not copy to clipboard");
+        return;
+      }
+      toast.success(successMessage);
+      if (willCreateNew) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+    });
+  };
 
   return {
     activeLink,
     isLoading,
-    copyOrCreate: () => mutation.mutateAsync({ regenerate: false }).then(() => undefined),
-    regenerate: () => mutation.mutateAsync({ regenerate: true }).then(() => undefined),
-    isPending: mutation.isPending,
+    copyOrCreate: () => handleCopy(false),
+    regenerate: () => handleCopy(true),
+    isPending,
   };
 }
