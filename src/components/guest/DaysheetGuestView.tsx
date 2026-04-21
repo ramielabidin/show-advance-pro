@@ -1,5 +1,5 @@
 import { format, parseISO } from "date-fns";
-import { MapPin, Mic } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import FieldGroup from "@/components/FieldGroup";
@@ -46,13 +46,12 @@ function Schedule({ show }: { show: GuestShowPayload }) {
             </span>
             <span
               className={cn(
-                "text-[15px] sm:text-base inline-flex items-baseline gap-1.5 min-w-0 break-words",
-                entry.is_band ? "text-foreground font-medium" : "text-foreground",
+                "text-[15px] sm:text-base min-w-0 break-words",
+                entry.is_band
+                  ? "font-semibold text-[var(--pastel-green-fg)]"
+                  : "text-foreground",
               )}
             >
-              {entry.is_band && (
-                <Mic className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground shrink-0 translate-y-[2px]" />
-              )}
               <span className="min-w-0 break-words">
                 {entry.label}
                 {setInline}
@@ -73,29 +72,24 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
   const rawAddr = show.venue_address?.replace(/,?\s*United States$/i, "") ?? "";
   const showTwoColumn = has("schedule") || has("contact") || has("loadIn") || has("parking");
 
-  const subtitleParts: string[] = [];
+  let artistVenue = "";
   if (show.artist_name && show.venue_name) {
-    subtitleParts.push(`${show.artist_name} at ${show.venue_name}`);
+    artistVenue = `${show.artist_name} at ${show.venue_name}`;
   } else if (show.venue_name) {
-    subtitleParts.push(show.venue_name);
+    artistVenue = show.venue_name;
   } else if (show.artist_name) {
-    subtitleParts.push(show.artist_name);
+    artistVenue = show.artist_name;
   }
-  if (city && !rawAddr) subtitleParts.push(city);
-  const subtitle = subtitleParts.join(" · ");
 
   return (
     <div className="space-y-8">
       <header className="space-y-2">
-        <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
-          Day Sheet
-        </p>
-        <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-[-0.02em] leading-[1.05] break-words">
-          {formatDate(show.date)}
-        </h1>
-        {subtitle ? (
-          <p className="text-sm sm:text-base text-foreground break-words">{subtitle}</p>
+        {artistVenue ? (
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-[-0.02em] leading-[1.05] break-words">
+            {artistVenue}
+          </h1>
         ) : null}
+        <p className="text-sm sm:text-base text-muted-foreground">{formatDate(show.date)}</p>
         {rawAddr ? (
           <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1">
             <a
@@ -107,6 +101,11 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
               <MapPin className="h-3 w-3 shrink-0" />
               <span className="break-words">{rawAddr}</span>
             </a>
+          </div>
+        ) : city ? (
+          <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span>{city}</span>
           </div>
         ) : null}
       </header>
