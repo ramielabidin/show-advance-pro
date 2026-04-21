@@ -31,7 +31,7 @@ export default function CopyGuestLinkButton({
       size="sm"
       className={`h-8 gap-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground ${className ?? ""}`}
       disabled={isPending}
-      onClick={() => void copyOrCreate()}
+      onClick={copyOrCreate}
     >
       <Sparkles className="h-3 w-3" />
       {label ?? defaultLabel}
@@ -52,7 +52,7 @@ export function CopyMagicLinkButton({ showId }: { showId: string }) {
       size="sm"
       className="h-9 gap-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground"
       disabled={isPending}
-      onClick={() => void copyOrCreate()}
+      onClick={copyOrCreate}
     >
       <Sparkles className="h-3.5 w-3.5" />
       Magic Link

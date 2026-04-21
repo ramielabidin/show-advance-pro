@@ -1,6 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
+import { copyTextViaPromise } from "@/lib/clipboard";
 import {
   buildGuestUrl,
   generateGuestLink,
@@ -17,71 +19,69 @@ const SUCCESS_COPY: Record<GuestLinkType, string> = {
 export interface GuestLinkActions {
   activeLink: GuestLinkRow | null | undefined;
   isLoading: boolean;
-  copyOrCreate: () => Promise<void>;
+  copyOrCreate: () => void;
   isPending: boolean;
 }
 
 export function useGuestLink(showId: string, linkType: GuestLinkType): GuestLinkActions {
   const queryClient = useQueryClient();
+  const { session } = useAuth();
   const queryKey = ["guest-link", showId, linkType];
+  const [isPending, setIsPending] = useState(false);
 
   const { data: activeLink, isLoading } = useQuery({
     queryKey,
     queryFn: () => getActiveGuestLink(showId, linkType),
   });
 
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
-      if (!userId) throw new Error("You must be signed in to create a share link");
-      return generateGuestLink(showId, linkType, userId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
-    },
-  });
+  // Safari strictly enforces that `navigator.clipboard.write` be called
+  // synchronously within a user gesture. We must not await anything before
+  // invoking `copyTextViaPromise` — instead we hand it a Promise that resolves
+  // to the URL once the link has been created.
+  const copyOrCreate = () => {
+    const userId = session?.user?.id;
+    if (!userId) {
+      toast.error("You must be signed in to create a share link");
+      return;
+    }
+    if (isPending) return;
 
-  // Safari restricts `navigator.clipboard.writeText` to code paths that run
-  // synchronously within a user gesture. React Query's `mutateAsync` plus any
-  // `await` before the write drops that gesture, producing "Could not copy to
-  // clipboard" errors. Two code paths keep the gesture alive:
-  //   1. When an active link already exists, call `writeText` directly inside
-  //      the click handler — no `await` before it.
-  //   2. When the link must be generated first, use `clipboard.write` with a
-  //      `ClipboardItem` whose payload is a Promise. Safari holds the user
-  //      activation window until that promise resolves.
-  const copyOrCreate = async () => {
-    try {
-      if (activeLink) {
-        await navigator.clipboard.writeText(buildGuestUrl(activeLink.token));
-        toast.success(SUCCESS_COPY[linkType]);
+    const willCreateNew = !activeLink;
+
+    const urlPromise: Promise<string> = willCreateNew
+      ? generateGuestLink(showId, linkType, userId).then((created) =>
+          buildGuestUrl(created.token),
+        )
+      : Promise.resolve(buildGuestUrl(activeLink!.token));
+
+    setIsPending(true);
+
+    // Kick off the clipboard write synchronously so Safari sees it under the
+    // same user gesture that triggered the click.
+    const clipboardPromise = copyTextViaPromise(urlPromise);
+
+    Promise.allSettled([urlPromise, clipboardPromise]).then(([urlResult, clipResult]) => {
+      setIsPending(false);
+      if (urlResult.status === "rejected") {
+        const err = urlResult.reason as Error;
+        toast.error(err?.message ?? "Could not create share link");
         return;
       }
-
-      const textPromise = (async () => {
-        const created = await createMutation.mutateAsync();
-        return new Blob([buildGuestUrl(created.token)], { type: "text/plain" });
-      })();
-
-      if (typeof ClipboardItem !== "undefined" && navigator.clipboard.write) {
-        await navigator.clipboard.write([
-          new ClipboardItem({ "text/plain": textPromise }),
-        ]);
-      } else {
-        const blob = await textPromise;
-        await navigator.clipboard.writeText(await blob.text());
+      if (clipResult.status === "rejected") {
+        toast.error("Could not copy to clipboard");
+        return;
       }
       toast.success(SUCCESS_COPY[linkType]);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not copy to clipboard");
-    }
+      if (willCreateNew) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+    });
   };
 
   return {
     activeLink,
     isLoading,
     copyOrCreate,
-    isPending: createMutation.isPending,
+    isPending,
   };
 }
