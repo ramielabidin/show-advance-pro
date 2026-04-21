@@ -30,30 +30,32 @@ interface Props {
 // intentionally omitted — load in, parking, hotel, guest list, etc. live in
 // the email and Slack day sheet where people have time to read them.
 //
-// Typography and layout mirror `DaysheetGuestView` so this artifact reads as
-// part of the same product family. jsPDF's built-in faces are a best-effort
-// stand-in for the web fonts:
-//   • times (bold)   ← DM Serif Display (display venue name)
-//   • helvetica      ← DM Sans           (eyebrow, body, labels)
-//   • courier        ← JetBrains Mono    (schedule times, phones, wifi pw)
+// jsPDF's built-in faces stand in for the product's web fonts:
+//   • times         ← DM Serif Display (venue title, footer wordmark)
+//   • helvetica     ← DM Sans           (eyebrow, body, labels)
+//   • courier       ← JetBrains Mono    (schedule times, phones, wifi pw)
 //
-// Colors mirror the app's light-mode palette:
-//   --background       → canvas
-//   --card             → card
-//   --foreground       → ink
-//   --muted-foreground → muted
-//   --border           → border
-//   pastel-green-fg    → accent
+// RGB values are derived directly from the HSL tokens in
+// `.claude/skills/advance-design/colors_and_type.css`:
+//   --background      40 30% 97%  → canvas
+//   --card            40 25% 99%  → card
+//   --foreground      30 10% 12%  → ink
+//   --muted-foreground 30 8% 50%  → muted
+//   --text-tertiary   30  6% 62%  → mutedSoft
+//   --border          35 18% 90%  → border
+//   --pastel-green-bg #edf3ec     → accentSoft  (band row fill)
+//   --pastel-green-fg #346538     → accent      (band row text)
 
 const T = {
-  canvas:      [245, 243, 239] as [number, number, number],
-  card:        [252, 250, 246] as [number, number, number],
-  ink:         [26,  23,  20]  as [number, number, number],
-  muted:       [139, 126, 118] as [number, number, number],
-  mutedSoft:   [176, 166, 158] as [number, number, number],
-  border:      [220, 213, 207] as [number, number, number],
-  borderSoft:  [232, 226, 219] as [number, number, number],
+  canvas:      [250, 248, 245] as [number, number, number],
+  card:        [253, 253, 252] as [number, number, number],
+  ink:         [34,  31,  28]  as [number, number, number],
+  muted:       [138, 128, 117] as [number, number, number],
+  mutedSoft:   [164, 158, 152] as [number, number, number],
+  border:      [234, 230, 225] as [number, number, number],
+  borderSoft:  [240, 236, 231] as [number, number, number],
   accent:      [52,  101, 56]  as [number, number, number],
+  accentSoft:  [237, 243, 236] as [number, number, number],
 } as const;
 
 // ─── Main component ─────────────────────────────────────────────────────────
