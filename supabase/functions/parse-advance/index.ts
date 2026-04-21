@@ -166,7 +166,14 @@ Key rules:
 - Dates should be in YYYY-MM-DD format.
 - Times should be in simple format like "3:00 PM" or "15:00".
 - If a field isn't clearly present in the text, OMIT it entirely. Never guess or fabricate values.
-- If the input is messy or partial, do your best — even extracting 2-3 fields is valuable.`;
+- If the input is messy or partial, do your best — even extracting 2-3 fields is valuable.
+
+Simplify and clarify the language for the touring crew:
+- Free-text fields (parking_notes, load_in_details, green_room_info, hospitality, departure_notes, backline_provided, guest_list_details, additional_info) should be distilled into the shortest form that still conveys everything the crew needs to act.
+- Rewrite long paragraphs into short sentences or tight bullet-like lines separated by newlines. No pleasantries, no rationale, no filler.
+- Preserve specifics verbatim: exact addresses, door / alarm / gate codes, phone numbers, emails, confirmation numbers, named contacts, dollar amounts, and time-of-day constraints.
+- Never invent, add, or infer details. Only condense what is already in the source text. If the original is already short and clear, leave it alone.
+- Example: "For parking, please come around to the back of the venue on 23rd Street and pull into the loading zone. It fits a 15-foot van. After you unload, kindly move the vehicle to the public lot directly across the street — they validate for us." → "Loading zone on 23rd St (back of venue). Fits 15-ft van. Move to public lot across street after load-in (validated)."`;
 
     const requestBody = JSON.stringify({
       model: "claude-haiku-4-5-20251001",

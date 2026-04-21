@@ -1,4 +1,4 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Plus, Check } from "lucide-react";
@@ -79,10 +79,26 @@ function formatCurrency(raw: string): string {
 export default function ShowDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { teamId } = useTeam();
 
   const [viewTab, setViewTab] = useState<"show" | "deal">("show");
+
+  // When we arrive here from the inbound-email "Review Now" flow, the
+  // forwarded email body is handed off via location state. Consume it once,
+  // open the Import Advance dialog with it so the AI parse runs automatically,
+  // and clear history state so refreshes / back-nav don't re-trigger.
+  const [inboundEmailText, setInboundEmailText] = useState<string | null>(null);
+  useEffect(() => {
+    const incoming = (location.state as { inboundEmailText?: string } | null)?.inboundEmailText;
+    if (incoming && incoming.trim()) {
+      setInboundEmailText(incoming);
+      window.history.replaceState({}, "");
+    }
+    // Only run on initial mount for this show id.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   // Inline edit: which field key is currently being edited (null = none)
   const [inlineField, setInlineField] = useState<string | null>(null);
@@ -644,6 +660,21 @@ export default function ShowDetailPage() {
 
   return (
     <div className="animate-fade-in max-w-3xl">
+      {/* Controlled parse dialog driven by inbound-email review flow. Opens
+          automatically when location state carries a forwarded email body and
+          auto-invokes the AI parse so the user lands on the confirm step. */}
+      <ParseAdvanceForShowDialog
+        showId={id!}
+        currentShow={show as Show}
+        onUpdated={() => {
+          queryClient.invalidateQueries({ queryKey: ["show", id] });
+          queryClient.invalidateQueries({ queryKey: ["shows"] });
+        }}
+        hideTrigger
+        open={!!inboundEmailText}
+        onOpenChange={(v) => { if (!v) setInboundEmailText(null); }}
+        initialEmailText={inboundEmailText}
+      />
       <Tabs
         value={viewTab}
         onValueChange={(v) => {

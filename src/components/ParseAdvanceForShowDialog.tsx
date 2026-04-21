@@ -63,6 +63,10 @@ interface Props {
   /** When provided, skip the paste step and jump straight to the confirm UI
    *  using these already-parsed fields. Used by the inbound-email review flow. */
   initialParsedResult?: Record<string, unknown> | null;
+  /** When provided and the dialog opens, pre-fill the paste area with this
+   *  text and automatically invoke the AI parse. Used by the inbound-email
+   *  review flow so the forwarded email goes straight to the confirm step. */
+  initialEmailText?: string | null;
   /** Controlled open state (optional). If set, overrides the internal state. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -76,6 +80,7 @@ export default function ParseAdvanceForShowDialog({
   onUpdated,
   trigger,
   initialParsedResult,
+  initialEmailText,
   open: controlledOpen,
   onOpenChange,
   hideTrigger,
@@ -185,8 +190,25 @@ export default function ParseAdvanceForShowDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialParsedResult]);
 
-  const handleParse = async () => {
-    if (!text.trim()) {
+  // When opened with raw forwarded-email text (inbound email review flow),
+  // pre-fill the paste area and auto-invoke the AI parse so the user goes
+  // straight to the confirm step without re-pasting the email.
+  const autoParsedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) {
+      autoParsedRef.current = null;
+      return;
+    }
+    if (!initialEmailText || !initialEmailText.trim()) return;
+    if (autoParsedRef.current === initialEmailText) return;
+    autoParsedRef.current = initialEmailText;
+    setText(initialEmailText);
+    void runParse(initialEmailText);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialEmailText]);
+
+  const runParse = async (emailText: string) => {
+    if (!emailText.trim()) {
       toast.error("Paste text or upload a PDF first");
       return;
     }
@@ -194,7 +216,7 @@ export default function ParseAdvanceForShowDialog({
     try {
       const { data: fnData, error: fnError } = await supabase.functions.invoke(
         "parse-advance",
-        { body: { emailText: text } }
+        { body: { emailText } }
       );
       if (fnError) throw new Error(fnError.message || "Failed to parse");
       if (fnData?.error) throw new Error(fnData.error);
@@ -209,6 +231,8 @@ export default function ParseAdvanceForShowDialog({
       setLoading(false);
     }
   };
+
+  const handleParse = () => runParse(text);
 
   const handleSave = async () => {
     const updates: Record<string, string> = {};
