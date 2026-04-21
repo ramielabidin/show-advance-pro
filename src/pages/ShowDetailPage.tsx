@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock, Sparkles, Mic, DollarSign, Ticket, Users, TrendingUp, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock, Sparkles, Mic, DollarSign, Ticket, Users, TrendingUp, Plus, Check } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -115,8 +115,9 @@ export default function ShowDetailPage() {
     settlement_notes: "",
   });
 
-  // Hotel group form state
-  const [hotelForm, setHotelForm] = useState<Record<string, string>>({});
+  // Generic form state shared across group editors (only one group is active at a time,
+  // gated by inlineField). Keyed by show column name.
+  const [groupForm, setGroupForm] = useState<Record<string, string>>({});
 
   // Backend deal structured form state
   const [backendDealForm, setBackendDealForm] = useState<{
@@ -390,26 +391,28 @@ export default function ShowDetailPage() {
     updateMutation.mutate({ [inlineField]: val || null } as any);
   };
 
-  // --- Hotel group inline edit ---
-  const startHotelEdit = () => {
-    setInlineField("hotel_group");
-    setHotelForm({
-      hotel_name: show.hotel_name ?? "",
-      hotel_address: show.hotel_address ?? "",
-      hotel_confirmation: show.hotel_confirmation ?? "",
-      hotel_checkin: show.hotel_checkin ?? "",
-      hotel_checkout: show.hotel_checkout ?? "",
-    });
+  // --- Group editor helpers ---
+  // Seed groupForm from the current show and enter edit mode for a named group
+  const startGroupEdit = (groupKey: string, keys: (keyof Show)[]) => {
+    const seed: Record<string, string> = {};
+    for (const k of keys) seed[k as string] = ((show as any)?.[k] ?? "") as string;
+    setGroupForm(seed);
+    setInlineField(groupKey);
   };
 
-  const saveHotelGroup = () => {
-    updateMutation.mutate({
-      hotel_name: hotelForm.hotel_name || null,
-      hotel_address: hotelForm.hotel_address || null,
-      hotel_confirmation: hotelForm.hotel_confirmation || null,
-      hotel_checkin: hotelForm.hotel_checkin || null,
-      hotel_checkout: hotelForm.hotel_checkout || null,
-    } as any);
+  // Persist a subset of groupForm to the show, applying optional per-field normalizers
+  const saveGroup = (
+    keys: (keyof Show)[],
+    normalizers: Partial<Record<keyof Show, (v: string) => string>> = {},
+  ) => {
+    const patch: Record<string, string | null> = {};
+    for (const k of keys) {
+      const raw = groupForm[k as string] ?? "";
+      const fn = normalizers[k];
+      const val = fn && raw ? fn(raw) : raw;
+      patch[k as string] = val || null;
+    }
+    updateMutation.mutate(patch as any);
   };
 
   // --- Backend deal structured inline edit ---
@@ -459,6 +462,25 @@ export default function ShowDetailPage() {
     </div>
   );
 
+  // Compact check button rendered inside an inline-edit input/textarea.
+  // onMouseDown prevents the input from blurring first (which would double-fire the save).
+  const InlineSaveIcon = ({ onSave, position }: { onSave: () => void; position: "input" | "textarea" }) => (
+    <button
+      type="button"
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onSave}
+      disabled={updateMutation.isPending}
+      aria-label="Save"
+      className={cn(
+        "absolute h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)] disabled:opacity-50",
+        position === "input" && "right-1.5 top-1/2 -translate-y-1/2",
+        position === "textarea" && "right-1.5 bottom-1.5",
+      )}
+    >
+      <Check className="h-3.5 w-3.5" />
+    </button>
+  );
+
   // Renders a field with inline edit support only
   const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; structuredTime?: boolean; hideTbd?: boolean; phoneFormat?: boolean; placeholder?: string; currency?: boolean; compact?: boolean; labelHidden?: boolean }) => {
     // Inline editing for this specific field
@@ -491,30 +513,36 @@ export default function ShowDetailPage() {
         <div ref={inlineRef} className="space-y-1">
           <Label className="text-xs text-muted-foreground">{label}</Label>
           {opts?.multiline ? (
-            <Textarea
-              value={inlineValue}
-              onChange={(e) => setInlineValue(e.target.value)}
-              className="text-sm min-h-[44px] ring-1 ring-ring/40"
-              autoFocus
-              placeholder={opts?.placeholder}
-              onBlur={handleBlurSave}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
-              }}
-            />
+            <div className="relative">
+              <Textarea
+                value={inlineValue}
+                onChange={(e) => setInlineValue(e.target.value)}
+                className="text-sm min-h-[44px] ring-1 ring-ring/40 pr-10"
+                autoFocus
+                placeholder={opts?.placeholder}
+                onBlur={handleBlurSave}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
+                }}
+              />
+              <InlineSaveIcon onSave={handleBlurSave} position="textarea" />
+            </div>
           ) : (
-            <Input
-              value={inlineValue}
-              onChange={(e) => setInlineValue(e.target.value)}
-              className={cn("text-sm h-11 sm:h-9 ring-1 ring-ring/40", opts?.mono && "font-mono")}
-              placeholder={opts?.timeFormat ? "e.g. 9:00 AM or 2:30 PM" : undefined}
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); handleBlurSave(); }
-                if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
-              }}
-              onBlur={handleBlurSave}
-            />
+            <div className="relative">
+              <Input
+                value={inlineValue}
+                onChange={(e) => setInlineValue(e.target.value)}
+                className={cn("text-sm h-11 sm:h-9 ring-1 ring-ring/40 pr-10", opts?.mono && "font-mono")}
+                placeholder={opts?.timeFormat ? "e.g. 9:00 AM or 2:30 PM" : undefined}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); handleBlurSave(); }
+                  if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
+                }}
+                onBlur={handleBlurSave}
+              />
+              <InlineSaveIcon onSave={handleBlurSave} position="input" />
+            </div>
           )}
         </div>
       );
@@ -933,36 +961,91 @@ export default function ShowDetailPage() {
               />
             )}
 
-            {/* Departure — first chronologically */}
+            {/* Departure — first chronologically (group editor: time + notes) */}
             <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
-              {editField("departure_time", "Time", { alwaysShow: true, structuredTime: true })}
-              {recommendedDeparture && inlineField !== "departure_time" && !show.departure_time && !driveCardDismissed && !suggestionDismissed && (
-                <div className="-mt-2 flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs gap-1.5"
-                    onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture } as any)}
-                    disabled={updateMutation.isPending}
-                  >
-                    <Clock className="h-3 w-3" />
-                    Use {recommendedDeparture}
-                    <span className="text-muted-foreground">· load-in − drive − 45 min</span>
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (id) localStorage.setItem(`departure-suggestion-dismissed-${id}`, "true");
-                      setSuggestionDismissed(true);
+              {(() => {
+                const DEPARTURE_KEYS: (keyof Show)[] = ["departure_time", "departure_notes"];
+                const isEditing = inlineField === "departure_group";
+                const empty = !show.departure_time && !show.departure_notes;
+                const startEdit = () => startGroupEdit("departure_group", DEPARTURE_KEYS);
+
+                if (isEditing) {
+                  return (
+                    <div ref={inlineRef} className="space-y-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Time</Label>
+                        <TimeInput
+                          value={groupForm.departure_time ?? ""}
+                          onChange={(val) => setGroupForm(p => ({ ...p, departure_time: val }))}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Notes</Label>
+                        <Textarea
+                          value={groupForm.departure_notes ?? ""}
+                          onChange={(e) => setGroupForm(p => ({ ...p, departure_notes: e.target.value }))}
+                          className="text-sm min-h-[44px]"
+                          placeholder="e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am"
+                        />
+                      </div>
+                      <InlineActions
+                        onSave={() => saveGroup(DEPARTURE_KEYS, { departure_time: normalizeTime })}
+                        onCancel={cancelInline}
+                      />
+                    </div>
+                  );
+                }
+
+                if (empty) {
+                  return (
+                    <>
+                      <EmptyFieldPrompt label="departure" onClick={startEdit} />
+                      {recommendedDeparture && !driveCardDismissed && !suggestionDismissed && (
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1.5"
+                            onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture } as any)}
+                            disabled={updateMutation.isPending}
+                          >
+                            <Clock className="h-3 w-3" />
+                            Use {recommendedDeparture}
+                            <span className="text-muted-foreground">· load-in − drive − 45 min</span>
+                          </Button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (id) localStorage.setItem(`departure-suggestion-dismissed-${id}`, "true");
+                              setSuggestionDismissed(true);
+                            }}
+                            className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
+                            aria-label="Dismiss departure suggestion"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  );
+                }
+
+                return (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={startEdit}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
                     }}
-                    className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
-                    aria-label="Dismiss departure suggestion"
+                    className="w-full text-left space-y-2 card-pressable cursor-pointer"
                   >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-              {editField("departure_notes", "Notes", { multiline: true, alwaysShow: true, placeholder: "e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am" })}
+                    <FieldRow label="Time" value={show.departure_time} mono />
+                    <FieldRow label="Notes" value={show.departure_notes} />
+                  </div>
+                );
+              })()}
             </FieldGroup>
 
             <Separator />
@@ -1036,47 +1119,253 @@ export default function ShowDetailPage() {
                     <span className="text-sm">Add schedule items (load-in, doors, set…)</span>
                   </button>
                 )}
-                {editField("set_length", "Set Length", { alwaysShow: true })}
-                {(inlineField === "changeover_time" || show.changeover_time) ? editField("changeover_time", "Changeover Time", { structuredTime: true }) : null}
+                {(() => {
+                  const TIMING_KEYS: (keyof Show)[] = ["set_length", "changeover_time"];
+                  const isEditing = inlineField === "timing_group";
+                  const empty = !show.set_length && !show.changeover_time;
+                  const startEdit = () => startGroupEdit("timing_group", TIMING_KEYS);
+
+                  if (isEditing) {
+                    return (
+                      <div ref={inlineRef} className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Set Length</Label>
+                            <Input
+                              value={groupForm.set_length ?? ""}
+                              onChange={(e) => setGroupForm(p => ({ ...p, set_length: e.target.value }))}
+                              className="text-sm h-9"
+                              autoFocus
+                              placeholder="e.g. 60 min"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Changeover Time</Label>
+                            <TimeInput
+                              value={groupForm.changeover_time ?? ""}
+                              onChange={(val) => setGroupForm(p => ({ ...p, changeover_time: val }))}
+                            />
+                          </div>
+                        </div>
+                        <InlineActions
+                          onSave={() => saveGroup(TIMING_KEYS, { changeover_time: normalizeTime })}
+                          onCancel={cancelInline}
+                        />
+                      </div>
+                    );
+                  }
+
+                  if (empty) {
+                    return <EmptyFieldPrompt label="set length / changeover" onClick={startEdit} />;
+                  }
+
+                  return (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={startEdit}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
+                      }}
+                      className="w-full text-left space-y-2 card-pressable cursor-pointer"
+                    >
+                      <FieldRow label="Set Length" value={show.set_length} />
+                      <FieldRow label="Changeover" value={show.changeover_time} mono />
+                    </div>
+                  );
+                })()}
               </FieldGroup>
               </div>
 
               {/* Vertical divider (desktop only) */}
               <Separator orientation="vertical" className="hidden md:block h-auto" />
 
-              {/* Right column: Day of Show Contact + Load In + Parking */}
+              {/* Right column: Day of Show Contact + Arrival (load in + parking) */}
               <div className="space-y-6">
-                <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone} contentClassName="space-y-2">
-                  {editField("dos_contact_name", "Name", { alwaysShow: true, compact: true })}
-                  {editField("dos_contact_phone", "Phone", { mono: true, alwaysShow: true, phoneFormat: true, compact: true })}
+                <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone}>
+                  {(() => {
+                    const DOS_KEYS: (keyof Show)[] = ["dos_contact_name", "dos_contact_phone"];
+                    const isEditing = inlineField === "dos_group";
+                    const empty = !show.dos_contact_name && !show.dos_contact_phone;
+                    const startEdit = () => startGroupEdit("dos_group", DOS_KEYS);
+
+                    if (isEditing) {
+                      return (
+                        <div ref={inlineRef} className="space-y-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Name</Label>
+                            <Input
+                              value={groupForm.dos_contact_name ?? ""}
+                              onChange={(e) => setGroupForm(p => ({ ...p, dos_contact_name: e.target.value }))}
+                              className="text-sm h-9"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Phone</Label>
+                            <Input
+                              value={groupForm.dos_contact_phone ?? ""}
+                              onChange={(e) => setGroupForm(p => ({ ...p, dos_contact_phone: e.target.value }))}
+                              className="text-sm h-9 font-mono"
+                              inputMode="tel"
+                            />
+                          </div>
+                          <InlineActions
+                            onSave={() => saveGroup(DOS_KEYS, { dos_contact_phone: normalizePhone })}
+                            onCancel={cancelInline}
+                          />
+                        </div>
+                      );
+                    }
+
+                    if (empty) {
+                      return <EmptyFieldPrompt label="day of show contact" onClick={startEdit} />;
+                    }
+
+                    return (
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={startEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
+                        }}
+                        className="w-full text-left space-y-2 card-pressable cursor-pointer"
+                      >
+                        <FieldRow label="Name" value={show.dos_contact_name} compact />
+                        <FieldRow label="Phone" value={show.dos_contact_phone} mono compact />
+                      </div>
+                    );
+                  })()}
                 </FieldGroup>
 
-                <FieldGroup title="Load In" incomplete={!show.load_in_details}>
-                  {editField("load_in_details", "Load In", { multiline: true, alwaysShow: true, labelHidden: true })}
-                </FieldGroup>
+                <FieldGroup title="Arrival" incomplete={!show.load_in_details && !show.parking_notes}>
+                  {(() => {
+                    const ARRIVAL_KEYS: (keyof Show)[] = ["load_in_details", "parking_notes"];
+                    const isEditing = inlineField === "arrival_group";
+                    const empty = !show.load_in_details && !show.parking_notes;
+                    const startEdit = () => startGroupEdit("arrival_group", ARRIVAL_KEYS);
 
-                <FieldGroup title="Parking" incomplete={!show.parking_notes}>
-                  {editField("parking_notes", "Parking", { multiline: true, alwaysShow: true, labelHidden: true })}
+                    if (isEditing) {
+                      return (
+                        <div ref={inlineRef} className="space-y-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Load In</Label>
+                            <Textarea
+                              value={groupForm.load_in_details ?? ""}
+                              onChange={(e) => setGroupForm(p => ({ ...p, load_in_details: e.target.value }))}
+                              className="text-sm min-h-[44px]"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Parking</Label>
+                            <Textarea
+                              value={groupForm.parking_notes ?? ""}
+                              onChange={(e) => setGroupForm(p => ({ ...p, parking_notes: e.target.value }))}
+                              className="text-sm min-h-[44px]"
+                            />
+                          </div>
+                          <InlineActions onSave={() => saveGroup(ARRIVAL_KEYS)} onCancel={cancelInline} />
+                        </div>
+                      );
+                    }
+
+                    if (empty) {
+                      return <EmptyFieldPrompt label="arrival (load in / parking)" onClick={startEdit} />;
+                    }
+
+                    return (
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={startEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
+                        }}
+                        className="w-full text-left space-y-2 card-pressable cursor-pointer"
+                      >
+                        <FieldRow label="Load In" value={show.load_in_details} />
+                        <FieldRow label="Parking" value={show.parking_notes} />
+                      </div>
+                    );
+                  })()}
                 </FieldGroup>
               </div>
             </div>
 
             <Separator />
 
-            {/* Backline */}
-            <FieldGroup title="Backline" incomplete={!show.backline_provided}>
-              {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true, labelHidden: true })}
-            </FieldGroup>
-
-            <Separator />
-
             {/* At The Venue + Accommodations — paired two-column */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <FieldGroup title="At The Venue">
-                {editField("green_room_info", "Green Room", { multiline: true, alwaysShow: true })}
-                {editField("hospitality", "Hospitality", { multiline: true })}
-                {editField("wifi_network", "WiFi Network", { mono: true, alwaysShow: true })}
-                {editField("wifi_password", "WiFi Password", { mono: true, alwaysShow: true })}
+                {(() => {
+                  const VENUE_KEYS: (keyof Show)[] = ["green_room_info", "wifi_network", "wifi_password"];
+                  const isEditing = inlineField === "venue_group";
+                  const empty = !show.green_room_info && !show.wifi_network && !show.wifi_password;
+                  const startEdit = () => startGroupEdit("venue_group", VENUE_KEYS);
+
+                  if (isEditing) {
+                    return (
+                      <div ref={inlineRef} className="space-y-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Green Room</Label>
+                          <Textarea
+                            value={groupForm.green_room_info ?? ""}
+                            onChange={(e) => setGroupForm(p => ({ ...p, green_room_info: e.target.value }))}
+                            className="text-sm min-h-[44px]"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">WiFi Network</Label>
+                            <Input
+                              value={groupForm.wifi_network ?? ""}
+                              onChange={(e) => setGroupForm(p => ({ ...p, wifi_network: e.target.value }))}
+                              className="text-sm h-9 font-mono"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">WiFi Password</Label>
+                            <Input
+                              value={groupForm.wifi_password ?? ""}
+                              onChange={(e) => setGroupForm(p => ({ ...p, wifi_password: e.target.value }))}
+                              className="text-sm h-9 font-mono"
+                            />
+                          </div>
+                        </div>
+                        <InlineActions onSave={() => saveGroup(VENUE_KEYS)} onCancel={cancelInline} />
+                      </div>
+                    );
+                  }
+
+                  if (empty) {
+                    return <EmptyFieldPrompt label="venue details" onClick={startEdit} />;
+                  }
+
+                  return (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={startEdit}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
+                      }}
+                      className="w-full text-left space-y-2 card-pressable cursor-pointer"
+                    >
+                      <FieldRow label="Green Room" value={show.green_room_info} />
+                      {(show.wifi_network || show.wifi_password) ? (
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+                          <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">WiFi</span>
+                          <span className="text-sm text-foreground font-mono text-[13px]">
+                            {show.wifi_network || "—"} <span className="text-muted-foreground/60 px-1">/</span> {show.wifi_password || "—"}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })()}
               </FieldGroup>
 
               <Separator className="md:hidden" />
@@ -1085,31 +1374,35 @@ export default function ShowDetailPage() {
                 {(() => {
                   const hotelEmpty = !show.hotel_name && !show.hotel_address && !show.hotel_confirmation && !show.hotel_checkin && !show.hotel_checkout;
                   const isHotelInline = inlineField === "hotel_group";
+                  const HOTEL_KEYS: (keyof Show)[] = ["hotel_name", "hotel_address", "hotel_confirmation", "hotel_checkin", "hotel_checkout"];
+                  const startHotelEdit = () => startGroupEdit("hotel_group", HOTEL_KEYS);
 
                   if (isHotelInline) {
                     return (
                       <div ref={inlineRef} className="space-y-2">
                         <div className="space-y-1">
                           <Label className="text-xs text-muted-foreground">Name</Label>
-                          <Input value={hotelForm.hotel_name ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_name: e.target.value }))} className="text-sm h-9" autoFocus />
+                          <Input value={groupForm.hotel_name ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_name: e.target.value }))} className="text-sm h-9" autoFocus />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs text-muted-foreground">Address</Label>
-                          <Input value={hotelForm.hotel_address ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_address: e.target.value }))} className="text-sm h-9" />
+                          <Input value={groupForm.hotel_address ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_address: e.target.value }))} className="text-sm h-9" />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs text-muted-foreground">Confirmation #</Label>
-                          <Input value={hotelForm.hotel_confirmation ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_confirmation: e.target.value }))} className="text-sm h-9 font-mono" />
+                          <Input value={groupForm.hotel_confirmation ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_confirmation: e.target.value }))} className="text-sm h-9 font-mono" />
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Check In</Label>
-                          <Input value={hotelForm.hotel_checkin ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkin: e.target.value }))} className="text-sm h-9 font-mono" />
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Check In</Label>
+                            <Input value={groupForm.hotel_checkin ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_checkin: e.target.value }))} className="text-sm h-9 font-mono" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Check Out</Label>
+                            <Input value={groupForm.hotel_checkout ?? ""} onChange={(e) => setGroupForm(p => ({ ...p, hotel_checkout: e.target.value }))} className="text-sm h-9 font-mono" />
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Check Out</Label>
-                          <Input value={hotelForm.hotel_checkout ?? ""} onChange={(e) => setHotelForm(p => ({ ...p, hotel_checkout: e.target.value }))} className="text-sm h-9 font-mono" />
-                        </div>
-                        <InlineActions onSave={saveHotelGroup} onCancel={cancelInline} />
+                        <InlineActions onSave={() => saveGroup(HOTEL_KEYS)} onCancel={cancelInline} />
                       </div>
                     );
                   }
@@ -1148,11 +1441,29 @@ export default function ShowDetailPage() {
                         </div>
                       ) : null}
                       <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
-                      <FieldRow label="Check In" value={show.hotel_checkin} mono />
-                      <FieldRow label="Check Out" value={show.hotel_checkout} mono />
+                      {(show.hotel_checkin || show.hotel_checkout) ? (
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+                          <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Check In / Out</span>
+                          <span className="text-sm text-foreground font-mono text-[13px]">
+                            {show.hotel_checkin || "—"} <span className="text-muted-foreground/60 px-1">→</span> {show.hotel_checkout || "—"}
+                          </span>
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })()}
+              </FieldGroup>
+            </div>
+
+            <Separator />
+
+            {/* Extras — collapsible by default unless populated */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+              <FieldGroup title="Hospitality" collapsible defaultOpen={!!show.hospitality}>
+                {editField("hospitality", "Hospitality", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add hospitality notes" })}
+              </FieldGroup>
+              <FieldGroup title="Backline" collapsible defaultOpen={!!show.backline_provided}>
+                {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add backline notes" })}
               </FieldGroup>
             </div>
 
@@ -1170,8 +1481,8 @@ export default function ShowDetailPage() {
 
             <EmailAttachments showId={show.id} />
 
-            {/* Notes — always visible at bottom */}
-            <FieldGroup title="Notes">
+            {/* Notes — collapsed by default on fresh shows */}
+            <FieldGroup title="Notes" collapsible defaultOpen={!!show.additional_info}>
               {editField("additional_info", "Notes", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add notes" })}
             </FieldGroup>
           </div>
