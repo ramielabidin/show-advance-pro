@@ -1,11 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_SEC = 60;
 
 /** Return value only if non-empty, non-TBD, non-n/a */
 function val(v: unknown): string | null {
@@ -296,6 +300,27 @@ serve(async (req) => {
 
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const rl = await checkRateLimit({
+      admin: supabase,
+      bucket: "push-slack-daysheet",
+      key: `user:${user.id}`,
+      maxRequests: RATE_LIMIT_MAX,
+      windowSeconds: RATE_LIMIT_WINDOW_SEC,
+    });
+    if (!rl.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Try again in a minute." }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(rl.retryAfterSec ?? RATE_LIMIT_WINDOW_SEC),
+          },
+        }
+      );
+    }
 
     const { data: show, error: showError } = await supabase
       .from("shows")
