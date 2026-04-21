@@ -54,7 +54,6 @@ const T = {
   border:      [220, 213, 207] as [number, number, number],
   borderSoft:  [232, 226, 219] as [number, number, number],
   accent:      [52,  101, 56]  as [number, number, number],
-  accentLight: [237, 243, 236] as [number, number, number],
 } as const;
 
 // ─── Main component ─────────────────────────────────────────────────────────
@@ -81,42 +80,11 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       doc.rect(0, 0, PW, PH, "F");
 
       // ════════════════════════════════════════════════════════════════════
-      // HEADER — eyebrow + display venue + address + date
-      // Mirrors the header block in `DaysheetGuestView.tsx`.
+      // HEADER — display venue name + date + address
+      // Matches the in-app show detail header: large serif title, date on
+      // its own line in muted, address with pin below.
       // ════════════════════════════════════════════════════════════════════
-      let y = MT + 4;
-
-      // "RUN OF SHOW" eyebrow  (text-[11px] uppercase tracking-widest muted)
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.setTextColor(...T.muted);
-      doc.setCharSpace(1.8);
-      doc.text("RUN OF SHOW", ML, y);
-      doc.setCharSpace(0);
-
-      // Tour pill, top-right — pastel green chip
-      const tourName = (show as any).tours?.name;
-      if (tourName) {
-        const tourLabel = String(tourName).toUpperCase();
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(7);
-        doc.setCharSpace(1.2);
-        const tourW = doc.getTextWidth(tourLabel);
-        const pillPad = 9;
-        const pillH = 14;
-        const pillW = tourW + pillPad * 2 + 2;
-        const pillX = PW - MR - pillW;
-        const pillY = y - 10;
-
-        doc.setFillColor(...T.accentLight);
-        doc.roundedRect(pillX, pillY, pillW, pillH, pillH / 2, pillH / 2, "F");
-        doc.setTextColor(...T.accent);
-        doc.text(tourLabel, pillX + pillPad, y);
-        doc.setCharSpace(0);
-      }
-
-      // Gap must clear the 42pt venue ascenders (~30pt) + eyebrow descenders + breathing room.
-      y += 46;
+      let y = MT + 36;
 
       // Venue name — big serif display (approximates DM Serif Display)
       doc.setFont("times", "bold");
@@ -124,20 +92,28 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       doc.setTextColor(...T.ink);
       const venueLines = doc.splitTextToSize(show.venue_name, CW);
       doc.text(venueLines, ML, y);
-      y += venueLines.length * 42 - 6;
+      y += venueLines.length * 42 - 4;
 
-      // Address (or city fallback) with a small pin glyph
+      // Date — muted, just below the title (matches screenshot order)
+      const dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
+      y += 10;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(...T.muted);
+      doc.text(dateStr, ML, y);
+      y += 16;
+
+      // Address (or city fallback) with a small pin glyph — below date
       const rawAddr = val(show.venue_address)?.replace(/,?\s*United States$/i, "") ?? null;
       const cityStr = formatCityState(show.city);
       const locLine = rawAddr ?? cityStr ?? null;
       if (locLine) {
-        y += 8;
+        y += 4;
         const pinX = ML + 2;
-        const pinY = y - 5;
-        // Minimal MapPin stand-in: a small outlined ring with a dot center
+        const pinY = y - 4.5;
         doc.setDrawColor(...T.muted);
         doc.setLineWidth(0.8);
-        doc.circle(pinX, pinY, 3.2, "S");
+        doc.circle(pinX, pinY, 3, "S");
         doc.setFillColor(...T.muted);
         doc.circle(pinX, pinY, 0.9, "F");
 
@@ -149,15 +125,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
         y += locLines.length * 12;
       }
 
-      // Date — body text in foreground ink (matches guest page)
-      const dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
-      y += 8;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      doc.setTextColor(...T.ink);
-      doc.text(dateStr, ML, y);
-
-      y += 32;
+      y += 28;
 
       // ════════════════════════════════════════════════════════════════════
       // SCHEDULE — bordered card with mono times + subtle dividers
