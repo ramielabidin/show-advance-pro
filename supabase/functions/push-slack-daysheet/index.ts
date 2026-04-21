@@ -23,22 +23,6 @@ function stripCountry(addr: string): string {
   return addr.replace(/,\s*United States$/i, "");
 }
 
-function formatGuestList(raw: string): string | null {
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return null;
-    return parsed
-      .map((g: any) => {
-        const name = g.name || "Guest";
-        const plus = g.guests || g.plusOnes || g.plus_ones || 0;
-        return plus > 0 ? `${name} +${plus}` : name;
-      })
-      .join(", ");
-  } catch {
-    return raw;
-  }
-}
-
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00");
   return d.toLocaleDateString("en-US", {
@@ -117,42 +101,41 @@ function sanitizeAppUrl(raw: unknown): string | null {
 
 type Block = Record<string, unknown>;
 
-function sectionHeader(text: string): Block {
-  return { type: "section", text: { type: "mrkdwn", text } };
-}
-
-function sectionText(text: string): Block {
-  return { type: "section", text: { type: "mrkdwn", text } };
-}
-
-function fieldsBlock(fields: string[]): Block {
-  return {
-    type: "section",
-    fields: fields.map((text) => ({ type: "mrkdwn", text })),
-  };
-}
-
 /**
- * Render the band day sheet as Slack Block Kit blocks.
- * Band-relevant sections only, populated fields only.
+ * Render the band day sheet as a minimal Slack Block Kit "show card":
+ * venue header, date + address, Load In / Sound Check fields, and a
+ * primary button linking to the guest day sheet. Everything else lives
+ * behind the link.
  */
 function buildDaySheetBlocks(show: any, guestUrl: string | null): Block[] {
   const blocks: Block[] = [];
 
-  const pushDivider = () => {
-    if (blocks.length && (blocks[blocks.length - 1] as any).type !== "divider") {
-      blocks.push({ type: "divider" });
-    }
-  };
+  const venue = val(show.venue_name) ?? "Show";
+  blocks.push({
+    type: "header",
+    text: { type: "plain_text", text: venue.slice(0, 150), emoji: false },
+  });
 
-  const artist = val(show.teams?.name);
-  const venue = show.venue_name;
-  const heroLines: string[] = [];
-  heroLines.push(artist ? `*${artist} at ${venue}*` : `*${venue}*`);
-  heroLines.push(formatDate(show.date));
+  const dateAddrLines: string[] = [formatDate(show.date)];
   const addr = val(show.venue_address);
-  if (addr) heroLines.push(stripCountry(addr));
-  blocks.push(sectionText(heroLines.join("\n")));
+  if (addr) dateAddrLines.push(stripCountry(addr));
+  blocks.push({
+    type: "section",
+    text: { type: "mrkdwn", text: dateAddrLines.join("\n") },
+  });
+
+  const entries = Array.isArray(show.schedule_entries) ? show.schedule_entries : [];
+  const findTime = (re: RegExp): string => {
+    const hit = entries.find((e: any) => e?.label && re.test(String(e.label)));
+    return val(hit?.time) ?? "—";
+  };
+  blocks.push({
+    type: "section",
+    fields: [
+      { type: "mrkdwn", text: `*Load In*\n${findTime(/\bload[-\s]*in\b/i)}` },
+      { type: "mrkdwn", text: `*Sound Check*\n${findTime(/\bsound[-\s]*check\b/i)}` },
+    ],
+  });
 
   if (guestUrl) {
     blocks.push({
@@ -160,104 +143,13 @@ function buildDaySheetBlocks(show: any, guestUrl: string | null): Block[] {
       elements: [
         {
           type: "button",
-          text: { type: "plain_text", text: "Open Day Sheet", emoji: true },
+          text: { type: "plain_text", text: "View Day Sheet", emoji: false },
           url: guestUrl,
           style: "primary",
         },
       ],
     });
   }
-
-  if (show.schedule_entries?.length > 0) {
-    pushDivider();
-    blocks.push(sectionHeader("*🕐 SCHEDULE*"));
-    const sorted = [...show.schedule_entries].sort(
-      (a: any, b: any) => a.sort_order - b.sort_order
-    );
-    const fields: string[] = [];
-    for (const entry of sorted) {
-      const setInline =
-        entry.is_band && val(show.set_length) ? ` (${val(show.set_length)})` : "";
-      fields.push(`*${entry.time}*`);
-      fields.push(`${entry.label}${setInline}`);
-    }
-    for (let i = 0; i < fields.length; i += 8) {
-      blocks.push(fieldsBlock(fields.slice(i, i + 8)));
-    }
-  }
-
-  if (val(show.dos_contact_name) || val(show.dos_contact_phone)) {
-    pushDivider();
-    blocks.push(sectionHeader("*📞 DAY OF SHOW CONTACT*"));
-    const fields: string[] = [];
-    if (val(show.dos_contact_name)) fields.push(`*Name:* ${val(show.dos_contact_name)}`);
-    if (val(show.dos_contact_phone)) fields.push(`*Phone:* ${val(show.dos_contact_phone)}`);
-    blocks.push(fieldsBlock(fields));
-  }
-
-  if (val(show.departure_time) || val(show.departure_notes)) {
-    pushDivider();
-    blocks.push(sectionHeader("*🚗 DEPARTURE*"));
-    const parts: string[] = [];
-    if (val(show.departure_time)) parts.push(`*Time:* ${val(show.departure_time)}`);
-    if (val(show.departure_notes)) parts.push(`*Notes:* ${val(show.departure_notes)}`);
-    blocks.push(sectionText(parts.join("\n\n")));
-  }
-
-  if (val(show.parking_notes) || val(show.load_in_details)) {
-    pushDivider();
-    blocks.push(sectionHeader("*📍 ARRIVAL*"));
-    const parts: string[] = [];
-    if (val(show.parking_notes)) parts.push(`*Parking:* ${val(show.parking_notes)}`);
-    if (val(show.load_in_details)) parts.push(`*Load In:* ${val(show.load_in_details)}`);
-    blocks.push(sectionText(parts.join("\n\n")));
-  }
-
-  const hasGreenRoom = !!val(show.green_room_info);
-  const hasWifi = !!val(show.wifi_network) && !!val(show.wifi_password);
-  const hasHospitality = !!val(show.hospitality);
-  if (hasGreenRoom || hasWifi || hasHospitality) {
-    blocks.push(sectionHeader("*🎸 AT THE VENUE*"));
-    const parts: string[] = [];
-    if (hasGreenRoom) parts.push(`*Green Room:* ${val(show.green_room_info)}`);
-    if (hasWifi)
-      parts.push(
-        `*WiFi:* Network: ${val(show.wifi_network)} · Password: ${val(show.wifi_password)}`
-      );
-    if (hasHospitality) parts.push(`*Hospitality:* ${val(show.hospitality)}`);
-    blocks.push(sectionText(parts.join("\n\n")));
-  }
-
-  if (val(show.hotel_name)) {
-    pushDivider();
-    blocks.push(sectionHeader("*🏨 ACCOMMODATIONS*"));
-    const parts: string[] = [`*Hotel:* ${val(show.hotel_name)}`];
-    if (val(show.hotel_address)) parts.push(`*Address:* ${val(show.hotel_address)}`);
-    if (val(show.hotel_confirmation))
-      parts.push(`*Confirmation:* ${val(show.hotel_confirmation)}`);
-    const ci = val(show.hotel_checkin);
-    const co = val(show.hotel_checkout);
-    if (ci && co) parts.push(`*Check-in:* ${ci} · *Check-out:* ${co}`);
-    else if (ci) parts.push(`*Check-in:* ${ci}`);
-    else if (co) parts.push(`*Check-out:* ${co}`);
-    blocks.push(sectionText(parts.join("\n\n")));
-  }
-
-  if (val(show.guest_list_details)) {
-    const formatted = formatGuestList(val(show.guest_list_details)!);
-    if (formatted) {
-      pushDivider();
-      blocks.push(sectionHeader("*📝 GUEST LIST*"));
-      blocks.push(sectionText(formatted));
-    }
-  }
-
-  blocks.push({
-    type: "context",
-    elements: [
-      { type: "mrkdwn", text: "Sent with <https://app.advancetouring.com|Advance>" },
-    ],
-  });
 
   return blocks;
 }
