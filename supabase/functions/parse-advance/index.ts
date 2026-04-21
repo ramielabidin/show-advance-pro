@@ -176,7 +176,7 @@ Simplify and clarify the language for the touring crew:
 - Example: "For parking, please come around to the back of the venue on 23rd Street and pull into the loading zone. It fits a 15-foot van. After you unload, kindly move the vehicle to the public lot directly across the street — they validate for us." → "Loading zone on 23rd St (back of venue). Fits 15-ft van. Move to public lot across street after load-in (validated)."`;
 
     const requestBody = JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
+      model: "claude-sonnet-4-6",
       max_tokens: 4096,
       system: systemPrompt,
       messages: [
