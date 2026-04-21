@@ -158,10 +158,7 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
                   <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">WiFi</span>
                   <div className="flex flex-col gap-0.5">
                     {show.wifi_network && (
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm text-foreground font-mono text-[13px]">{show.wifi_network}</span>
-                        <CopyButton value={show.wifi_network} />
-                      </div>
+                      <span className="text-sm text-foreground font-mono text-[13px]">{show.wifi_network}</span>
                     )}
                     {show.wifi_password && (
                       <div className="flex items-center gap-1">
