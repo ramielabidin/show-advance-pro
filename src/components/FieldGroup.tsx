@@ -37,11 +37,11 @@ export default function FieldGroup({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="flex items-center gap-1.5 mb-3 w-full text-left group"
+          className="relative mb-3 w-full text-left group"
         >
           <ChevronRight
             className={cn(
-              "h-3 w-3 shrink-0 text-muted-foreground/60 group-hover:text-foreground [transition:transform_160ms_var(--ease-out),color_150ms_var(--ease-out)]",
+              "absolute -left-4 top-1/2 -translate-y-1/2 h-3 w-3 shrink-0 text-muted-foreground/60 group-hover:text-foreground [transition:transform_160ms_var(--ease-out),color_150ms_var(--ease-out)]",
               open && "rotate-90"
             )}
           />
