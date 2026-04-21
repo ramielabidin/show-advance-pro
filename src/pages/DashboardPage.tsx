@@ -23,6 +23,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn, formatCityState } from "@/lib/utils";
+import { to24Hour } from "@/lib/timeFormat";
+import { isLoadInLabel, isDoorsLabel } from "@/lib/scheduleMatch";
 import CreateShowDialog from "@/components/CreateShowDialog";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
 import TourPicker from "@/components/TourPicker";
@@ -65,31 +67,6 @@ type DashCards =
 function isUpcomingDate(date: string): boolean {
   const d = parseISO(date);
   return isToday(d) || !isPast(d);
-}
-
-function to24Hour(timeStr: string | null | undefined): string | null {
-  if (!timeStr) return null;
-  const s = timeStr.trim();
-  if (!s || /^(tbd|n\/a)$/i.test(s)) return null;
-
-  const withAmPm = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (withAmPm) {
-    let h = parseInt(withAmPm[1], 10);
-    const m = withAmPm[2];
-    const ap = withAmPm[3].toUpperCase();
-    if (ap === "PM" && h < 12) h += 12;
-    if (ap === "AM" && h === 12) h = 0;
-    return `${String(h).padStart(2, "0")}:${m}`;
-  }
-
-  const noAmPm = s.match(/^(\d{1,2}):(\d{2})$/);
-  if (noAmPm) {
-    const h = parseInt(noAmPm[1], 10);
-    if (h < 0 || h > 23) return null;
-    return `${String(h).padStart(2, "0")}:${noAmPm[2]}`;
-  }
-
-  return null;
 }
 
 function parseScope(raw: string | null): Scope | null {
@@ -152,7 +129,7 @@ export default function DashboardPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tours")
-        .select("*, shows(*)")
+        .select("*, shows(*, schedule_entries(*))")
         .order("start_date", { ascending: true });
       if (error) throw error;
       return data as TourWithShows[];
@@ -927,9 +904,9 @@ function FeaturedShowCard({
 
   const entries = show.schedule_entries ?? [];
   const loadInEntry = entries
-    .filter((e) => /load\s*-?\s*in/i.test(e.label))
-    .sort((a, b) => (a.time || "").localeCompare(b.time || ""))[0];
-  const doorsEntry = entries.find((e) => /doors?/i.test(e.label));
+    .filter((e) => isLoadInLabel(e.label))
+    .sort((a, b) => (to24Hour(a.time) ?? "").localeCompare(to24Hour(b.time) ?? ""))[0];
+  const doorsEntry = entries.find((e) => isDoorsLabel(e.label));
   const bandEntry = entries.find((e) => e.is_band);
 
   const loadInTime = to24Hour(loadInEntry?.time);
