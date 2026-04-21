@@ -1193,24 +1193,22 @@ export default function ShowDetailPage() {
                 if (isEditing) {
                   return (
                     <div ref={inlineRef} className="space-y-2">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Load In</Label>
-                          <Textarea
-                            value={groupForm.load_in_details ?? ""}
-                            onChange={(e) => setGroupForm(p => ({ ...p, load_in_details: e.target.value }))}
-                            className="text-sm min-h-[44px]"
-                            autoFocus
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Parking</Label>
-                          <Textarea
-                            value={groupForm.parking_notes ?? ""}
-                            onChange={(e) => setGroupForm(p => ({ ...p, parking_notes: e.target.value }))}
-                            className="text-sm min-h-[44px]"
-                          />
-                        </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Load In</Label>
+                        <Textarea
+                          value={groupForm.load_in_details ?? ""}
+                          onChange={(e) => setGroupForm(p => ({ ...p, load_in_details: e.target.value }))}
+                          className="text-sm min-h-[44px]"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Parking</Label>
+                        <Textarea
+                          value={groupForm.parking_notes ?? ""}
+                          onChange={(e) => setGroupForm(p => ({ ...p, parking_notes: e.target.value }))}
+                          className="text-sm min-h-[44px]"
+                        />
                       </div>
                       <InlineActions onSave={() => saveGroup(ARRIVAL_KEYS)} onCancel={cancelInline} />
                     </div>
@@ -1229,7 +1227,7 @@ export default function ShowDetailPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(); }
                     }}
-                    className="w-full text-left grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 card-pressable cursor-pointer"
+                    className="w-full text-left space-y-2 card-pressable cursor-pointer"
                   >
                     <FieldRow label="Load In" value={show.load_in_details} />
                     <FieldRow label="Parking" value={show.parking_notes} />
