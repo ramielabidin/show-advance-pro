@@ -5,6 +5,68 @@ import { cn } from "@/lib/utils";
 const IS_MAC = typeof navigator !== "undefined" &&
   /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent);
 
+const INLINE_CHROME_CLASS = cn(
+  "w-full bg-transparent border-0 border-b border-dashed border-foreground/40 rounded-none",
+  "focus:outline-none focus:border-foreground/60",
+  "py-1 px-0 leading-[1.55] text-[13px] text-foreground placeholder:text-muted-foreground/60",
+);
+
+interface InlineFieldProps {
+  value: string;
+  onChange: (val: string) => void;
+  multiline?: boolean;
+  mono?: boolean;
+  autoFocus?: boolean;
+  placeholder?: string;
+  inputMode?: "text" | "numeric" | "tel" | "decimal" | "email" | "url";
+  className?: string;
+}
+
+/**
+ * Chromeless text input / textarea sharing the same dashed-underline look
+ * as `InlineEditable`, but without the keyboard/blur/save lifecycle —
+ * intended for multi-field group editors where the parent owns the save
+ * button and the fields aren't individually committable.
+ */
+export function InlineField({
+  value,
+  onChange,
+  multiline = false,
+  mono = false,
+  autoFocus,
+  placeholder,
+  inputMode,
+  className,
+}: InlineFieldProps) {
+  const cls = cn(
+    INLINE_CHROME_CLASS,
+    mono ? "font-mono" : "font-sans",
+    multiline && "min-h-[72px] resize-y",
+    className,
+  );
+  return multiline ? (
+    <textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      autoFocus={autoFocus}
+      placeholder={placeholder}
+      enterKeyHint="done"
+      className={cls}
+    />
+  ) : (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      autoFocus={autoFocus}
+      placeholder={placeholder}
+      enterKeyHint="done"
+      inputMode={inputMode}
+      className={cls}
+    />
+  );
+}
+
 interface InlineEditableProps {
   value: string;
   onChange: (val: string) => void;
@@ -82,9 +144,7 @@ export default function InlineEditable({
   };
 
   const inputClassName = cn(
-    "w-full bg-transparent border-0 border-b border-dashed border-foreground/40 rounded-none",
-    "focus:outline-none focus:border-foreground/60",
-    "py-1 px-0 leading-[1.55] text-[13px] text-foreground placeholder:text-muted-foreground/60",
+    INLINE_CHROME_CLASS,
     mono ? "font-mono" : "font-sans",
     multiline && "min-h-[72px] resize-y",
     className,
