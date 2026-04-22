@@ -45,18 +45,23 @@ interface TourScopedHeaderProps {
 export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: TourScopedHeaderProps) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState<{ name: string; notes: string }>({
+  const [form, setForm] = useState<{ name: string; notes: string; startDate: string; endDate: string }>({
     name: tour.name,
     notes: tour.notes ?? "",
+    startDate: "",
+    endDate: "",
   });
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [linkingOpen, setLinkingOpen] = useState(false);
   const [selectedShowId, setSelectedShowId] = useState("");
 
   const sortedShows = [...tourShows].sort((a, b) => a.date.localeCompare(b.date));
-  const start = sortedShows[0]?.date ?? null;
-  const end = sortedShows[sortedShows.length - 1]?.date ?? null;
-  const settledCount = tourShows.filter((s) => (s as any).is_settled).length;
+  const computedStart = sortedShows[0]?.date ?? null;
+  const computedEnd = sortedShows[sortedShows.length - 1]?.date ?? null;
+  // Explicit tour.start_date / end_date override the computed show range.
+  const start = tour.start_date ?? computedStart;
+  const end = tour.end_date ?? computedEnd;
+  const settledCount = tourShows.filter((s) => s.is_settled).length;
 
   const { data: standaloneShows = [] } = useQuery({
     queryKey: ["standalone-shows"],
@@ -73,10 +78,18 @@ export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: Tou
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (updates: { name: string; notes: string }) => {
+    mutationFn: async (updates: { name: string; notes: string; startDate: string; endDate: string }) => {
+      if (updates.startDate && updates.endDate && updates.startDate > updates.endDate) {
+        throw new Error("Start date must be on or before end date.");
+      }
       const { error } = await supabase
         .from("tours")
-        .update({ name: updates.name, notes: updates.notes || null })
+        .update({
+          name: updates.name,
+          notes: updates.notes || null,
+          start_date: updates.startDate || null,
+          end_date: updates.endDate || null,
+        })
         .eq("id", tour.id);
       if (error) throw error;
     },
@@ -122,7 +135,12 @@ export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: Tou
   });
 
   const startEdit = () => {
-    setForm({ name: tour.name, notes: tour.notes ?? "" });
+    setForm({
+      name: tour.name,
+      notes: tour.notes ?? "",
+      startDate: tour.start_date ?? "",
+      endDate: tour.end_date ?? "",
+    });
     setEditing(true);
   };
 
@@ -209,13 +227,48 @@ export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: Tou
       </div>
 
       {editing && (
-        <div className="space-y-2 mb-3 rounded-lg border bg-card p-3">
-          <Label className="text-xs">Notes</Label>
-          <Textarea
-            value={form.notes}
-            onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            placeholder="Internal notes for this tour…"
-          />
+        <div className="space-y-3 mb-3 rounded-lg border bg-card p-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs" htmlFor="tour-start-date">Start date</Label>
+              <Input
+                id="tour-start-date"
+                type="date"
+                value={form.startDate}
+                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                placeholder={computedStart ?? ""}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {computedStart
+                  ? `Leave empty to use first show (${format(parseISO(computedStart), "MMM d, yyyy")}).`
+                  : "Leave empty to auto-set when shows are added."}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs" htmlFor="tour-end-date">End date</Label>
+              <Input
+                id="tour-end-date"
+                type="date"
+                value={form.endDate}
+                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                placeholder={computedEnd ?? ""}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {computedEnd
+                  ? `Leave empty to use last show (${format(parseISO(computedEnd), "MMM d, yyyy")}).`
+                  : "Leave empty to auto-set when shows are added."}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs" htmlFor="tour-notes">Notes</Label>
+            <Textarea
+              id="tour-notes"
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="Internal notes for this tour…"
+            />
+          </div>
         </div>
       )}
 
