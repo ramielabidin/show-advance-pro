@@ -49,7 +49,6 @@ export interface RenderShow extends ShowLike {
 
 export interface RenderOptions {
   personalMessage?: string | null;
-  senderName?: string | null;
 }
 
 export interface RenderedEmail {
@@ -150,19 +149,27 @@ function sectionCard(title: string, innerHtml: string): string {
   </td></tr>`;
 }
 
-function fieldRow(label: string, value: string | null | undefined, opts: { mono?: boolean } = {}): string {
+function fieldRow(
+  label: string,
+  value: string | null | undefined,
+  opts: { mono?: boolean; href?: string } = {},
+): string {
   const v = val(value);
   if (!v) return "";
   const valueFont = opts.mono ? T.mono : T.sans;
   const valueSize = opts.mono ? "13px" : "14px";
+  const body = nl2br(v);
+  const content = opts.href
+    ? `<a href="${escapeHtml(opts.href)}" style="color:${T.fg};text-decoration:underline;">${body}</a>`
+    : body;
   // Return just the <tr> — the enclosing <table> is supplied by fieldTable()
   // so every row in a card shares one column layout. Per-row tables make
   // Gmail re-compute label width per row, which makes "Load In" wrap and
   // short values like "8:30 AM" float away from their label.
   return `
     <tr>
-      <td valign="top" style="font-family:${T.sans};font-size:14px;line-height:1.5;color:${T.muted};padding:4px 12px 4px 0;vertical-align:top;">${escapeHtml(label)}</td>
-      <td valign="top" style="font-family:${valueFont};font-size:${valueSize};line-height:1.5;color:${T.fg};padding:4px 0;vertical-align:top;white-space:pre-wrap;word-break:break-word;">${nl2br(v)}</td>
+      <td valign="top" style="font-family:${T.sans};font-size:14px;line-height:1.5;color:${T.muted};padding:10px 12px 10px 0;vertical-align:top;">${escapeHtml(label)}</td>
+      <td valign="top" style="font-family:${valueFont};font-size:${valueSize};line-height:1.5;color:${T.fg};padding:10px 0;vertical-align:top;white-space:pre-wrap;word-break:break-word;">${content}</td>
     </tr>`;
 }
 
@@ -250,9 +257,13 @@ function renderAtVenue(show: RenderShow): string {
 }
 
 function renderHotel(show: RenderShow): string {
+  const addr = val(show.hotel_address);
+  const mapUrl = addr
+    ? `https://maps.google.com/?q=${encodeURIComponent(stripCountry(addr))}`
+    : undefined;
   const inner = fieldTable(
     fieldRow("Name", show.hotel_name) +
-      fieldRow("Address", show.hotel_address) +
+      fieldRow("Address", show.hotel_address, mapUrl ? { href: mapUrl } : {}) +
       fieldRow("Confirmation #", show.hotel_confirmation, { mono: true }) +
       fieldRow("Check In", show.hotel_checkin, { mono: true }) +
       fieldRow("Check Out", show.hotel_checkout, { mono: true }),
@@ -281,17 +292,13 @@ function renderNotes(show: RenderShow): string {
   return sectionCard("Notes", freeTextRow(notes));
 }
 
-function renderPersonalMessage(message: string | null | undefined, senderName: string | null | undefined): string {
+function renderPersonalMessage(message: string | null | undefined): string {
   const msg = val(message);
   if (!msg) return "";
-  const fromLine = senderName
-    ? `<div style="font-family:${T.sans};font-size:11px;line-height:1.4;letter-spacing:0.12em;text-transform:uppercase;color:${T.muted};font-weight:500;margin:0 0 8px 0;">From ${escapeHtml(senderName)}</div>`
-    : "";
   return `
   <tr><td style="padding:0 0 24px 0;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-left:3px solid ${T.border};background:${T.cardBg};border-radius:4px;">
       <tr><td style="padding:14px 18px;">
-        ${fromLine}
         <div style="font-family:${T.sans};font-size:15px;line-height:1.55;color:${T.fg};white-space:pre-wrap;word-break:break-word;">${nl2br(msg)}</div>
       </td></tr>
     </table>
@@ -349,8 +356,7 @@ function renderPlainText(show: RenderShow, opts: RenderOptions): string {
 
   const personal = val(opts.personalMessage);
   if (personal) {
-    const prefix = opts.senderName ? `From ${opts.senderName}:\n` : "";
-    parts.push(`${prefix}${personal}`);
+    parts.push(personal);
   }
 
   if (hasData(show, "schedule") && show.schedule_entries?.length) {
@@ -438,7 +444,7 @@ export function buildSubject(show: RenderShow): string {
 export function renderDaysheetEmail(show: RenderShow, opts: RenderOptions = {}): RenderedEmail {
   const blocks: string[] = [];
   blocks.push(renderHeader(show));
-  blocks.push(renderPersonalMessage(opts.personalMessage, opts.senderName));
+  blocks.push(renderPersonalMessage(opts.personalMessage));
 
   // Order mirrors DaysheetGuestView: Schedule, Contact, Departure, Arrival,
   // At The Venue, Accommodations, Guest List, Notes.

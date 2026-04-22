@@ -124,18 +124,19 @@ describe("renderDaysheetEmail", () => {
   it("renders the personal note above the first section when provided", () => {
     const { html } = renderDaysheetEmail(baseShow(), {
       personalMessage: "Pumped for this one — see y'all there.",
-      senderName: "Ryan",
     });
     const messageIdx = html.indexOf("Pumped for this one");
     const scheduleIdx = html.indexOf(">Schedule<");
     expect(messageIdx).toBeGreaterThan(-1);
     expect(messageIdx).toBeLessThan(scheduleIdx);
-    expect(html).toContain("From Ryan");
+    // The block carries no "From <sender>" preamble — the message itself
+    // is rendered raw inside the left-bordered card. Recipients already see
+    // the sender in the From header.
+    expect(html).toContain("border-left:3px solid");
   });
 
   it("omits the personal-message block entirely when the note is empty", () => {
     const { html } = renderDaysheetEmail(baseShow(), { personalMessage: "   " });
-    expect(html).not.toContain("From ");
     expect(html).not.toContain("border-left:3px solid");
   });
 

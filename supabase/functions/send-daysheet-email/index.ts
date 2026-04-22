@@ -185,10 +185,7 @@ serve(async (req) => {
       artist_name: show.teams?.name ?? null,
     };
 
-    const rendered = renderDaysheetEmail(renderShow, {
-      personalMessage,
-      senderName,
-    });
+    const rendered = renderDaysheetEmail(renderShow, { personalMessage });
     const subject = subjectOverride || buildSubject(renderShow);
 
     const payload: SendGridPayload = {
