@@ -155,12 +155,25 @@ function fieldRow(label: string, value: string | null | undefined, opts: { mono?
   if (!v) return "";
   const valueFont = opts.mono ? T.mono : T.sans;
   const valueSize = opts.mono ? "13px" : "14px";
+  // Return just the <tr> — the enclosing <table> is supplied by fieldTable()
+  // so every row in a card shares one column layout. Per-row tables make
+  // Gmail re-compute label width per row, which makes "Load In" wrap and
+  // short values like "8:30 AM" float away from their label.
   return `
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0;">
     <tr>
-      <td style="font-family:${T.sans};font-size:14px;line-height:1.5;color:${T.muted};padding:4px 12px 4px 0;width:128px;vertical-align:top;">${escapeHtml(label)}</td>
-      <td style="font-family:${valueFont};font-size:${valueSize};line-height:1.5;color:${T.fg};padding:4px 0;vertical-align:top;white-space:pre-wrap;word-break:break-word;">${nl2br(v)}</td>
-    </tr>
+      <td valign="top" style="font-family:${T.sans};font-size:14px;line-height:1.5;color:${T.muted};padding:4px 12px 4px 0;vertical-align:top;">${escapeHtml(label)}</td>
+      <td valign="top" style="font-family:${valueFont};font-size:${valueSize};line-height:1.5;color:${T.fg};padding:4px 0;vertical-align:top;white-space:pre-wrap;word-break:break-word;">${nl2br(v)}</td>
+    </tr>`;
+}
+
+function fieldTable(rowsHtml: string): string {
+  if (!rowsHtml.trim()) return "";
+  // table-layout:fixed + <colgroup> locks the label column width across all
+  // rows in the card — otherwise Gmail's auto-layout algorithm collapses
+  // the label when the value is a long multi-line block.
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;border-collapse:collapse;">
+    <colgroup><col style="width:128px;" /><col /></colgroup>
+    ${rowsHtml}
   </table>`;
 }
 
@@ -201,26 +214,26 @@ function renderSchedule(show: RenderShow): string {
 }
 
 function renderContact(show: RenderShow): string {
-  const inner = [
-    fieldRow("Name", show.dos_contact_name),
-    fieldRow("Phone", show.dos_contact_phone, { mono: true }),
-  ].join("");
+  const inner = fieldTable(
+    fieldRow("Name", show.dos_contact_name) +
+      fieldRow("Phone", show.dos_contact_phone, { mono: true }),
+  );
   return sectionCard("Day of Show Contact", inner);
 }
 
 function renderDeparture(show: RenderShow): string {
-  const inner = [
-    fieldRow("Time", show.departure_time, { mono: true }),
-    fieldRow("Notes", show.departure_notes),
-  ].join("");
+  const inner = fieldTable(
+    fieldRow("Time", show.departure_time, { mono: true }) +
+      fieldRow("Notes", show.departure_notes),
+  );
   return sectionCard("Departure", inner);
 }
 
 function renderArrival(show: RenderShow): string {
-  const inner = [
-    hasData(show, "loadIn") ? fieldRow("Load In", show.load_in_details) : "",
-    hasData(show, "parking") ? fieldRow("Parking", show.parking_notes) : "",
-  ].join("");
+  const inner = fieldTable(
+    (hasData(show, "loadIn") ? fieldRow("Load In", show.load_in_details) : "") +
+      (hasData(show, "parking") ? fieldRow("Parking", show.parking_notes) : ""),
+  );
   return sectionCard("Arrival", inner);
 }
 
@@ -233,17 +246,17 @@ function renderAtVenue(show: RenderShow): string {
     const wifiValue = [network, password].filter(Boolean).join("\n");
     rows.push(fieldRow("WiFi", wifiValue, { mono: true }));
   }
-  return sectionCard("At The Venue", rows.join(""));
+  return sectionCard("At The Venue", fieldTable(rows.join("")));
 }
 
 function renderHotel(show: RenderShow): string {
-  const inner = [
-    fieldRow("Name", show.hotel_name),
-    fieldRow("Address", show.hotel_address),
-    fieldRow("Confirmation #", show.hotel_confirmation, { mono: true }),
-    fieldRow("Check In", show.hotel_checkin, { mono: true }),
-    fieldRow("Check Out", show.hotel_checkout, { mono: true }),
-  ].join("");
+  const inner = fieldTable(
+    fieldRow("Name", show.hotel_name) +
+      fieldRow("Address", show.hotel_address) +
+      fieldRow("Confirmation #", show.hotel_confirmation, { mono: true }) +
+      fieldRow("Check In", show.hotel_checkin, { mono: true }) +
+      fieldRow("Check Out", show.hotel_checkout, { mono: true }),
+  );
   return sectionCard("Accommodations", inner);
 }
 
