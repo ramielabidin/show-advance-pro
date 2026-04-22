@@ -61,39 +61,50 @@ export default function SetListPdfDialog({ show, entries, trigger }: Props) {
       doc.rect(0, 0, PW, PH, "F");
 
       // ════════════════════════════════════════════════════════════════════
-      // HEADER — venue + date + location (mirrors ExportPdfDialog)
+      // HEADER — venue left, date + city stacked right, baseline-anchored
+      //
+      // Date/city share the last line of the venue block. If the venue name
+      // is long enough to wrap, the right-side metadata still aligns to the
+      // last venue line's baseline.
       // ════════════════════════════════════════════════════════════════════
-      let y = MT + 36;
 
+      const cityStr = formatCityState(show.city);
+      const dateStr = format(parseISO(show.date), "EEE, MMM d, yyyy");
+      const rightReserveW = cityStr ? 200 : 170;
+      const venueMaxW = CW - rightReserveW - 16;
+
+      const VENUE_FS = 38;
       doc.setFont("times", "bold");
-      doc.setFontSize(38);
+      doc.setFontSize(VENUE_FS);
       doc.setTextColor(...T.ink);
-      const venueLines = doc.splitTextToSize(show.venue_name, CW);
-      doc.text(venueLines, ML, y);
-      y += venueLines.length * 38 - 4;
+      const venueLines = doc.splitTextToSize(show.venue_name, venueMaxW);
 
-      const dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
-      y += 10;
+      const firstBaselineY = MT + 36;
+      doc.text(venueLines, ML, firstBaselineY);
+      const lastVenueBaseline = firstBaselineY + (venueLines.length - 1) * VENUE_FS;
+
+      // Right-aligned date at the venue's last baseline
+      const rightX = ML + CW;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
       doc.setTextColor(...T.muted);
-      doc.text(dateStr, ML, y);
-      y += 16;
+      doc.text(dateStr, rightX, lastVenueBaseline, { align: "right" });
 
-      const cityStr = formatCityState(show.city);
       if (cityStr) {
-        y += 4;
-        doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
-        doc.setTextColor(...T.muted);
-        doc.text(cityStr, ML, y);
-        y += 12;
+        doc.setTextColor(...T.mutedSoft);
+        doc.text(cityStr, rightX, lastVenueBaseline + 14, { align: "right" });
       }
 
-      y += 12;
+      // Advance from the bottom of the header block to the first song
+      let y = lastVenueBaseline + (cityStr ? 14 : 0) + 22;
 
       // ════════════════════════════════════════════════════════════════════
-      // SET LIST — bordered card with auto-sized rows
+      // SET LIST — unboxed, numbered list with auto-sized rows
+      //
+      // No card border, fill, or dividers — the numbers provide all the
+      // visual structure needed, and the output stays legible when printed
+      // in black and white.
       //
       // Fit strategy (one-page guarantee is the hard constraint):
       //   1. Try single-column with a readable 14pt floor.
@@ -110,15 +121,13 @@ export default function SetListPdfDialog({ show, entries, trigger }: Props) {
       const FONT_MIN_DOUBLE = 11;
       const STEP = 0.5;
       const LINE_GAP = 1.6;
-      const CARD_PAD_Y = 14;
-      const CARD_PAD_X = 18;
 
       const rowCount = entries.length;
 
       const fit = (columns: number, floor: number) => {
         const rowsPerCol = Math.ceil(rowCount / columns);
         const heightAt = (fs: number) =>
-          rowCount === 0 ? 0 : CARD_PAD_Y * 2 + rowsPerCol * fs * LINE_GAP;
+          rowCount === 0 ? 0 : rowsPerCol * fs * LINE_GAP;
         let fs = FONT_MAX;
         while (fs > floor && heightAt(fs) > availableH) fs -= STEP;
         return { fs, fits: heightAt(fs) <= availableH, rowsPerCol };
@@ -133,25 +142,16 @@ export default function SetListPdfDialog({ show, entries, trigger }: Props) {
       const rowsPerCol = chosen.rowsPerCol;
 
       const rowH = fontSize * LINE_GAP;
-      const cardH = rowCount === 0 ? 0 : CARD_PAD_Y * 2 + rowsPerCol * rowH;
-      const cardW = CW;
-      const cardX = ML;
-      const cardY = y;
-
-      doc.setFillColor(...T.card);
-      doc.roundedRect(cardX, cardY, cardW, cardH, 10, 10, "F");
-
       const colGap = 28;
-      const totalInnerW = cardW - CARD_PAD_X * 2;
-      const colW = (totalInnerW - (columns - 1) * colGap) / columns;
+      const colW = (CW - (columns - 1) * colGap) / columns;
 
       let visibleIdx = 0;
 
       for (let c = 0; c < columns; c++) {
-        const colX = cardX + CARD_PAD_X + c * (colW + colGap);
+        const colX = ML + c * (colW + colGap);
         const numColX = colX;
         const titleColX = numColX + fontSize * 2.2;
-        let rowY = cardY + CARD_PAD_Y + rowH * 0.7;
+        let rowY = y + rowH * 0.7;
 
         const startI = c * rowsPerCol;
         const endI = Math.min(startI + rowsPerCol, rowCount);
@@ -178,22 +178,9 @@ export default function SetListPdfDialog({ show, entries, trigger }: Props) {
             doc.text(titleOf(entry), numColX, rowY);
           }
 
-          // Hairline divider within this column (not after the last row)
-          if (i < endI - 1) {
-            const divY = cardY + CARD_PAD_Y + (i - startI + 1) * rowH;
-            doc.setDrawColor(...T.borderSoft);
-            doc.setLineWidth(0.4);
-            doc.line(colX, divY, colX + colW, divY);
-          }
-
           rowY += rowH;
         }
       }
-
-      // Border last so it sits on top of any fills
-      doc.setDrawColor(...T.border);
-      doc.setLineWidth(0.6);
-      doc.roundedRect(cardX, cardY, cardW, cardH, 10, 10, "S");
 
       // ════════════════════════════════════════════════════════════════════
       // FOOTER
