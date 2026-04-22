@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save, UserPlus, Trash2, Crown, Plus, Pencil, X, Users, Loader2, Music, Copy, Mail } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -123,7 +123,7 @@ export default function SettingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inbound_parse_events")
-        .select("id, email_subject, from_address, status, created_at")
+        .select("id, email_subject, from_address, status, created_at, reviewed_show_id")
         .eq("team_id", teamId!)
         .order("created_at", { ascending: false })
         .limit(10);
@@ -818,31 +818,48 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {recentInboundEvents.map((e) => (
-                    <div
-                      key={e.id}
-                      className="flex items-center justify-between rounded-md border px-3 py-2 gap-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {e.email_subject || "(no subject)"}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {e.from_address || "unknown sender"} · {formatDistanceToNow(new Date(e.created_at), { addSuffix: true })}
-                        </p>
+                  {recentInboundEvents.map((e) => {
+                    const linkTo =
+                      e.status === "reviewed" && e.reviewed_show_id
+                        ? `/shows/${e.reviewed_show_id}`
+                        : null;
+                    const rowClass = cn(
+                      "flex items-center justify-between rounded-md border px-3 py-2 gap-2",
+                      linkTo &&
+                        "hover:bg-accent/40 hover:border-border [transition:background-color_150ms_var(--ease-out),border-color_150ms_var(--ease-out)]",
+                    );
+                    const inner = (
+                      <>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {e.email_subject || "(no subject)"}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {e.from_address || "unknown sender"} · {formatDistanceToNow(new Date(e.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                        <Chip
+                          tone={
+                            e.status === "pending" ? "yellow"
+                            : e.status === "reviewed" ? "green"
+                            : "muted"
+                          }
+                          className="capitalize"
+                        >
+                          {e.status}
+                        </Chip>
+                      </>
+                    );
+                    return linkTo ? (
+                      <Link key={e.id} to={linkTo} className={rowClass}>
+                        {inner}
+                      </Link>
+                    ) : (
+                      <div key={e.id} className={rowClass}>
+                        {inner}
                       </div>
-                      <Chip
-                        tone={
-                          e.status === "pending" ? "yellow"
-                          : e.status === "reviewed" ? "green"
-                          : "muted"
-                        }
-                        className="capitalize"
-                      >
-                        {e.status}
-                      </Chip>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
