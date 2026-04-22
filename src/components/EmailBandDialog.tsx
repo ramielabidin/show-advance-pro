@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Mail } from "lucide-react";
+import { Loader2, Mail, X } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatCityState } from "@/lib/utils";
+import { cn, formatCityState } from "@/lib/utils";
 import type { Show } from "@/lib/types";
 
 const MAX_PERSONAL_MESSAGE_CHARS = 2000;
@@ -66,6 +66,7 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
   const [open, setOpen] = useState(false);
   const [subject, setSubject] = useState(() => defaultSubject(show));
   const [personalMessage, setPersonalMessage] = useState("");
+  const [excludedEmails, setExcludedEmails] = useState<Set<string>>(new Set());
 
   const { data: members = [], isLoading: loadingMembers } = useQuery({
     queryKey: ["touring-party", teamId],
@@ -83,18 +84,36 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
   const recipients = members.filter((m): m is { name: string | null; email: string } =>
     typeof m.email === "string" && m.email.trim().length > 0,
   );
+  const activeRecipientCount = recipients.filter(
+    (m) => !excludedEmails.has(m.email.toLowerCase()),
+  ).length;
+
+  const toggleExcluded = (email: string) => {
+    const key = email.toLowerCase();
+    setExcludedEmails((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const sendMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("send-daysheet-email", {
-        body: { showId: show.id, subject, personalMessage },
+        body: {
+          showId: show.id,
+          subject,
+          personalMessage,
+          excludedEmails: Array.from(excludedEmails),
+        },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       return data as { success: boolean; recipientCount: number };
     },
     onSuccess: (data) => {
-      const count = data?.recipientCount ?? recipients.length;
+      const count = data?.recipientCount ?? activeRecipientCount;
       toast.success(`Day sheet sent to ${count} recipient${count === 1 ? "" : "s"}`);
       setOpen(false);
     },
@@ -108,10 +127,12 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
     if (!open) {
       setPersonalMessage("");
       setSubject(defaultSubject(show));
+      setExcludedEmails(new Set());
     }
   }, [open, show]);
 
-  const sendDisabled = sendMutation.isPending || recipients.length === 0 || loadingMembers;
+  const sendDisabled =
+    sendMutation.isPending || activeRecipientCount === 0 || loadingMembers;
   const displayName = senderDisplayName(user?.user_metadata, user?.email);
 
   return (
@@ -133,9 +154,16 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
 
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-widest text-muted-foreground">
-                Recipients
-              </Label>
+              <div className="flex items-baseline justify-between">
+                <Label className="text-xs uppercase tracking-widest text-muted-foreground">
+                  Recipients
+                </Label>
+                {recipients.length > 0 ? (
+                  <span className="text-[11px] text-muted-foreground tabular-nums">
+                    {activeRecipientCount} of {recipients.length}
+                  </span>
+                ) : null}
+              </div>
               {loadingMembers ? (
                 <p className="text-sm text-muted-foreground">Loading…</p>
               ) : recipients.length === 0 ? (
@@ -145,19 +173,50 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
-                  {recipients.map((m) => (
-                    <span
-                      key={m.email}
-                      className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-xs"
-                    >
-                      <span className="font-medium">{m.name || m.email}</span>
-                      {m.name ? (
-                        <span className="text-muted-foreground">&lt;{m.email}&gt;</span>
-                      ) : null}
-                    </span>
-                  ))}
+                  {recipients.map((m) => {
+                    const excluded = excludedEmails.has(m.email.toLowerCase());
+                    return (
+                      <button
+                        key={m.email}
+                        type="button"
+                        onClick={() => toggleExcluded(m.email)}
+                        disabled={sendMutation.isPending}
+                        aria-pressed={!excluded}
+                        aria-label={
+                          excluded
+                            ? `Include ${m.name || m.email}`
+                            : `Remove ${m.name || m.email}`
+                        }
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs transition-colors",
+                          "disabled:cursor-not-allowed disabled:opacity-50",
+                          excluded
+                            ? "border-dashed border-border bg-transparent text-muted-foreground line-through hover:border-foreground/40"
+                            : "border-border bg-muted/40 hover:bg-muted/60",
+                        )}
+                      >
+                        <span className="font-medium">{m.name || m.email}</span>
+                        {m.name ? (
+                          <span className={excluded ? "" : "text-muted-foreground"}>
+                            &lt;{m.email}&gt;
+                          </span>
+                        ) : null}
+                        <X
+                          className={cn(
+                            "h-3 w-3 transition-transform",
+                            excluded && "rotate-45",
+                          )}
+                        />
+                      </button>
+                    );
+                  })}
                 </div>
               )}
+              {activeRecipientCount === 0 && recipients.length > 0 ? (
+                <p className="text-[11px] text-muted-foreground">
+                  All recipients are excluded. Click a chip to include them.
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-1.5">

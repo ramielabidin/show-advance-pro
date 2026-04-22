@@ -91,7 +91,12 @@ serve(async (req) => {
     if (authError || !userData?.user) return json({ error: "Unauthorized" }, 401);
     const user = userData.user;
 
-    let body: { showId?: unknown; personalMessage?: unknown; subject?: unknown };
+    let body: {
+      showId?: unknown;
+      personalMessage?: unknown;
+      subject?: unknown;
+      excludedEmails?: unknown;
+    };
     try {
       body = await req.json();
     } catch {
@@ -104,6 +109,15 @@ serve(async (req) => {
     const personalMessageRaw = typeof body.personalMessage === "string" ? body.personalMessage : "";
     const personalMessage = personalMessageRaw.slice(0, MAX_PERSONAL_MESSAGE_CHARS);
     const subjectOverride = typeof body.subject === "string" ? body.subject.trim() : "";
+
+    const excludedEmails = Array.isArray(body.excludedEmails)
+      ? new Set(
+          body.excludedEmails
+            .filter((e): e is string => typeof e === "string")
+            .map((e) => e.trim().toLowerCase())
+            .filter(Boolean),
+        )
+      : new Set<string>();
 
     const admin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
@@ -154,16 +168,15 @@ serve(async (req) => {
 
     const recipients = (members ?? [])
       .map((m) => ({ email: (m.email ?? "").trim(), name: (m.name ?? "").trim() || undefined }))
-      .filter((m) => m.email.length > 0 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m.email));
+      .filter((m) => m.email.length > 0 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m.email))
+      .filter((m) => !excludedEmails.has(m.email.toLowerCase()));
 
     if (recipients.length === 0) {
-      return json(
-        {
-          error:
-            "No touring party members with email addresses. Add someone in Settings → Team before sending.",
-        },
-        400,
-      );
+      const msg =
+        excludedEmails.size > 0
+          ? "All recipients were removed. Include at least one person to send."
+          : "No touring party members with email addresses. Add someone in Settings → Team before sending.";
+      return json({ error: msg }, 400);
     }
 
     const senderName = resolveSenderName(user.user_metadata, user.email);
