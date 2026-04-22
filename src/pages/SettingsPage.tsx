@@ -433,7 +433,8 @@ export default function SettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["songs"] });
-      setSongAdding(false);
+      // Keep the input open so the user can rapid-fire add songs.
+      // Clearing the draft is enough; the input stays mounted and focused.
       setSongDraft("");
       toast.success("Song added");
     },
@@ -988,13 +989,13 @@ export default function SettingsPage() {
                 value={songDraft}
                 onChange={(e) => setSongDraft(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && songDraft.trim()) {
+                  if (e.key === "Enter" && songDraft.trim() && !createSongMutation.isPending) {
                     createSongMutation.mutate(songDraft);
                   } else if (e.key === "Escape") {
                     cancelSongEdit();
                   }
                 }}
-                placeholder="Song title"
+                placeholder="Song title — press Enter to add, Esc to close"
                 className="h-9 flex-1"
               />
               <Button
