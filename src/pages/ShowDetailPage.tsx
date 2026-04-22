@@ -1146,12 +1146,13 @@ export default function ShowDetailPage() {
               <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
                 {departureEditor.isEditing ? (
                   <div ref={inlineRef} className="space-y-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Time</Label>
+                    <div className="space-y-2">
+                      <Label className="block text-xs text-muted-foreground">Time</Label>
                       <TimeInput
                         value={departureEditor.get("departure_time")}
                         onChange={(val) => departureEditor.setField("departure_time", val)}
                         autoFocus
+                        hideTbd
                       />
                     </div>
                     <div className="space-y-1">
