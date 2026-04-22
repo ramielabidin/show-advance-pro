@@ -113,7 +113,10 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
   const sendDisabled = sendMutation.isPending || recipients.length === 0 || loadingMembers;
   const displayName = senderDisplayName(user?.user_metadata, user?.email);
 
-  const openDialog = () => setOpen(true);
+  // Defer opening until after the DropdownMenu finishes its close cycle.
+  // Without this, the click event that dismisses the menu bubbles to the
+  // Dialog overlay and immediately triggers onOpenChange(false).
+  const openDialog = () => setTimeout(() => setOpen(true), 0);
 
   return (
     <>
