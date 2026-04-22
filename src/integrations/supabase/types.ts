@@ -393,6 +393,7 @@ export type Database = {
           departure_time: string | null
           dos_contact_name: string | null
           dos_contact_phone: string | null
+          dos_contact_email: string | null
           green_room_info: string | null
           guarantee: string | null
           guest_list_details: string | null
@@ -443,6 +444,7 @@ export type Database = {
           departure_time?: string | null
           dos_contact_name?: string | null
           dos_contact_phone?: string | null
+          dos_contact_email?: string | null
           green_room_info?: string | null
           guarantee?: string | null
           guest_list_details?: string | null
@@ -493,6 +495,7 @@ export type Database = {
           departure_time?: string | null
           dos_contact_name?: string | null
           dos_contact_phone?: string | null
+          dos_contact_email?: string | null
           green_room_info?: string | null
           guarantee?: string | null
           guest_list_details?: string | null

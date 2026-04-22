@@ -35,6 +35,7 @@ export interface Show {
   date: string;
   dos_contact_name: string | null;
   dos_contact_phone: string | null;
+  dos_contact_email: string | null;
   departure_time: string | null;
   departure_notes: string | null;
   parking_notes: string | null;
