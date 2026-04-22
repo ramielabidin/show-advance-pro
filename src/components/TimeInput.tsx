@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, type KeyboardEvent } from "react";
 import { cn } from "@/lib/utils";
+import { normalizeTime } from "@/lib/timeFormat";
 
 function parseTime(raw: string): { hour: string; minute: string; ampm: "AM" | "PM" } | null {
   if (!raw || raw === "TBD") return null;
@@ -34,27 +35,20 @@ interface TimeInputProps {
   hideTbd?: boolean;
 }
 
-/**
- * Editorial time picker. Two free-type HH / MM inputs in the display
- * typeface, with a vertical AM/PM rail. Typing a 2-digit hour (or a
- * first digit that can't lead a valid 1–12 hour) auto-advances focus
- * to minutes; blurring minutes zero-pads single digits.
- */
 export default function TimeInput({ value, onChange, autoFocus, hideTbd }: TimeInputProps) {
   const isTbd = value === "TBD";
   const parsed = parseTime(value);
 
-  const [hour, setHour] = useState(parsed?.hour ?? "");
-  const [minute, setMinute] = useState(parsed?.minute ?? "");
+  // Display the time portion only ("8:25") — AM/PM lives in the rail
+  const [raw, setRaw] = useState(parsed ? `${parsed.hour}:${parsed.minute.padStart(2, "0")}` : "");
   const [ampm, setAmpm] = useState<"AM" | "PM">(parsed?.ampm ?? "AM");
 
-  const hourRef = useRef<HTMLInputElement>(null);
-  const minuteRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!autoFocus) return;
-    hourRef.current?.focus();
-    hourRef.current?.select();
+    inputRef.current?.focus();
+    inputRef.current?.select();
   }, [autoFocus]);
 
   // Sync if parent value changes externally (AI parse, reset, etc.)
@@ -62,88 +56,73 @@ export default function TimeInput({ value, onChange, autoFocus, hideTbd }: TimeI
     if (value === "TBD") return;
     const p = parseTime(value);
     if (p) {
-      setHour(p.hour);
-      setMinute(p.minute);
+      setRaw(`${p.hour}:${p.minute.padStart(2, "0")}`);
       setAmpm(p.ampm);
     } else if (!value) {
-      setHour("");
-      setMinute("");
+      setRaw("");
     }
   }, [value]);
 
-  const emit = (h: string, m: string, a: "AM" | "PM") => {
-    if (!h) return;
-    const paddedM = (m || "0").padStart(2, "0");
-    onChange(`${h}:${paddedM} ${a}`);
-  };
-
-  const handleHourChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const d = e.target.value.replace(/\D/g, "").slice(-2);
-    setHour(d);
-    emit(d, minute, ampm);
-    // Auto-advance when we hit 2 digits or a first digit that can't lead a valid 1–12 hour
-    if (d.length === 2 || (d.length === 1 && parseInt(d, 10) >= 2)) {
-      minuteRef.current?.focus();
-      minuteRef.current?.select();
+  const normalize = (text: string, rail: "AM" | "PM") => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    // If user typed an explicit meridiem ("8p", "9am", "8:30 PM"), trust it
+    // Otherwise, append the rail selection so "8:30" + PM rail → "8:30 PM"
+    const hasExplicitMeridiem = /[ap]/i.test(trimmed);
+    const toParse = hasExplicitMeridiem ? trimmed : `${trimmed} ${rail}`;
+    const normalized = normalizeTime(toParse);
+    if (!normalized) return;
+    // Update display to canonical H:MM form and sync rail
+    const p = parseTime(normalized);
+    if (p) {
+      setRaw(`${p.hour}:${p.minute.padStart(2, "0")}`);
+      setAmpm(p.ampm);
     }
+    onChange(normalized);
   };
 
-  const handleMinuteChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const d = e.target.value.replace(/\D/g, "").slice(-2);
-    setMinute(d);
-    emit(hour, d, ampm);
+  const handleBlur = () => normalize(raw, ampm);
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") e.currentTarget.blur();
   };
 
-  const handleMinuteBlur = () => {
-    if (minute && minute.length < 2) {
-      const padded = minute.padStart(2, "0");
-      setMinute(padded);
-      emit(hour, padded, ampm);
-    }
+  const handleAmpmClick = (a: "AM" | "PM") => {
+    setAmpm(a);
+    // Re-emit immediately if there's already a valid time in the field
+    normalize(raw, a);
   };
 
-  const numberInputClass =
-    "w-[1.35em] bg-transparent border-0 border-b border-dashed border-foreground/30 " +
+  const inputClass =
+    "bg-transparent border-0 border-b border-dashed border-foreground/30 " +
     "focus:border-foreground/60 focus:outline-none rounded-none p-0 " +
     "font-display text-[28px] leading-none tracking-tight text-foreground " +
-    "placeholder:text-muted-foreground/40 appearance-none [-moz-appearance:textfield] " +
-    "[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+    "placeholder:text-muted-foreground/40";
 
   return (
     <div className="inline-flex items-center gap-3 flex-wrap">
       {!isTbd && (
         <div className="inline-flex items-center gap-3">
-          <div className="inline-flex items-baseline gap-0.5">
-            <input
-              ref={hourRef}
-              value={hour}
-              onChange={handleHourChange}
-              inputMode="numeric"
-              maxLength={2}
-              placeholder="--"
-              aria-label="Hour"
-              className={cn(numberInputClass, "text-right")}
-            />
-            <span className="font-display text-[28px] leading-none text-muted-foreground/60 px-0.5">:</span>
-            <input
-              ref={minuteRef}
-              value={minute}
-              onChange={handleMinuteChange}
-              onBlur={handleMinuteBlur}
-              inputMode="numeric"
-              maxLength={2}
-              placeholder="--"
-              aria-label="Minute"
-              className={cn(numberInputClass, "text-left")}
-            />
-          </div>
+          <input
+            ref={inputRef}
+            type="text"
+            value={raw}
+            onChange={(e) => setRaw(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            inputMode="text"
+            size={5}
+            placeholder="–:––"
+            aria-label="Time"
+            className={inputClass}
+          />
 
           <div className="inline-flex flex-col justify-center gap-0.5">
             {(["AM", "PM"] as const).map((a) => (
               <button
                 key={a}
                 type="button"
-                onClick={() => { setAmpm(a); emit(hour, minute, a); }}
+                onClick={() => handleAmpmClick(a)}
                 aria-pressed={ampm === a}
                 className={cn(
                   "text-[11px] font-mono font-semibold uppercase tracking-[0.14em]",
