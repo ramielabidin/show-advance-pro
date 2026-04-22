@@ -46,6 +46,7 @@ import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
 import ShowAttachments from "@/components/ShowAttachments";
 import ExportPdfDialog from "@/components/ExportPdfDialog";
+import SetListDialog from "@/components/SetListDialog";
 import CopyGuestLinkButton, { CopyMagicLinkButton } from "@/components/CopyGuestLinkButton";
 import GuestListEditor, { GuestListView, parseGuestList, guestTotal, parseComps } from "@/components/GuestListEditor";
 import ScheduleEditor, { type ScheduleRow } from "@/components/ScheduleEditor";
@@ -897,6 +898,7 @@ export default function ShowDetailPage() {
                 <SlackPushDialog showId={id!} show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
                 <EmailBandDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email Band</DropdownMenuItem>} />
                 <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
+                <SetListDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Set List</DropdownMenuItem>} />
               </DropdownMenuContent>
             </DropdownMenu>
 

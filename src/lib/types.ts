@@ -15,6 +15,18 @@ export interface ScheduleEntry {
   sort_order: number;
 }
 
+export interface Song {
+  id: string;
+  team_id: string;
+  title: string;
+  created_at: string;
+}
+
+export type SetListEntry =
+  | { kind: "song"; song_id: string; title: string }
+  | { kind: "custom"; title: string }
+  | { kind: "note"; text: string };
+
 export interface Show {
   id: string;
   venue_name: string;
@@ -64,6 +76,7 @@ export interface Show {
   settlement_notes: string | null;
   created_at: string;
   updated_at: string;
+  set_list?: SetListEntry[] | null;
   schedule_entries?: ScheduleEntry[];
   show_party_members?: ShowPartyMember[];
 }
