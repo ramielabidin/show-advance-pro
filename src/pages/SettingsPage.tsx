@@ -1030,7 +1030,7 @@ export default function SettingsPage() {
               <p className="text-sm">No songs yet. Build your catalog to quickly pick set lists for each show.</p>
             </div>
           ) : (
-            <div className="stagger-list">
+            <div className="stagger-list max-h-[400px] overflow-y-auto">
               {songs.map((s, i) => {
                 const isEditing = songEditingId === s.id;
                 return (
