@@ -917,15 +917,10 @@ function FeaturedShowCard({
   const capNum = capRaw ? parseInt(String(capRaw).replace(/[^\d]/g, ""), 10) : NaN;
   const capDisplay = Number.isFinite(capNum) ? capNum.toLocaleString() : null;
 
-  const setCell =
-    setTime && show.set_length
-      ? `${setTime} · ${show.set_length}`
-      : setTime ?? null;
-
   const footerCells: { label: string; value: string | null }[] = [
     { label: "Load-in", value: loadInTime },
     { label: "Doors", value: doorsTime },
-    { label: "Set", value: setCell },
+    { label: "Set", value: setTime },
     { label: "Capacity", value: capDisplay },
   ];
   const hasAnyFooterData = footerCells.some((c) => !!c.value);
@@ -981,7 +976,7 @@ function FeaturedShowCard({
             {footerCells.map((cell, i) => (
               <div
                 key={cell.label}
-                className={cn("py-4 px-5", i < 3 && "border-r")}
+                className={cn("py-3 px-3 sm:px-4", i < 3 && "border-r")}
                 style={i < 3 ? { borderRightWidth: "0.5px" } : undefined}
               >
                 <div className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground">
@@ -989,7 +984,7 @@ function FeaturedShowCard({
                 </div>
                 <div
                   className={cn(
-                    "text-base mt-1",
+                    "text-sm mt-1 whitespace-nowrap",
                     cell.value ? "text-foreground" : "text-muted-foreground",
                   )}
                 >
