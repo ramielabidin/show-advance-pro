@@ -26,10 +26,18 @@ const T = {
   fg: "#211d17",
   muted: "#8a7e6b",
   border: "#e8e0d3",
+  rule: "#211d17",
+  rowRule: "#ede5d4",
   bandFg: "#346538",
   bandBg: "#edf3ec",
+  hotelDashed: "#b8ab92",
+  hotelDashedInner: "#e0d6bf",
+  footerRule: "#e8e0d3",
+  logoBg: "#221f1c",
+  logoFg: "#f9f7f4",
   link: "#1f6c9f",
   sans: `"DM Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif`,
+  serif: `"DM Serif Display", Georgia, "Times New Roman", serif`,
   mono: `"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`,
 };
 
@@ -49,6 +57,7 @@ export interface RenderShow extends ShowLike {
 
 export interface RenderOptions {
   personalMessage?: string | null;
+  senderName?: string | null;
 }
 
 export interface RenderedEmail {
@@ -98,22 +107,27 @@ function formatCityState(city: string | null | undefined): string {
   return city.replace(/\*+$/, "").trim();
 }
 
-function formatGuestListText(raw: string | null | undefined): string[] {
+interface GuestEntry {
+  name: string;
+  plus: number;
+}
+
+function parseGuestListEntries(raw: string | null | undefined): GuestEntry[] {
   if (!raw?.trim()) return [];
   try {
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
       return parsed
-        .map((entry: unknown) => {
-          if (!entry || typeof entry !== "object") return "";
+        .map((entry: unknown): GuestEntry | null => {
+          if (!entry || typeof entry !== "object") return null;
           const e = entry as Record<string, unknown>;
           const name = String(e.name ?? e.Name ?? "").trim();
           const plusRaw = e.plusOnes ?? e.plus_ones ?? e.plusOne ?? 0;
           const plus = typeof plusRaw === "number" ? plusRaw : parseInt(String(plusRaw), 10) || 0;
-          if (!name) return "";
-          return plus > 0 ? `${name} +${plus}` : name;
+          if (!name) return null;
+          return { name, plus };
         })
-        .filter(Boolean);
+        .filter((entry): entry is GuestEntry => entry !== null);
     }
   } catch {
     // not JSON — fall through
@@ -121,7 +135,14 @@ function formatGuestListText(raw: string | null | undefined): string[] {
   return raw
     .split(/\r?\n/)
     .map((s) => s.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((name) => ({ name, plus: 0 }));
+}
+
+function formatGuestListText(raw: string | null | undefined): string[] {
+  return parseGuestListEntries(raw).map((entry) =>
+    entry.plus > 0 ? `${entry.name} +${entry.plus}` : entry.name,
+  );
 }
 
 function artistVenueLine(show: RenderShow): string {
@@ -137,15 +158,11 @@ function artistVenueLine(show: RenderShow): string {
 // HTML building blocks
 // ---------------------------------------------------------------------------
 
-function sectionCard(title: string, innerHtml: string): string {
+function section(title: string, innerHtml: string): string {
   return `
-  <tr><td style="padding:0 0 28px 0;">
-    <h2 style="font-family:${T.sans};font-size:18px;line-height:1.3;color:${T.fg};font-weight:700;margin:0 0 12px 0;padding:0;">${escapeHtml(title)}</h2>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${T.border};border-radius:8px;background:${T.cardBg};">
-      <tr><td style="padding:6px 18px;">
-        ${innerHtml}
-      </td></tr>
-    </table>
+  <tr><td style="padding:0 0 36px 0;">
+    <div style="font-family:${T.sans};font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${T.muted};font-weight:500;padding-bottom:10px;border-bottom:1px solid ${T.rule};">${escapeHtml(title)}</div>
+    ${innerHtml}
   </td></tr>`;
 }
 
@@ -156,44 +173,103 @@ interface FieldSpec {
   href?: string;
 }
 
-function renderFieldRow(spec: FieldSpec, isFirst: boolean): string {
+function renderFieldRow(spec: FieldSpec, isFirst: boolean, isLast: boolean): string {
   const v = val(spec.value);
   if (!v) return "";
   const valueFont = spec.mono ? T.mono : T.sans;
   const valueSize = spec.mono ? "13px" : "14px";
   const body = nl2br(v);
   const content = spec.href
-    ? `<a href="${escapeHtml(spec.href)}" style="color:${T.fg};text-decoration:underline;">${body}</a>`
+    ? `<a href="${escapeHtml(spec.href)}" style="color:${T.fg};text-decoration:underline;text-underline-offset:3px;">${body}</a>`
     : body;
-  // border-top gives a visible separator between rows. vertical padding on
-  // top of that buys real breathing room; 14px each side = 28px of total
-  // space around the divider line.
-  const divider = isFirst ? "" : `border-top:1px solid ${T.border};`;
-  const padTop = isFirst ? "10px" : "14px";
+  const padTop = isFirst ? "12px" : "10px";
+  const padBottom = isLast ? "0" : "10px";
   return `
     <tr>
-      <td valign="top" style="${divider}font-family:${T.sans};font-size:14px;line-height:1.5;color:${T.muted};padding:${padTop} 12px 14px 0;vertical-align:top;">${escapeHtml(spec.label)}</td>
-      <td valign="top" style="${divider}font-family:${valueFont};font-size:${valueSize};line-height:1.5;color:${T.fg};padding:${padTop} 0 14px 0;vertical-align:top;white-space:pre-wrap;word-break:break-word;">${content}</td>
+      <td valign="top" style="font-family:${T.sans};font-size:12px;line-height:1.5;color:${T.muted};padding:${padTop} 16px ${padBottom} 0;vertical-align:top;">${escapeHtml(spec.label)}</td>
+      <td valign="top" style="font-family:${valueFont};font-size:${valueSize};line-height:1.6;color:${T.fg};padding:${padTop} 0 ${padBottom} 0;vertical-align:top;white-space:pre-wrap;word-break:break-word;">${content}</td>
     </tr>`;
 }
 
 function fieldTable(specs: FieldSpec[]): string {
   const live = specs.filter((s) => !!val(s.value));
   if (live.length === 0) return "";
-  const rows = live.map((s, i) => renderFieldRow(s, i === 0)).join("");
+  const rows = live
+    .map((s, i) => renderFieldRow(s, i === 0, i === live.length - 1))
+    .join("");
   // table-layout:fixed + <colgroup> locks the label column width across all
-  // rows in the card — otherwise Gmail's auto-layout algorithm collapses
-  // the label when the value is a long multi-line block.
+  // rows so Gmail's auto-layout doesn't collapse labels next to long values.
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;border-collapse:collapse;">
-    <colgroup><col style="width:128px;" /><col /></colgroup>
+    <colgroup><col style="width:100px;" /><col /></colgroup>
     ${rows}
   </table>`;
 }
 
-function freeTextRow(value: string | null | undefined): string {
-  const v = val(value);
-  if (!v) return "";
-  return `<div style="font-family:${T.sans};font-size:14px;line-height:1.55;color:${T.fg};white-space:pre-wrap;word-break:break-word;">${nl2br(v)}</div>`;
+function findScheduleMatch(show: RenderShow, pattern: RegExp): string | null {
+  const entries = show.schedule_entries ?? [];
+  const hit = entries.find((e) => pattern.test((e.label ?? "").trim().toLowerCase()));
+  return hit && val(hit.time) ? val(hit.time) : null;
+}
+
+function findBandTime(show: RenderShow): string | null {
+  const entries = show.schedule_entries ?? [];
+  const hit = entries.find((e) => e.is_band === true);
+  return hit && val(hit.time) ? val(hit.time) : null;
+}
+
+function renderKeyMoments(show: RenderShow): string {
+  const loadIn = findScheduleMatch(show, /^load[\s-]?in\b/);
+  const doors = findScheduleMatch(show, /^doors?\b/);
+  const setTime = findBandTime(show);
+
+  interface Moment {
+    label: string;
+    value: string;
+    accent: boolean;
+  }
+  const moments: Moment[] = [];
+  if (loadIn) moments.push({ label: "Load in", value: loadIn, accent: false });
+  if (doors) moments.push({ label: "Doors", value: doors, accent: false });
+  if (setTime) moments.push({ label: "Set", value: setTime, accent: true });
+  if (moments.length === 0) return "";
+
+  const colWidth = `${Math.floor(100 / moments.length)}%`;
+  const tds = moments
+    .map((m) => {
+      const labelColor = m.accent ? T.bandFg : T.muted;
+      const valueColor = m.accent ? T.bandFg : T.fg;
+      const weight = m.accent ? "500" : "400";
+      return `
+        <td style="padding:14px 0;vertical-align:top;width:${colWidth};">
+          <div style="font-family:${T.mono};font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:${labelColor};">${escapeHtml(m.label)}</div>
+          <div style="font-family:${T.mono};font-size:16px;color:${valueColor};font-weight:${weight};margin-top:4px;">${escapeHtml(m.value)}</div>
+        </td>`;
+    })
+    .join("");
+
+  return `
+  <tr><td style="padding:0 0 40px 0;border-top:1px solid ${T.rule};">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tbody><tr>${tds}</tr></tbody>
+    </table>
+  </td></tr>`;
+}
+
+function renderFooter(): string {
+  return `
+  <tr><td style="padding:24px 0 0 0;border-top:1px solid ${T.footerRule};">
+    <table role="presentation" cellpadding="0" cellspacing="0"><tbody><tr>
+      <td style="vertical-align:middle;padding-right:10px;">
+        <div style="width:20px;height:20px;background:${T.logoBg};border-radius:4px;text-align:center;line-height:20px;">
+          <span style="font-family:${T.serif};color:${T.logoFg};font-size:14px;">A</span>
+        </div>
+      </td>
+      <td style="vertical-align:middle;">
+        <div style="font-family:${T.serif};font-size:14px;color:${T.fg};letter-spacing:-0.02em;">Advance</div>
+      </td>
+    </tr></tbody></table>
+    <div style="margin-top:10px;font-family:${T.sans};font-size:11px;line-height:1.5;color:${T.muted};">Sent via Advance · Tour management for musicians</div>
+  </td></tr>`;
 }
 
 function renderSchedule(show: RenderShow): string {
@@ -209,25 +285,28 @@ function renderSchedule(show: RenderShow): string {
       const label = escapeHtml(entry.label ?? "");
       const time = escapeHtml(entry.time ?? "");
       const isLast = i === entries.length - 1;
-      const bandStyle = isBand
-        ? `color:${T.bandFg};font-weight:600;background:${T.bandBg};`
+      const border = isLast ? "0" : `1px solid ${T.rowRule}`;
+      const timeColor = isBand ? T.bandFg : T.muted;
+      const timeWeight = isBand ? "500" : "400";
+      const labelStyle = isBand
+        ? `color:${T.bandFg};font-weight:600;`
         : `color:${T.fg};font-weight:400;`;
       return `
       <tr>
-        <td style="font-family:${T.mono};font-size:13px;line-height:1.5;color:${T.muted};padding:10px 12px 10px 0;vertical-align:top;white-space:nowrap;border-bottom:${isLast ? "0" : `1px solid ${T.border}`};width:80px;${isBand ? `background:${T.bandBg};` : ""}">${time}</td>
-        <td style="font-family:${T.sans};font-size:15px;line-height:1.5;padding:10px 0;vertical-align:top;border-bottom:${isLast ? "0" : `1px solid ${T.border}`};${bandStyle}">${label}${setInline}</td>
+        <td style="font-family:${T.mono};font-size:13px;line-height:1.5;color:${timeColor};font-weight:${timeWeight};padding:10px 16px 10px 0;vertical-align:top;white-space:nowrap;border-bottom:${border};width:80px;">${time}</td>
+        <td style="font-family:${T.sans};font-size:14px;line-height:1.5;padding:10px 0;vertical-align:top;border-bottom:${border};${labelStyle}">${label}${setInline}</td>
       </tr>`;
     })
     .join("");
 
-  return sectionCard(
+  return section(
     "Schedule",
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>`,
   );
 }
 
 function renderContact(show: RenderShow): string {
-  return sectionCard(
+  return section(
     "Day of Show Contact",
     fieldTable([
       { label: "Name", value: show.dos_contact_name },
@@ -237,7 +316,7 @@ function renderContact(show: RenderShow): string {
 }
 
 function renderDeparture(show: RenderShow): string {
-  return sectionCard(
+  return section(
     "Departure",
     fieldTable([
       { label: "Time", value: show.departure_time, mono: true },
@@ -247,7 +326,7 @@ function renderDeparture(show: RenderShow): string {
 }
 
 function renderArrival(show: RenderShow): string {
-  return sectionCard(
+  return section(
     "Arrival",
     fieldTable([
       { label: "Load In", value: hasData(show, "loadIn") ? show.load_in_details : null },
@@ -267,80 +346,156 @@ function renderAtVenue(show: RenderShow): string {
     const wifiValue = [network, password].filter(Boolean).join("\n");
     specs.push({ label: "WiFi", value: wifiValue, mono: true });
   }
-  return sectionCard("At The Venue", fieldTable(specs));
+  return section("At The Venue", fieldTable(specs));
 }
 
 function renderHotel(show: RenderShow): string {
+  const name = val(show.hotel_name);
   const addr = val(show.hotel_address);
-  const mapUrl = addr
-    ? `https://maps.google.com/?q=${encodeURIComponent(stripCountry(addr))}`
-    : undefined;
-  return sectionCard(
-    "Accommodations",
-    fieldTable([
-      { label: "Name", value: show.hotel_name },
-      { label: "Address", value: show.hotel_address, href: mapUrl },
-      { label: "Confirmation #", value: show.hotel_confirmation, mono: true },
-      { label: "Check In", value: show.hotel_checkin, mono: true },
-      { label: "Check Out", value: show.hotel_checkout, mono: true },
-    ]),
-  );
+  const addrStripped = addr ? stripCountry(addr) : "";
+  const mapUrl = addrStripped
+    ? `https://maps.google.com/?q=${encodeURIComponent(addrStripped)}`
+    : "";
+  const confirmation = val(show.hotel_confirmation);
+  const checkIn = val(show.hotel_checkin);
+  const checkOut = val(show.hotel_checkout);
+
+  const nameHtml = name
+    ? `<div style="font-family:${T.serif};font-size:22px;letter-spacing:-0.02em;color:${T.fg};line-height:1.15;">${escapeHtml(name)}</div>`
+    : "";
+  const addrHtml = addrStripped
+    ? `<div style="margin-top:${name ? "6px" : "0"};"><a href="${escapeHtml(mapUrl)}" style="font-family:${T.mono};font-size:12px;color:${T.muted};text-decoration:underline;text-underline-offset:3px;">${escapeHtml(addrStripped)}</a></div>`
+    : "";
+  const headerCell = nameHtml || addrHtml
+    ? `<tr><td style="padding:16px 18px 12px 18px;">${nameHtml}${addrHtml}</td></tr>`
+    : "";
+
+  interface HotelCell {
+    caption: string;
+    value: string;
+  }
+  const cells: HotelCell[] = [];
+  if (confirmation) cells.push({ caption: "Confirmation #", value: confirmation });
+  if (checkIn) cells.push({ caption: "Check In", value: checkIn });
+  if (checkOut) cells.push({ caption: "Check Out", value: checkOut });
+
+  let gridRow = "";
+  if (cells.length > 0) {
+    const colWidth = `${Math.floor(100 / cells.length)}%`;
+    const tds = cells
+      .map((c, i) => {
+        const isFirst = i === 0;
+        const isLast = i === cells.length - 1;
+        const padLeft = isFirst ? "0" : "10px";
+        const padRight = isLast ? "0" : "10px";
+        return `
+          <td style="padding:12px ${padRight} 0 ${padLeft};width:${colWidth};vertical-align:top;">
+            <div style="font-family:${T.mono};font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:${T.muted};">${escapeHtml(c.caption)}</div>
+            <div style="font-family:${T.mono};font-size:13px;color:${T.fg};margin-top:4px;">${escapeHtml(c.value)}</div>
+          </td>`;
+      })
+      .join("");
+    gridRow = `
+      <tr><td style="padding:0 18px 16px 18px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px dashed ${T.hotelDashedInner};">
+          <tbody><tr>${tds}</tr></tbody>
+        </table>
+      </td></tr>`;
+  }
+
+  if (!headerCell && !gridRow) return "";
+
+  const cardHtml = `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;border:1px dashed ${T.hotelDashed};">
+      <tbody>${headerCell}${gridRow}</tbody>
+    </table>`;
+
+  return section("Accommodations", cardHtml);
 }
 
 function renderGuestList(show: RenderShow): string {
-  const names = formatGuestListText(show.guest_list_details);
-  if (names.length === 0) return "";
-  const items = names
-    .map(
-      (name) =>
-        `<li style="font-family:${T.sans};font-size:14px;line-height:1.6;color:${T.fg};margin:0;padding:2px 0;">${escapeHtml(name)}</li>`,
-    )
+  const entries = parseGuestListEntries(show.guest_list_details);
+  if (entries.length === 0) return "";
+  const rows = entries
+    .map((entry, i) => {
+      const isLast = i === entries.length - 1;
+      const border = isLast ? "0" : `1px solid ${T.rowRule}`;
+      const plusText = entry.plus > 0 ? `+${entry.plus}` : "—";
+      return `
+        <tr>
+          <td style="font-family:${T.sans};font-size:14px;line-height:1.5;color:${T.fg};padding:10px 0;border-bottom:${border};">${escapeHtml(entry.name)}</td>
+          <td style="font-family:${T.mono};font-size:12px;color:${T.muted};padding:10px 0;text-align:right;border-bottom:${border};">${escapeHtml(plusText)}</td>
+        </tr>`;
+    })
     .join("");
-  return sectionCard(
+  return section(
     "Guest List",
-    `<ul style="margin:0;padding:0 0 0 18px;list-style:disc;">${items}</ul>`,
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>`,
   );
 }
 
 function renderNotes(show: RenderShow): string {
   const notes = val(show.additional_info);
   if (!notes) return "";
-  return sectionCard("Notes", freeTextRow(notes));
+  const body = `<div style="padding-top:12px;font-family:${T.sans};font-size:14px;line-height:1.6;color:${T.fg};white-space:pre-wrap;word-break:break-word;">${nl2br(notes)}</div>`;
+  return section("Notes", body);
 }
 
-function renderPersonalMessage(message: string | null | undefined): string {
+function renderPersonalMessage(
+  message: string | null | undefined,
+  senderName: string | null | undefined,
+): string {
   const msg = val(message);
   if (!msg) return "";
+  const sender = val(senderName);
+  const signature = sender
+    ? `<div style="margin-top:10px;font-family:${T.sans};font-size:12px;color:${T.muted};">— ${escapeHtml(sender)}</div>`
+    : "";
   return `
-  <tr><td style="padding:0 0 24px 0;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-left:3px solid ${T.border};background:${T.cardBg};border-radius:4px;">
-      <tr><td style="padding:14px 18px;">
-        <div style="font-family:${T.sans};font-size:15px;line-height:1.55;color:${T.fg};white-space:pre-wrap;word-break:break-word;">${nl2br(msg)}</div>
-      </td></tr>
-    </table>
+  <tr><td style="padding:0 0 36px 0;">
+    <div style="font-family:${T.sans};font-size:15px;line-height:1.55;color:${T.fg};white-space:pre-wrap;word-break:break-word;">${nl2br(msg)}</div>
+    ${signature}
   </td></tr>`;
 }
 
 function renderHeader(show: RenderShow): string {
-  const title = escapeHtml(artistVenueLine(show));
+  const venue = val(show.venue_name);
+  const artist = val(show.artist_name);
+  const title = escapeHtml(venue ?? artist ?? "Day Sheet");
   const dateStr = formatFullDate(show.date);
-  const addr = val(show.venue_address) ? stripCountry(show.venue_address!) : "";
   const city = formatCityState(show.city);
+  const doors = findScheduleMatch(show, /^doors?\b/);
+  const addr = val(show.venue_address) ? stripCountry(show.venue_address!) : "";
+
+  const artistHtml = artist && venue
+    ? `<tr><td style="padding:0 0 8px 0;">
+         <div style="font-family:${T.sans};font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${T.muted};font-weight:500;">${escapeHtml(artist)}</div>
+       </td></tr>`
+    : "";
+
+  const subParts = [
+    dateStr,
+    city,
+    doors ? `Doors ${doors}` : "",
+  ].filter(Boolean);
+  const subHtml = subParts.length
+    ? `<div style="font-family:${T.sans};font-size:14px;line-height:1.5;color:${T.muted};">${escapeHtml(subParts.join(" · "))}</div>`
+    : "";
+
   const addrHtml = addr
-    ? `<div style="margin-top:6px;"><a href="https://maps.google.com/?q=${encodeURIComponent(addr)}" style="font-family:${T.sans};font-size:13px;line-height:1.5;color:${T.muted};text-decoration:none;">${escapeHtml(addr)}</a></div>`
-    : city
-      ? `<div style="margin-top:6px;font-family:${T.sans};font-size:13px;line-height:1.5;color:${T.muted};">${escapeHtml(city)}</div>`
-      : "";
-  const dateHtml = dateStr
-    ? `<div style="margin-top:8px;font-family:${T.sans};font-size:14px;line-height:1.4;color:${T.muted};">${escapeHtml(dateStr)}</div>`
+    ? `<div style="margin-top:${subHtml ? "4px" : "0"};"><a href="https://maps.google.com/?q=${encodeURIComponent(addr)}" style="font-family:${T.mono};font-size:12px;color:${T.muted};text-decoration:underline;text-underline-offset:3px;">${escapeHtml(addr)}</a></div>`
+    : "";
+
+  const subRow = subHtml || addrHtml
+    ? `<tr><td style="padding:0 0 32px 0;">${subHtml}${addrHtml}</td></tr>`
     : "";
 
   return `
-  <tr><td style="padding:0 0 28px 0;">
-    <h1 style="font-family:${T.sans};font-size:28px;line-height:1.15;letter-spacing:-0.02em;font-weight:700;color:${T.fg};margin:0;word-break:break-word;">${title}</h1>
-    ${dateHtml}
-    ${addrHtml}
-  </td></tr>`;
+  ${artistHtml}
+  <tr><td style="padding:0 0 12px 0;">
+    <h1 style="font-family:${T.serif};font-size:40px;line-height:1.0;letter-spacing:-0.035em;font-weight:400;color:${T.fg};margin:0;word-break:break-word;">${title}</h1>
+  </td></tr>
+  ${subRow}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -460,7 +615,8 @@ export function buildSubject(show: RenderShow): string {
 export function renderDaysheetEmail(show: RenderShow, opts: RenderOptions = {}): RenderedEmail {
   const blocks: string[] = [];
   blocks.push(renderHeader(show));
-  blocks.push(renderPersonalMessage(opts.personalMessage));
+  blocks.push(renderPersonalMessage(opts.personalMessage, opts.senderName));
+  blocks.push(renderKeyMoments(show));
 
   // Order mirrors DaysheetGuestView: Schedule, Contact, Departure, Arrival,
   // At The Venue, Accommodations, Guest List, Notes.
@@ -470,8 +626,9 @@ export function renderDaysheetEmail(show: RenderShow, opts: RenderOptions = {}):
   if (hasData(show, "loadIn") || hasData(show, "parking")) blocks.push(renderArrival(show));
   if (hasData(show, "greenRoom") || hasData(show, "wifi")) blocks.push(renderAtVenue(show));
   if (hasData(show, "hotel")) blocks.push(renderHotel(show));
-  if (formatGuestListText(show.guest_list_details).length > 0) blocks.push(renderGuestList(show));
+  if (parseGuestListEntries(show.guest_list_details).length > 0) blocks.push(renderGuestList(show));
   if (val(show.additional_info)) blocks.push(renderNotes(show));
+  blocks.push(renderFooter());
 
   const html = `<!doctype html>
 <html lang="en">
@@ -481,24 +638,26 @@ export function renderDaysheetEmail(show: RenderShow, opts: RenderOptions = {}):
 <meta name="color-scheme" content="light only" />
 <meta name="supported-color-schemes" content="light" />
 <title>${escapeHtml(buildSubject(show))}</title>
-<!-- DM Sans (app body font) + JetBrains Mono for times/phones. Apple Mail and
-     iOS Mail honor these; Gmail web strips the external sheet and falls back
-     to -apple-system / Helvetica, which still reads clean. -->
+<!-- DM Sans (body) + DM Serif Display (venue hero + hotel name) + JetBrains Mono
+     (times / phones / confirmation #s). Apple Mail and iOS honor these; Gmail
+     web strips the sheet and falls back to system sans, which still reads clean. -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
-  href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+  href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500&display=swap"
   rel="stylesheet"
 />
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500&display=swap');
 </style>
 </head>
-<body style="margin:0;padding:0;background:${T.pageBg};color:${T.fg};-webkit-text-size-adjust:100%;">
+<body style="margin:0;padding:0;background:${T.pageBg};color:${T.fg};-webkit-text-size-adjust:100%;font-family:${T.sans};">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${T.pageBg};">
-  <tr><td align="center" style="padding:32px 16px;">
-    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-      ${blocks.join("")}
+  <tr><td align="center" style="padding:32px 20px;">
+    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+      <tbody>
+        ${blocks.join("")}
+      </tbody>
     </table>
   </td></tr>
 </table>

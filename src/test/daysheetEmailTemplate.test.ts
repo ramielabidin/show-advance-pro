@@ -129,15 +129,27 @@ describe("renderDaysheetEmail", () => {
     const scheduleIdx = html.indexOf(">Schedule<");
     expect(messageIdx).toBeGreaterThan(-1);
     expect(messageIdx).toBeLessThan(scheduleIdx);
-    // The block carries no "From <sender>" preamble — the message itself
-    // is rendered raw inside the left-bordered card. Recipients already see
-    // the sender in the From header.
-    expect(html).toContain("border-left:3px solid");
+  });
+
+  it("signs the personal note with the sender's name when provided", () => {
+    const { html } = renderDaysheetEmail(baseShow(), {
+      personalMessage: "Pumped for this one.",
+      senderName: "Rami",
+    });
+    expect(html).toContain("— Rami");
+  });
+
+  it("omits the sender signature when no personal note is present", () => {
+    const { html } = renderDaysheetEmail(baseShow(), {
+      personalMessage: "   ",
+      senderName: "Rami",
+    });
+    expect(html).not.toContain("— Rami");
   });
 
   it("omits the personal-message block entirely when the note is empty", () => {
     const { html } = renderDaysheetEmail(baseShow(), { personalMessage: "   " });
-    expect(html).not.toContain("border-left:3px solid");
+    expect(html).not.toContain("Pumped for this one");
   });
 
   it("renders phone and confirmation # in the monospace font", () => {
@@ -172,9 +184,14 @@ describe("renderDaysheetEmail", () => {
 
   it("parses a JSON guest list into named line items and strips empties", () => {
     const { html, text } = renderDaysheetEmail(baseShow());
-    expect(html).toContain("Jamie +1");
-    expect(html).toContain("Sam");
+    // Name and plus-count render in adjacent table cells (name left, plus right).
+    expect(html).toContain(">Jamie<");
+    expect(html).toContain(">+1<");
+    expect(html).toContain(">Sam<");
+    // Guests with zero plus-ones render an em-dash in the plus column, not "+0".
+    expect(html).toContain(">—<");
     expect(html).not.toContain("+0");
+    // Plain-text body still collapses name + plus into a single line.
     expect(text).toContain("Jamie +1");
     expect(text).toContain("Sam");
   });
