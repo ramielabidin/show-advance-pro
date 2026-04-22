@@ -36,9 +36,9 @@ const T = {
   logoBg: "#221f1c",
   logoFg: "#f9f7f4",
   link: "#1f6c9f",
-  sans: `"DM Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif`,
-  serif: `"DM Serif Display", Georgia, "Times New Roman", serif`,
-  mono: `"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`,
+  sans: `'DM Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif`,
+  serif: `'DM Serif Display', 'Bodoni 72', Didot, 'Playfair Display', Georgia, 'Times New Roman', serif`,
+  mono: `'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`,
 };
 
 // ---------------------------------------------------------------------------
@@ -258,17 +258,21 @@ function renderKeyMoments(show: RenderShow): string {
 function renderFooter(): string {
   return `
   <tr><td style="padding:24px 0 0 0;border-top:1px solid ${T.footerRule};">
-    <table role="presentation" cellpadding="0" cellspacing="0"><tbody><tr>
-      <td style="vertical-align:middle;padding-right:10px;">
-        <div style="width:20px;height:20px;background:${T.logoBg};border-radius:4px;text-align:center;line-height:20px;">
-          <span style="font-family:${T.serif};color:${T.logoFg};font-size:14px;">A</span>
-        </div>
-      </td>
-      <td style="vertical-align:middle;">
-        <div style="font-family:${T.serif};font-size:14px;color:${T.fg};letter-spacing:-0.02em;">Advance</div>
-      </td>
-    </tr></tbody></table>
-    <div style="margin-top:10px;font-family:${T.sans};font-size:11px;line-height:1.5;color:${T.muted};">Sent via Advance · Tour management for musicians</div>
+    <a href="https://advancetouring.com" style="text-decoration:none;color:inherit;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;"><tbody><tr>
+        <td style="vertical-align:middle;padding-right:10px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;"><tbody><tr>
+            <td width="20" height="20" align="center" valign="middle" style="background:${T.logoBg};border-radius:4px;font-family:Georgia, 'Times New Roman', serif;color:${T.logoFg};font-size:14px;line-height:20px;">A</td>
+          </tr></tbody></table>
+        </td>
+        <td style="vertical-align:middle;">
+          <div style="font-family:${T.serif};font-size:14px;color:${T.fg};letter-spacing:-0.02em;">Advance</div>
+        </td>
+      </tr></tbody></table>
+    </a>
+    <a href="https://advancetouring.com" style="display:inline-block;margin-top:12px;text-decoration:none;">
+      <div style="font-family:${T.sans};font-size:11px;line-height:1.5;color:${T.muted};">Sent via Advance · Tour management for musicians</div>
+    </a>
   </td></tr>`;
 }
 
