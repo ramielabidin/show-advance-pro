@@ -1,193 +1,282 @@
-import { Mail } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { Loader2, Mail, X } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
 import { useTeam } from "@/components/TeamProvider";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { formatCityState } from "@/lib/utils";
-import { hasData, type SectionKey } from "@/lib/daysheetSections";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { cn, formatCityState } from "@/lib/utils";
 import type { Show } from "@/lib/types";
 
-// ---------------------------------------------------------------------------
-// helpers
-// ---------------------------------------------------------------------------
-
-function fieldLine(label: string, value: string | null | undefined): string {
-  if (!value?.trim()) return "";
-  return `${label}: ${value.trim()}`;
-}
-
-function val(v: unknown): string | null {
-  if (v == null) return null;
-  const s = String(v).trim();
-  if (!s || s.toLowerCase() === "tbd" || s.toLowerCase() === "n/a") return null;
-  return s;
-}
-
-function formatGuestList(raw: string | null | undefined): string {
-  if (!raw?.trim()) return "";
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed
-        .map((entry: any) => {
-          const name = entry.name ?? entry.Name ?? "";
-          const plus = entry.plusOnes ?? entry.plus_ones ?? entry.plusOne ?? 0;
-          return plus > 0 ? `${String(name)} +${plus}` : String(name);
-        })
-        .filter(Boolean)
-        .join("\n");
-    }
-  } catch {
-    // not JSON
-  }
-  return raw!.trim();
-}
-
-function sectionBlock(title: string, lines: string[]): string {
-  const filled = lines.filter(Boolean);
-  if (filled.length === 0) return "";
-  return `${title.toUpperCase()}\n${filled.join("\n")}`;
-}
-
-const DEFAULT_GREETING = "Hey fellas —";
-
-function buildPlainTextBody(show: Show & { schedule_entries?: any[] }): string {
-  const parts: string[] = [];
-  const has = (k: SectionKey) => hasData(show, k);
-
-  parts.push(DEFAULT_GREETING);
-
-  if (has("contact")) {
-    parts.push(sectionBlock("Day of Show Contact", [
-      fieldLine("Name", val(show.dos_contact_name)),
-      fieldLine("Phone", val(show.dos_contact_phone)),
-    ]));
-  }
-
-  if (has("venue")) {
-    const rawAddr = show.venue_address?.replace(/,?\s*United States$/i, "") ?? "";
-    parts.push(sectionBlock("Venue", [rawAddr ? `Address: ${rawAddr}` : ""]));
-  }
-
-  if (has("schedule") && show.schedule_entries?.length) {
-    const sorted = [...show.schedule_entries].sort((a, b) => a.sort_order - b.sort_order);
-    const lines = sorted.map((e) => {
-      const setInline = e.is_band && val(show.set_length) ? ` (${val(show.set_length)})` : "";
-      return `${e.time}  ${e.label}${setInline}`;
-    });
-    parts.push(sectionBlock("Schedule", lines));
-  }
-
-  if (has("departure")) {
-    parts.push(sectionBlock("Departure", [
-      fieldLine("Time", val(show.departure_time)),
-      fieldLine("Notes", val(show.departure_notes)),
-    ]));
-  }
-
-  if (has("parking")) {
-    parts.push(sectionBlock("Parking", [val(show.parking_notes)!]));
-  }
-
-  if (has("loadIn")) {
-    parts.push(sectionBlock("Load In", [val(show.load_in_details)!]));
-  }
-
-  if (has("greenRoom")) {
-    parts.push(sectionBlock("Green Room", [val(show.green_room_info)!]));
-  }
-
-  if (has("venueDetails")) {
-    const fields: string[] = [];
-    if (val(show.venue_capacity)) fields.push(fieldLine("Capacity", val(show.venue_capacity)));
-    if (val(show.age_restriction)) fields.push(fieldLine("Age Restriction", val(show.age_restriction)));
-    if (fields.some(Boolean)) parts.push(sectionBlock("Venue Details", fields));
-  }
-
-  if (has("guestList")) {
-    parts.push(sectionBlock("Guest List", [formatGuestList(show.guest_list_details)]));
-  }
-
-  if (has("wifi")) {
-    parts.push(sectionBlock("WiFi", [
-      fieldLine("Network", val(show.wifi_network)),
-      fieldLine("Password", val(show.wifi_password)),
-    ]));
-  }
-
-  if (has("hotel")) {
-    parts.push(sectionBlock("Accommodations", [
-      fieldLine("Name", val(show.hotel_name)),
-      fieldLine("Address", val(show.hotel_address)),
-      fieldLine("Confirmation #", val(show.hotel_confirmation)),
-      fieldLine("Check In", val(show.hotel_checkin)),
-      fieldLine("Check Out", val(show.hotel_checkout)),
-    ]));
-  }
-
-  return parts.filter(Boolean).join("\n\n");
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+const MAX_PERSONAL_MESSAGE_CHARS = 2000;
 
 interface EmailBandDialogProps {
-  show: Show & { schedule_entries?: any[] };
+  show: Show & { schedule_entries?: unknown[] };
   trigger?: React.ReactNode;
+}
+
+function defaultSubject(show: EmailBandDialogProps["show"]): string {
+  let dateStr = "";
+  try {
+    dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
+  } catch {
+    dateStr = "";
+  }
+  const city = formatCityState(show.city);
+  const cityPart = city ? ` (${city})` : "";
+  const datePart = dateStr ? `${dateStr} - ` : "";
+  return `${datePart}${show.venue_name ?? "Show"}${cityPart} - Day Sheet`;
+}
+
+function senderDisplayName(
+  metadata: Record<string, unknown> | undefined,
+  email: string | null | undefined,
+): string {
+  const meta = metadata ?? {};
+  const fullName = typeof meta.full_name === "string" ? meta.full_name.trim() : "";
+  if (fullName) return fullName;
+  const name = typeof meta.name === "string" ? meta.name.trim() : "";
+  if (name) return name;
+  if (email) {
+    const local = email.split("@")[0];
+    if (local) return local;
+  }
+  return "Advance";
 }
 
 export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps) {
   const { teamId } = useTeam();
+  const { session } = useAuth();
+  const user = session?.user;
 
-  const { data: members = [] } = useQuery({
+  const [open, setOpen] = useState(false);
+  const [subject, setSubject] = useState(() => defaultSubject(show));
+  const [personalMessage, setPersonalMessage] = useState("");
+  const [excludedEmails, setExcludedEmails] = useState<Set<string>>(new Set());
+
+  const { data: members = [], isLoading: loadingMembers } = useQuery({
     queryKey: ["touring-party", teamId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("touring_party_members")
-        .select("email")
+        .select("name, email")
         .eq("team_id", teamId!);
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
-    enabled: !!teamId,
+    enabled: open && !!teamId,
   });
 
-  const handleSend = () => {
-    const emails = members.map((m) => m.email).filter(Boolean);
-    if (emails.length === 0) {
-      toast.error("No touring party members with email addresses");
-      return;
-    }
-    const dateStr = format(parseISO(show.date), "EEEE, MMMM d, yyyy");
-    const subject = `${dateStr} - ${show.venue_name} (${formatCityState(show.city)}) - Day Sheet`;
-    const body = buildPlainTextBody(show);
-    const gmailUrl =
-      "https://mail.google.com/mail/?view=cm" +
-      `&to=${encodeURIComponent(emails.join(","))}` +
-      `&su=${encodeURIComponent(subject)}` +
-      `&body=${encodeURIComponent(body)}`;
-    window.open(gmailUrl, "_blank");
+  const recipients = members.filter((m): m is { name: string | null; email: string } =>
+    typeof m.email === "string" && m.email.trim().length > 0,
+  );
+  const activeRecipientCount = recipients.filter(
+    (m) => !excludedEmails.has(m.email.toLowerCase()),
+  ).length;
+
+  const toggleExcluded = (email: string) => {
+    const key = email.toLowerCase();
+    setExcludedEmails((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   };
 
-  if (trigger) {
-    return (
-      <span
-        onClick={(e) => {
-          e.preventDefault();
-          handleSend();
-        }}
-      >
-        {trigger}
-      </span>
-    );
-  }
+  const sendMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("send-daysheet-email", {
+        body: {
+          showId: show.id,
+          subject,
+          personalMessage,
+          excludedEmails: Array.from(excludedEmails),
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      return data as { success: boolean; recipientCount: number };
+    },
+    onSuccess: (data) => {
+      const count = data?.recipientCount ?? activeRecipientCount;
+      toast.success(`Day sheet sent to ${count} recipient${count === 1 ? "" : "s"}`);
+      setOpen(false);
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to send day sheet");
+    },
+  });
+
+  // Reset local state whenever the dialog closes so the next open starts clean.
+  useEffect(() => {
+    if (!open) {
+      setPersonalMessage("");
+      setSubject(defaultSubject(show));
+      setExcludedEmails(new Set());
+    }
+  }, [open, show]);
+
+  const sendDisabled =
+    sendMutation.isPending || activeRecipientCount === 0 || loadingMembers;
+  const displayName = senderDisplayName(user?.user_metadata, user?.email);
 
   return (
-    <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSend}>
-      <Mail className="h-4 w-4" /> Email Band
-    </Button>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger || (
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <Mail className="h-4 w-4" /> Email Band
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Email Day Sheet</DialogTitle>
+            <DialogDescription>
+              Sends an HTML day sheet to your touring party. Replies come to you.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <div className="flex items-baseline justify-between">
+                <Label className="text-xs uppercase tracking-widest text-muted-foreground">
+                  Recipients
+                </Label>
+                {recipients.length > 0 ? (
+                  <span className="text-[11px] text-muted-foreground tabular-nums">
+                    {activeRecipientCount} of {recipients.length}
+                  </span>
+                ) : null}
+              </div>
+              {loadingMembers ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : recipients.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No touring party members with email addresses. Add someone in Settings → Team
+                  before sending.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {recipients.map((m) => {
+                    const excluded = excludedEmails.has(m.email.toLowerCase());
+                    return (
+                      <button
+                        key={m.email}
+                        type="button"
+                        onClick={() => toggleExcluded(m.email)}
+                        disabled={sendMutation.isPending}
+                        aria-pressed={!excluded}
+                        aria-label={
+                          excluded
+                            ? `Include ${m.name || m.email}`
+                            : `Remove ${m.name || m.email}`
+                        }
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs transition-colors",
+                          "disabled:cursor-not-allowed disabled:opacity-50",
+                          excluded
+                            ? "border-dashed border-border bg-transparent text-muted-foreground line-through hover:border-foreground/40"
+                            : "border-border bg-muted/40 hover:bg-muted/60",
+                        )}
+                      >
+                        <span className="font-medium">{m.name || m.email}</span>
+                        {m.name ? (
+                          <span className={excluded ? "" : "text-muted-foreground"}>
+                            &lt;{m.email}&gt;
+                          </span>
+                        ) : null}
+                        <X
+                          className={cn(
+                            "h-3 w-3 transition-transform",
+                            excluded && "rotate-45",
+                          )}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {activeRecipientCount === 0 && recipients.length > 0 ? (
+                <p className="text-[11px] text-muted-foreground">
+                  All recipients are excluded. Click a chip to include them.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="email-subject" className="text-xs uppercase tracking-widest text-muted-foreground">
+                Subject
+              </Label>
+              <Input
+                id="email-subject"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                disabled={sendMutation.isPending}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-baseline justify-between">
+                <Label htmlFor="email-message" className="text-xs uppercase tracking-widest text-muted-foreground">
+                  Personal note (optional)
+                </Label>
+                <span className="text-[11px] text-muted-foreground tabular-nums">
+                  {personalMessage.length}/{MAX_PERSONAL_MESSAGE_CHARS}
+                </span>
+              </div>
+              <Textarea
+                id="email-message"
+                value={personalMessage}
+                onChange={(e) => setPersonalMessage(e.target.value.slice(0, MAX_PERSONAL_MESSAGE_CHARS))}
+                placeholder="Add a quick note — shown at the top of the email."
+                rows={4}
+                disabled={sendMutation.isPending}
+              />
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              From <span className="font-medium text-foreground">{displayName}</span> via Advance ·
+              Replies go to {user?.email ?? "you"}
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setOpen(false)}
+              disabled={sendMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button onClick={() => sendMutation.mutate()} disabled={sendDisabled}>
+              {sendMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Sending…
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4" /> Send day sheet
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

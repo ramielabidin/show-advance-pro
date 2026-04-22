@@ -184,6 +184,7 @@ Located in `supabase/functions/`. Called via `supabase.functions.invoke("<name>"
 
 - **`parse-advance`** — AI-parses pasted email / extracted PDF text into show fields + schedule
 - **`push-slack-daysheet`** — sends day sheet to connected Slack workspace
+- **`send-daysheet-email`** — sends the HTML band day sheet via SendGrid. One shared thread (all recipients in `to`), `reply_to` is the caller so replies land in the user's inbox. Requires Supabase secrets `SENDGRID_API_KEY` and `SENDGRID_FROM_EMAIL`. The HTML template lives alongside the function in `supabase/functions/send-daysheet-email/template.ts` and mirrors `DaysheetGuestView` — keep them in visual sync. The section list is duplicated at `supabase/functions/send-daysheet-email/sections.ts` (Deno can't import from `src/`); if you edit `src/lib/daysheetSections.ts`, mirror the change there
 - **`calculate-drive-time`** — Google Maps drive time between two points (used on `ShowDetailPage`)
 - **`lookup-venue-address`** — resolves a venue name + city into a full address
 - **`autocomplete-place`** — Google Places autocomplete (used for Home Base City)

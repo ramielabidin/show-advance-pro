@@ -20,6 +20,9 @@ dist-ssr
 # Supabase CLI temp files
 supabase/.temp/
 
+# Local preview output (email template renders, etc.)
+tmp/
+
 # Claude Code local settings (may contain secrets)
 .claude/*
 !.claude/skills/
