@@ -55,7 +55,6 @@ export interface Show {
   tour_id: string | null;
   venue_capacity: string | null;
   ticket_price: string | null;
-  age_restriction: string | null;
   guarantee: string | null;
   backend_deal: string | null;
   hospitality: string | null;

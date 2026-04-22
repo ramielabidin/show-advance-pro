@@ -55,7 +55,7 @@ export function hasData(
     case "greenRoom":
       return v(show.green_room_info);
     case "venueDetails":
-      return v(show.venue_capacity) || v(show.age_restriction);
+      return v(show.venue_capacity);
     case "guestList":
       return v(show.guest_list_details);
     case "wifi":

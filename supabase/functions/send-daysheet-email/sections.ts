@@ -40,7 +40,6 @@ export interface ShowLike {
   load_in_details?: string | null;
   green_room_info?: string | null;
   venue_capacity?: string | null;
-  age_restriction?: string | null;
   guest_list_details?: string | null;
   wifi_network?: string | null;
   wifi_password?: string | null;
@@ -82,7 +81,7 @@ export function hasData(show: ShowLike, key: SectionKey): boolean {
     case "greenRoom":
       return v(show.green_room_info);
     case "venueDetails":
-      return v(show.venue_capacity) || v(show.age_restriction);
+      return v(show.venue_capacity);
     case "guestList":
       return v(show.guest_list_details);
     case "wifi":
