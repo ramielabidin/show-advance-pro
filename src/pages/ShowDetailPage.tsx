@@ -895,7 +895,7 @@ export default function ShowDetailPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <SlackPushDialog showId={id!} show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
-                <EmailBandDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email Band</DropdownMenuItem>} />
+                <EmailBandDialog show={show as Show} trigger={<DropdownMenuItem>Email Band</DropdownMenuItem>} />
                 <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
               </DropdownMenuContent>
             </DropdownMenu>
