@@ -1,7 +1,7 @@
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, Phone, Mail } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -40,7 +40,6 @@ import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
 import Eyebrow from "@/components/Eyebrow";
 import StatTile from "@/components/StatTile";
-import DriveTimeCallout from "@/components/DriveTimeCallout";
 import SlackPushDialog from "@/components/SlackPushDialog";
 import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
@@ -230,9 +229,6 @@ export default function ShowDetailPage() {
 
   const [lookingUpAddress, setLookingUpAddress] = useState(false);
   const [scheduleKey, setScheduleKey] = useState(0);
-  const [driveCardDismissed, setDriveCardDismissed] = useState(() =>
-    id ? localStorage.getItem(`drive-card-dismissed-${id}`) === "true" : false
-  );
   const [suggestionDismissed, setSuggestionDismissed] = useState(() =>
     id ? localStorage.getItem(`departure-suggestion-dismissed-${id}`) === "true" : false
   );
@@ -507,13 +503,13 @@ export default function ShowDetailPage() {
   // can be open at a time.
   const dosEditor = useGroupEditor({
     groupKey: "dos_group",
-    keys: ["dos_contact_name", "dos_contact_phone"] as const,
+    keys: ["dos_contact_name", "dos_contact_phone", "dos_contact_email"] as const,
     show,
     inlineField,
     setInlineField,
     updateMutation,
     normalizers: { dos_contact_phone: normalizePhone },
-    isEmpty: s => !s.dos_contact_name && !s.dos_contact_phone,
+    isEmpty: s => !s.dos_contact_name && !s.dos_contact_phone && !s.dos_contact_email,
   });
 
   const departureEditor = useGroupEditor({
@@ -1024,22 +1020,34 @@ export default function ShowDetailPage() {
             </div>
           ) : (
           <div className="space-y-6 sm:space-y-8">
-            {/* Drive-time callout — pulled out of Departure so it sits at the top of the show view */}
-            {driveTimeLabel && departureOrigin && !driveCardDismissed && (
-              <DriveTimeCallout
-                driveTimeLabel={driveTimeLabel}
-                originLabel={departureOrigin.label}
-                distanceText={driveTime?.distance_text}
-                onDismiss={() => {
-                  if (id) localStorage.setItem(`drive-card-dismissed-${id}`, "true");
-                  setDriveCardDismissed(true);
-                }}
-              />
+            {/* Drive-time — compact single line */}
+            {driveTimeLabel && departureOrigin && (
+              <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground flex-wrap">
+                <Car className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                <span className="font-mono text-foreground">{driveTimeLabel}</span>
+                <span>drive from {departureOrigin.label}</span>
+                {driveTime?.distance_text && (
+                  <>
+                    <span className="text-border mx-0.5">·</span>
+                    <span className="font-mono">{driveTime.distance_text}</span>
+                  </>
+                )}
+                {recommendedDeparture && (
+                  <>
+                    <span className="text-border mx-0.5">·</span>
+                    <span>
+                      leave by{" "}
+                      <span className="font-mono text-foreground">{recommendedDeparture}</span>
+                      {" "}for load in
+                    </span>
+                  </>
+                )}
+              </div>
             )}
 
             {/* Day of Show Contact + Departure — paired two-column */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone}>
+              <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone && !show.dos_contact_email}>
                 {dosEditor.isEditing ? (
                   <div ref={inlineRef} className="space-y-3">
                     <div className="space-y-1">
@@ -1059,6 +1067,15 @@ export default function ShowDetailPage() {
                         inputMode="tel"
                       />
                     </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Email</Label>
+                      <InlineField
+                        value={dosEditor.get("dos_contact_email")}
+                        onChange={(v) => dosEditor.setField("dos_contact_email", v)}
+                        mono
+                        inputMode="email"
+                      />
+                    </div>
                     <InlineActions onSave={dosEditor.save} onCancel={dosEditor.cancel} />
                   </div>
                 ) : dosEditor.empty ? (
@@ -1071,10 +1088,53 @@ export default function ShowDetailPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); dosEditor.startEdit(); }
                     }}
-                    className="w-full text-left space-y-2 card-pressable cursor-pointer"
+                    className="w-full text-left card-pressable cursor-pointer"
                   >
-                    <FieldRow label="Name" value={show.dos_contact_name} compact />
-                    <FieldRow label="Phone" value={show.dos_contact_phone} mono compact />
+                    {/* Avatar + name */}
+                    <div className="flex items-center gap-3">
+                      <div className="h-[38px] w-[38px] rounded-full bg-[var(--pastel-blue-bg)] text-[var(--pastel-blue-fg)] flex items-center justify-center shrink-0 select-none">
+                        <span className="font-display text-[15px] leading-none">
+                          {(show.dos_contact_name ?? "")
+                            .trim()
+                            .split(/\s+/)
+                            .slice(0, 2)
+                            .map((w) => w[0])
+                            .join("")
+                            .toUpperCase() || "?"}
+                        </span>
+                      </div>
+                      <span className="text-sm font-medium text-foreground">{show.dos_contact_name}</span>
+                    </div>
+                    {/* Phone / email links — stopPropagation so clicks open the app, not edit mode */}
+                    {(show.dos_contact_phone || show.dos_contact_email) && (
+                      <div
+                        className="mt-2.5 pt-2.5 border-t border-border/60 space-y-1.5 pl-[50px]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {show.dos_contact_phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
+                            <a
+                              href={`tel:${show.dos_contact_phone}`}
+                              className="text-sm font-mono text-foreground hover:underline"
+                            >
+                              {show.dos_contact_phone}
+                            </a>
+                          </div>
+                        )}
+                        {show.dos_contact_email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
+                            <a
+                              href={`mailto:${show.dos_contact_email}`}
+                              className="text-sm font-mono text-foreground hover:underline"
+                            >
+                              {show.dos_contact_email}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </FieldGroup>
@@ -1106,7 +1166,7 @@ export default function ShowDetailPage() {
                 ) : departureEditor.empty ? (
                   <>
                     <EmptyFieldPrompt label="departure" onClick={departureEditor.startEdit} />
-                    {recommendedDeparture && !driveCardDismissed && !suggestionDismissed && (
+                    {recommendedDeparture && !suggestionDismissed && (
                       <div className="flex items-center gap-1.5">
                         <Button
                           variant="outline"
