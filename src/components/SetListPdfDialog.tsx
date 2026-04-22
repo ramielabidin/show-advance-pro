@@ -90,97 +90,104 @@ export default function SetListPdfDialog({ show, entries, trigger }: Props) {
         y += 12;
       }
 
-      y += 28;
+      y += 12;
 
       // ════════════════════════════════════════════════════════════════════
-      // SET LIST — section label + bordered card with auto-sized rows
+      // SET LIST — bordered card with auto-sized rows
+      //
+      // Fit strategy (one-page guarantee is the hard constraint):
+      //   1. Try single-column with a readable 14pt floor.
+      //   2. If that doesn't fit, switch to two-column with an 11pt floor —
+      //      doubles capacity without shrinking as aggressively.
+      //   3. Numbering stays continuous: left column 1..N/2, right N/2+1..N.
       // ════════════════════════════════════════════════════════════════════
 
-      const SECTION_LABEL_RESERVE = 26;
       const FOOTER_H = 16;
-      const availableH = PH - MB - FOOTER_H - y - SECTION_LABEL_RESERVE;
+      const availableH = PH - MB - FOOTER_H - y;
 
-      // Auto-size: start at 22pt, shrink to 11pt if needed
       const FONT_MAX = 22;
-      const FONT_MIN = 11;
+      const FONT_MIN_SINGLE = 14;
+      const FONT_MIN_DOUBLE = 11;
       const STEP = 0.5;
       const LINE_GAP = 1.6;
       const CARD_PAD_Y = 14;
       const CARD_PAD_X = 18;
 
       const rowCount = entries.length;
-      const cardHeightAt = (fs: number) =>
-        rowCount === 0 ? 0 : CARD_PAD_Y * 2 + rowCount * fs * LINE_GAP;
 
-      let fontSize = FONT_MAX;
-      while (fontSize > FONT_MIN && cardHeightAt(fontSize) > availableH) {
-        fontSize -= STEP;
-      }
+      const fit = (columns: number, floor: number) => {
+        const rowsPerCol = Math.ceil(rowCount / columns);
+        const heightAt = (fs: number) =>
+          rowCount === 0 ? 0 : CARD_PAD_Y * 2 + rowsPerCol * fs * LINE_GAP;
+        let fs = FONT_MAX;
+        while (fs > floor && heightAt(fs) > availableH) fs -= STEP;
+        return { fs, fits: heightAt(fs) <= availableH, rowsPerCol };
+      };
+
+      const singleTry = fit(1, FONT_MIN_SINGLE);
+      const useTwoColumn = !singleTry.fits;
+      const chosen = useTwoColumn ? fit(2, FONT_MIN_DOUBLE) : singleTry;
+
+      const columns = useTwoColumn ? 2 : 1;
+      const fontSize = chosen.fs;
+      const rowsPerCol = chosen.rowsPerCol;
 
       const rowH = fontSize * LINE_GAP;
-      const cardH = cardHeightAt(fontSize);
+      const cardH = rowCount === 0 ? 0 : CARD_PAD_Y * 2 + rowsPerCol * rowH;
       const cardW = CW;
       const cardX = ML;
+      const cardY = y;
 
-      const centerOffset = Math.min(Math.max(0, (availableH - cardH) / 2), 40);
-      const cardY = y + SECTION_LABEL_RESERVE + centerOffset;
-
-      // Section label: slim vertical bar + uppercase tracking label
-      const labelY = cardY - 12;
-      doc.setFillColor(196, 194, 191);
-      doc.roundedRect(ML, labelY - 8, 2, 10, 1, 1, "F");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.setTextColor(...T.muted);
-      doc.setCharSpace(1.8);
-      doc.text("SET LIST", ML + 8, labelY);
-      doc.setCharSpace(0);
-
-      // Card fill
       doc.setFillColor(...T.card);
       doc.roundedRect(cardX, cardY, cardW, cardH, 10, 10, "F");
 
-      // Number column width scales with type size
-      const numColX = cardX + CARD_PAD_X;
-      const titleColX = numColX + fontSize * 2.2;
-      let rowY = cardY + CARD_PAD_Y + rowH * 0.7;
+      const colGap = 28;
+      const totalInnerW = cardW - CARD_PAD_X * 2;
+      const colW = (totalInnerW - (columns - 1) * colGap) / columns;
 
-      // Track visible-index (songs + customs increment; notes do not)
       let visibleIdx = 0;
 
-      for (let i = 0; i < rowCount; i++) {
-        const entry = entries[i];
-        const isNote = entry.kind === "note";
+      for (let c = 0; c < columns; c++) {
+        const colX = cardX + CARD_PAD_X + c * (colW + colGap);
+        const numColX = colX;
+        const titleColX = numColX + fontSize * 2.2;
+        let rowY = cardY + CARD_PAD_Y + rowH * 0.7;
 
-        if (!isNote) {
-          visibleIdx += 1;
-          // Number (mono, muted)
-          doc.setFont("courier", "normal");
-          doc.setFontSize(fontSize * 0.7);
-          doc.setTextColor(...T.mutedSoft);
-          doc.text(`${visibleIdx}.`, numColX, rowY);
+        const startI = c * rowsPerCol;
+        const endI = Math.min(startI + rowsPerCol, rowCount);
 
-          // Title (sans, ink)
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(fontSize);
-          doc.setTextColor(...T.ink);
-          doc.text(titleOf(entry), titleColX, rowY);
-        } else {
-          // Note (italic, muted, indented into the number column)
-          doc.setFont("helvetica", "italic");
-          doc.setFontSize(fontSize * 0.82);
-          doc.setTextColor(...T.muted);
-          doc.text(titleOf(entry), numColX, rowY);
+        for (let i = startI; i < endI; i++) {
+          const entry = entries[i];
+          const isNote = entry.kind === "note";
+
+          if (!isNote) {
+            visibleIdx += 1;
+            doc.setFont("courier", "normal");
+            doc.setFontSize(fontSize * 0.7);
+            doc.setTextColor(...T.mutedSoft);
+            doc.text(`${visibleIdx}.`, numColX, rowY);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(fontSize);
+            doc.setTextColor(...T.ink);
+            doc.text(titleOf(entry), titleColX, rowY);
+          } else {
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(fontSize * 0.82);
+            doc.setTextColor(...T.muted);
+            doc.text(titleOf(entry), numColX, rowY);
+          }
+
+          // Hairline divider within this column (not after the last row)
+          if (i < endI - 1) {
+            const divY = cardY + CARD_PAD_Y + (i - startI + 1) * rowH;
+            doc.setDrawColor(...T.borderSoft);
+            doc.setLineWidth(0.4);
+            doc.line(colX, divY, colX + colW, divY);
+          }
+
+          rowY += rowH;
         }
-
-        if (i < rowCount - 1) {
-          const divY = cardY + CARD_PAD_Y + (i + 1) * rowH;
-          doc.setDrawColor(...T.borderSoft);
-          doc.setLineWidth(0.4);
-          doc.line(cardX + CARD_PAD_X, divY, cardX + cardW - CARD_PAD_X, divY);
-        }
-
-        rowY += rowH;
       }
 
       // Border last so it sits on top of any fills
