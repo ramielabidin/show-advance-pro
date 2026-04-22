@@ -23,7 +23,7 @@ export type Database = {
           slack_channel_name: string | null
           slack_team_name: string | null
           slack_webhook_url: string | null
-          team_id: string | null
+          team_id: string
           updated_at: string
         }
         Insert: {
@@ -34,7 +34,7 @@ export type Database = {
           slack_channel_name?: string | null
           slack_team_name?: string | null
           slack_webhook_url?: string | null
-          team_id?: string | null
+          team_id: string
           updated_at?: string
         }
         Update: {
@@ -45,7 +45,7 @@ export type Database = {
           slack_channel_name?: string | null
           slack_team_name?: string | null
           slack_webhook_url?: string | null
-          team_id?: string | null
+          team_id?: string
           updated_at?: string
         }
         Relationships: [
@@ -88,6 +88,27 @@ export type Database = {
           slot?: string
           team_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      edge_rate_limits: {
+        Row: {
+          bucket: string
+          created_at: string
+          id: string
+          key: string
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          id?: string
+          key: string
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          id?: string
+          key?: string
         }
         Relationships: []
       }
@@ -389,12 +410,13 @@ export type Database = {
           net_gross: string | null
           parking_notes: string | null
           set_length: string | null
+          set_list: Json | null
           settlement_guarantee: string | null
           settlement_method: string | null
           settlement_notes: string | null
           support_act: string | null
           support_pay: string | null
-          team_id: string | null
+          team_id: string
           ticket_price: string | null
           tour_id: string | null
           updated_at: string
@@ -438,12 +460,13 @@ export type Database = {
           net_gross?: string | null
           parking_notes?: string | null
           set_length?: string | null
+          set_list?: Json | null
           settlement_guarantee?: string | null
           settlement_method?: string | null
           settlement_notes?: string | null
           support_act?: string | null
           support_pay?: string | null
-          team_id?: string | null
+          team_id: string
           ticket_price?: string | null
           tour_id?: string | null
           updated_at?: string
@@ -487,12 +510,13 @@ export type Database = {
           net_gross?: string | null
           parking_notes?: string | null
           set_length?: string | null
+          set_list?: Json | null
           settlement_guarantee?: string | null
           settlement_method?: string | null
           settlement_notes?: string | null
           support_act?: string | null
           support_pay?: string | null
-          team_id?: string | null
+          team_id?: string
           ticket_price?: string | null
           tour_id?: string | null
           updated_at?: string
@@ -516,6 +540,35 @@ export type Database = {
             columns: ["tour_id"]
             isOneToOne: false
             referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      songs: {
+        Row: {
+          created_at: string
+          id: string
+          team_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          team_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          team_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "songs_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -613,7 +666,7 @@ export type Database = {
           name: string
           phone: string
           role: string | null
-          team_id: string | null
+          team_id: string
         }
         Insert: {
           created_at?: string
@@ -622,7 +675,7 @@ export type Database = {
           name: string
           phone?: string
           role?: string | null
-          team_id?: string | null
+          team_id: string
         }
         Update: {
           created_at?: string
@@ -631,7 +684,7 @@ export type Database = {
           name?: string
           phone?: string
           role?: string | null
-          team_id?: string | null
+          team_id?: string
         }
         Relationships: [
           {
@@ -651,7 +704,7 @@ export type Database = {
           name: string
           notes: string | null
           start_date: string | null
-          team_id: string | null
+          team_id: string
           updated_at: string
         }
         Insert: {
@@ -661,7 +714,7 @@ export type Database = {
           name: string
           notes?: string | null
           start_date?: string | null
-          team_id?: string | null
+          team_id: string
           updated_at?: string
         }
         Update: {
@@ -671,7 +724,7 @@ export type Database = {
           name?: string
           notes?: string | null
           start_date?: string | null
-          team_id?: string | null
+          team_id?: string
           updated_at?: string
         }
         Relationships: [
