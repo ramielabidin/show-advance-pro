@@ -139,48 +139,54 @@ function artistVenueLine(show: RenderShow): string {
 
 function sectionCard(title: string, innerHtml: string): string {
   return `
-  <tr><td style="padding:0 0 24px 0;">
-    <div style="font-family:${T.sans};font-size:11px;line-height:1.4;letter-spacing:0.12em;text-transform:uppercase;color:${T.muted};font-weight:500;margin:0 0 10px 0;">${escapeHtml(title)}</div>
+  <tr><td style="padding:0 0 28px 0;">
+    <h2 style="font-family:${T.sans};font-size:18px;line-height:1.3;color:${T.fg};font-weight:700;margin:0 0 12px 0;padding:0;">${escapeHtml(title)}</h2>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${T.border};border-radius:8px;background:${T.cardBg};">
-      <tr><td style="padding:16px 18px;">
+      <tr><td style="padding:6px 18px;">
         ${innerHtml}
       </td></tr>
     </table>
   </td></tr>`;
 }
 
-function fieldRow(
-  label: string,
-  value: string | null | undefined,
-  opts: { mono?: boolean; href?: string } = {},
-): string {
-  const v = val(value);
+interface FieldSpec {
+  label: string;
+  value: string | null | undefined;
+  mono?: boolean;
+  href?: string;
+}
+
+function renderFieldRow(spec: FieldSpec, isFirst: boolean): string {
+  const v = val(spec.value);
   if (!v) return "";
-  const valueFont = opts.mono ? T.mono : T.sans;
-  const valueSize = opts.mono ? "13px" : "14px";
+  const valueFont = spec.mono ? T.mono : T.sans;
+  const valueSize = spec.mono ? "13px" : "14px";
   const body = nl2br(v);
-  const content = opts.href
-    ? `<a href="${escapeHtml(opts.href)}" style="color:${T.fg};text-decoration:underline;">${body}</a>`
+  const content = spec.href
+    ? `<a href="${escapeHtml(spec.href)}" style="color:${T.fg};text-decoration:underline;">${body}</a>`
     : body;
-  // Return just the <tr> — the enclosing <table> is supplied by fieldTable()
-  // so every row in a card shares one column layout. Per-row tables make
-  // Gmail re-compute label width per row, which makes "Load In" wrap and
-  // short values like "8:30 AM" float away from their label.
+  // border-top gives a visible separator between rows. vertical padding on
+  // top of that buys real breathing room; 14px each side = 28px of total
+  // space around the divider line.
+  const divider = isFirst ? "" : `border-top:1px solid ${T.border};`;
+  const padTop = isFirst ? "10px" : "14px";
   return `
     <tr>
-      <td valign="top" style="font-family:${T.sans};font-size:14px;line-height:1.5;color:${T.muted};padding:10px 12px 10px 0;vertical-align:top;">${escapeHtml(label)}</td>
-      <td valign="top" style="font-family:${valueFont};font-size:${valueSize};line-height:1.5;color:${T.fg};padding:10px 0;vertical-align:top;white-space:pre-wrap;word-break:break-word;">${content}</td>
+      <td valign="top" style="${divider}font-family:${T.sans};font-size:14px;line-height:1.5;color:${T.muted};padding:${padTop} 12px 14px 0;vertical-align:top;">${escapeHtml(spec.label)}</td>
+      <td valign="top" style="${divider}font-family:${valueFont};font-size:${valueSize};line-height:1.5;color:${T.fg};padding:${padTop} 0 14px 0;vertical-align:top;white-space:pre-wrap;word-break:break-word;">${content}</td>
     </tr>`;
 }
 
-function fieldTable(rowsHtml: string): string {
-  if (!rowsHtml.trim()) return "";
+function fieldTable(specs: FieldSpec[]): string {
+  const live = specs.filter((s) => !!val(s.value));
+  if (live.length === 0) return "";
+  const rows = live.map((s, i) => renderFieldRow(s, i === 0)).join("");
   // table-layout:fixed + <colgroup> locks the label column width across all
   // rows in the card — otherwise Gmail's auto-layout algorithm collapses
   // the label when the value is a long multi-line block.
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;border-collapse:collapse;">
     <colgroup><col style="width:128px;" /><col /></colgroup>
-    ${rowsHtml}
+    ${rows}
   </table>`;
 }
 
@@ -221,39 +227,47 @@ function renderSchedule(show: RenderShow): string {
 }
 
 function renderContact(show: RenderShow): string {
-  const inner = fieldTable(
-    fieldRow("Name", show.dos_contact_name) +
-      fieldRow("Phone", show.dos_contact_phone, { mono: true }),
+  return sectionCard(
+    "Day of Show Contact",
+    fieldTable([
+      { label: "Name", value: show.dos_contact_name },
+      { label: "Phone", value: show.dos_contact_phone, mono: true },
+    ]),
   );
-  return sectionCard("Day of Show Contact", inner);
 }
 
 function renderDeparture(show: RenderShow): string {
-  const inner = fieldTable(
-    fieldRow("Time", show.departure_time, { mono: true }) +
-      fieldRow("Notes", show.departure_notes),
+  return sectionCard(
+    "Departure",
+    fieldTable([
+      { label: "Time", value: show.departure_time, mono: true },
+      { label: "Notes", value: show.departure_notes },
+    ]),
   );
-  return sectionCard("Departure", inner);
 }
 
 function renderArrival(show: RenderShow): string {
-  const inner = fieldTable(
-    (hasData(show, "loadIn") ? fieldRow("Load In", show.load_in_details) : "") +
-      (hasData(show, "parking") ? fieldRow("Parking", show.parking_notes) : ""),
+  return sectionCard(
+    "Arrival",
+    fieldTable([
+      { label: "Load In", value: hasData(show, "loadIn") ? show.load_in_details : null },
+      { label: "Parking", value: hasData(show, "parking") ? show.parking_notes : null },
+    ]),
   );
-  return sectionCard("Arrival", inner);
 }
 
 function renderAtVenue(show: RenderShow): string {
-  const rows: string[] = [];
-  if (hasData(show, "greenRoom")) rows.push(fieldRow("Green Room", show.green_room_info));
+  const specs: FieldSpec[] = [];
+  if (hasData(show, "greenRoom")) {
+    specs.push({ label: "Green Room", value: show.green_room_info });
+  }
   if (hasData(show, "wifi")) {
     const network = val(show.wifi_network);
     const password = val(show.wifi_password);
     const wifiValue = [network, password].filter(Boolean).join("\n");
-    rows.push(fieldRow("WiFi", wifiValue, { mono: true }));
+    specs.push({ label: "WiFi", value: wifiValue, mono: true });
   }
-  return sectionCard("At The Venue", fieldTable(rows.join("")));
+  return sectionCard("At The Venue", fieldTable(specs));
 }
 
 function renderHotel(show: RenderShow): string {
@@ -261,14 +275,16 @@ function renderHotel(show: RenderShow): string {
   const mapUrl = addr
     ? `https://maps.google.com/?q=${encodeURIComponent(stripCountry(addr))}`
     : undefined;
-  const inner = fieldTable(
-    fieldRow("Name", show.hotel_name) +
-      fieldRow("Address", show.hotel_address, mapUrl ? { href: mapUrl } : {}) +
-      fieldRow("Confirmation #", show.hotel_confirmation, { mono: true }) +
-      fieldRow("Check In", show.hotel_checkin, { mono: true }) +
-      fieldRow("Check Out", show.hotel_checkout, { mono: true }),
+  return sectionCard(
+    "Accommodations",
+    fieldTable([
+      { label: "Name", value: show.hotel_name },
+      { label: "Address", value: show.hotel_address, href: mapUrl },
+      { label: "Confirmation #", value: show.hotel_confirmation, mono: true },
+      { label: "Check In", value: show.hotel_checkin, mono: true },
+      { label: "Check Out", value: show.hotel_checkout, mono: true },
+    ]),
   );
-  return sectionCard("Accommodations", inner);
 }
 
 function renderGuestList(show: RenderShow): string {
@@ -465,6 +481,18 @@ export function renderDaysheetEmail(show: RenderShow, opts: RenderOptions = {}):
 <meta name="color-scheme" content="light only" />
 <meta name="supported-color-schemes" content="light" />
 <title>${escapeHtml(buildSubject(show))}</title>
+<!-- DM Sans (app body font) + JetBrains Mono for times/phones. Apple Mail and
+     iOS Mail honor these; Gmail web strips the external sheet and falls back
+     to -apple-system / Helvetica, which still reads clean. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+  rel="stylesheet"
+/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+</style>
 </head>
 <body style="margin:0;padding:0;background:${T.pageBg};color:${T.fg};-webkit-text-size-adjust:100%;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${T.pageBg};">
