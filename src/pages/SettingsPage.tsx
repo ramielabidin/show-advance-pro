@@ -31,6 +31,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import BandDocuments from "@/components/BandDocuments";
+import type { Song } from "@/lib/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,6 +83,12 @@ export default function SettingsPage() {
   const [partyDialogOpen, setPartyDialogOpen] = useState(false);
   const [partyEditingId, setPartyEditingId] = useState<string | null>(null);
   const [partyForm, setPartyForm] = useState<PartyMemberForm>(emptyPartyForm);
+
+  // Song catalog state
+  const [songAdding, setSongAdding] = useState(false);
+  const [songEditingId, setSongEditingId] = useState<string | null>(null);
+  const [songDraft, setSongDraft] = useState("");
+  const [pendingRemoveSongId, setPendingRemoveSongId] = useState<string | null>(null);
 
   // Confirmation state
   const [slackDisconnectOpen, setSlackDisconnectOpen] = useState(false);
@@ -397,6 +404,88 @@ export default function SettingsPage() {
       phone: m.phone,
       role: (m as any).role ?? "",
     });
+  };
+
+  // ── Song Catalog ──
+  // Typed as a loose client call until `src/integrations/supabase/types.ts`
+  // is regenerated after the set_list migration applies.
+  const { data: songs = [], isLoading: songsLoading } = useQuery({
+    queryKey: ["songs"],
+    queryFn: async (): Promise<Song[]> => {
+      const { data, error } = await (supabase as any)
+        .from("songs")
+        .select("*")
+        .order("title");
+      if (error) throw error;
+      return (data ?? []) as Song[];
+    },
+  });
+
+  const createSongMutation = useMutation({
+    mutationFn: async (title: string) => {
+      const trimmed = title.trim();
+      if (!trimmed) throw new Error("Song title cannot be empty");
+      const { error } = await (supabase as any).from("songs").insert({
+        title: trimmed,
+        team_id: teamId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["songs"] });
+      // Keep the input open so the user can rapid-fire add songs.
+      // Clearing the draft is enough; the input stays mounted and focused.
+      setSongDraft("");
+      toast.success("Song added");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const updateSongMutation = useMutation({
+    mutationFn: async ({ id, title }: { id: string; title: string }) => {
+      const trimmed = title.trim();
+      if (!trimmed) throw new Error("Song title cannot be empty");
+      const { error } = await (supabase as any)
+        .from("songs")
+        .update({ title: trimmed })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["songs"] });
+      setSongEditingId(null);
+      setSongDraft("");
+      toast.success("Song updated");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const deleteSongMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any)
+        .from("songs")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["songs"] });
+      setPendingRemoveSongId(null);
+      toast.success("Song removed");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const startSongEdit = (s: Song) => {
+    setSongEditingId(s.id);
+    setSongDraft(s.title);
+    setSongAdding(false);
+  };
+
+  const cancelSongEdit = () => {
+    setSongEditingId(null);
+    setSongAdding(false);
+    setSongDraft("");
   };
 
   // ── Team Members ──
@@ -868,6 +957,149 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      {/* ── Song Catalog ── */}
+      <section>
+        <SectionLabel
+          action={
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => {
+                setSongAdding(true);
+                setSongEditingId(null);
+                setSongDraft("");
+              }}
+              disabled={songAdding}
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Add song</span>
+              <span className="sm:hidden">Add</span>
+            </Button>
+          }
+        >
+          Song catalog · {songs.length}
+        </SectionLabel>
+
+        <div className="rounded-lg border bg-card overflow-hidden">
+          {songAdding && (
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-border/60 bg-muted/30">
+              <Input
+                autoFocus
+                value={songDraft}
+                onChange={(e) => setSongDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && songDraft.trim() && !createSongMutation.isPending) {
+                    createSongMutation.mutate(songDraft);
+                  } else if (e.key === "Escape") {
+                    cancelSongEdit();
+                  }
+                }}
+                placeholder="Song title — press Enter to add, Esc to close"
+                className="h-9 flex-1"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={cancelSongEdit}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => createSongMutation.mutate(songDraft)}
+                disabled={!songDraft.trim() || createSongMutation.isPending}
+              >
+                <Save className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+
+          {songsLoading ? (
+            <div className="p-4 space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-12 rounded-md bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : songs.length === 0 && !songAdding ? (
+            <div className="text-center py-10 text-muted-foreground">
+              <Music className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">No songs yet. Build your catalog to quickly pick set lists for each show.</p>
+            </div>
+          ) : (
+            <div className="stagger-list max-h-[400px] overflow-y-auto">
+              {songs.map((s, i) => {
+                const isEditing = songEditingId === s.id;
+                return (
+                  <div
+                    key={s.id}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3",
+                      i < songs.length - 1 && "border-b border-border/60",
+                    )}
+                  >
+                    {isEditing ? (
+                      <Input
+                        autoFocus
+                        value={songDraft}
+                        onChange={(e) => setSongDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && songDraft.trim()) {
+                            updateSongMutation.mutate({ id: s.id, title: songDraft });
+                          } else if (e.key === "Escape") {
+                            cancelSongEdit();
+                          }
+                        }}
+                        className="h-9 flex-1"
+                      />
+                    ) : (
+                      <div className="flex-1 min-w-0 text-sm text-foreground truncate">
+                        {s.title}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isEditing ? (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cancelSongEdit}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => updateSongMutation.mutate({ id: s.id, title: songDraft })}
+                            disabled={!songDraft.trim() || updateSongMutation.isPending}
+                          >
+                            <Save className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startSongEdit(s)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setPendingRemoveSongId(s.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* ── Team Members ── */}
       <section className="space-y-4">
         <SectionLabel>
@@ -1030,6 +1262,31 @@ export default function SettingsPage() {
               onClick={() => {
                 if (pendingRemovePartyId) deletePartyMutation.mutate(pendingRemovePartyId);
                 setPendingRemovePartyId(null);
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!pendingRemoveSongId}
+        onOpenChange={(open) => { if (!open) setPendingRemoveSongId(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove song?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the song from your catalog. Existing set lists that reference it keep the title.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingRemoveSongId) deleteSongMutation.mutate(pendingRemoveSongId);
               }}
             >
               Remove
