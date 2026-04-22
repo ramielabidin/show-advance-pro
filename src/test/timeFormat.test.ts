@@ -1,5 +1,71 @@
 import { describe, it, expect } from "vitest";
-import { to12Hour, to24Hour } from "@/lib/timeFormat";
+import { normalizeTime, to12Hour, to24Hour } from "@/lib/timeFormat";
+
+describe("normalizeTime", () => {
+  it("passes through already-normalized time", () => {
+    expect(normalizeTime("7:00 PM")).toBe("7:00 PM");
+  });
+
+  it("uppercases lowercase pm suffix", () => {
+    expect(normalizeTime("7:00pm")).toBe("7:00 PM");
+  });
+
+  it("handles single-char p suffix", () => {
+    expect(normalizeTime("7p")).toBe("7:00 PM");
+  });
+
+  it("handles single-char a suffix", () => {
+    expect(normalizeTime("9a")).toBe("9:00 AM");
+  });
+
+  it("converts 24h time without suffix to 12h with PM", () => {
+    expect(normalizeTime("19:00")).toBe("7:00 PM");
+  });
+
+  it("converts 4-digit 24h format", () => {
+    expect(normalizeTime("1900")).toBe("7:00 PM");
+  });
+
+  it("normalizes 3-digit compact format without AM/PM as ambiguous", () => {
+    expect(normalizeTime("930")).toBe("9:30");
+  });
+
+  it("converts midnight (00:00) to 12:00 AM", () => {
+    expect(normalizeTime("00:00")).toBe("12:00 AM");
+  });
+
+  it("converts midnight (0000) to 12:00 AM", () => {
+    expect(normalizeTime("0000")).toBe("12:00 AM");
+  });
+
+  it("preserves noon with PM suffix", () => {
+    expect(normalizeTime("12:00 PM")).toBe("12:00 PM");
+  });
+
+  it("preserves noon with AM suffix", () => {
+    expect(normalizeTime("12:00 AM")).toBe("12:00 AM");
+  });
+
+  it("leaves bare hour without AM/PM ambiguous", () => {
+    expect(normalizeTime("7")).toBe("7:00");
+  });
+
+  it("preserves minutes", () => {
+    expect(normalizeTime("7:30 PM")).toBe("7:30 PM");
+  });
+
+  it("preserves minutes through 24h conversion", () => {
+    expect(normalizeTime("19:45")).toBe("7:45 PM");
+  });
+
+  it("returns TBD as-is (unparseable)", () => {
+    expect(normalizeTime("TBD")).toBe("TBD");
+  });
+
+  it("returns empty string unchanged", () => {
+    expect(normalizeTime("")).toBe("");
+  });
+});
 
 describe("to24Hour", () => {
   it("parses H:MM AM/PM", () => {
