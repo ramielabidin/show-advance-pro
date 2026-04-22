@@ -16,6 +16,13 @@ const MAX_ATTACHMENTS = 10;
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 const BUCKET = "inbound-attachments";
 
+// Cap on the concatenated thread blob stored on a single pending event.
+// parse-advance accepts up to 40k chars; we keep a generous 3x that so the
+// full conversation is preserved for display / audit, and truncate oldest
+// content first if a thread grows past the cap.
+const MAX_THREAD_CHARS = 120_000;
+const TRUNCATION_MARKER = "[… earlier messages truncated …]\n\n";
+
 // Per-team rate limit. A leaked or guessed routing token would otherwise let
 // an attacker flood inbound_parse_events + the attachments bucket; this caps
 // legitimate teams to a generous 50 inbound emails / hour.
@@ -72,6 +79,12 @@ function sanitizeFilename(name: string): string {
 // arrives straight from SendGrid we fall back to the `Thread-Index` /
 // `References` / `In-Reply-To` headers so retries and forwards of existing
 // threads still dedupe correctly.
+//
+// Known limitation: if a forwarding setup strips `References:` but keeps
+// `In-Reply-To:`, each reply picks up its parent's Message-ID as the thread
+// key instead of the root's, so replies in the same conversation land as
+// separate rows. The common Gmail path preserves `References:` and groups
+// correctly; fix this only if real-world breakage shows up.
 function extractThreadId(form: FormData): string | null {
   const explicit = String(form.get("gmail_thread_id") ?? "").trim();
   if (explicit) return explicit;
@@ -160,6 +173,21 @@ async function findBestMatch(
   return { showId: best.show.id, confidence };
 }
 
+// Append a new reply onto an existing thread blob, keeping chronological
+// order (oldest first). Clamps to MAX_THREAD_CHARS by dropping from the
+// front, which preserves the most recent content — the AI parser is
+// instructed to prefer the most up-to-date information in a thread.
+function appendToThread(existing: string, incoming: string, from: string | null): string {
+  const stamp = new Date().toISOString();
+  const fromLabel = from ? ` from ${from}` : "";
+  const separator = `\n\n--- Reply on ${stamp}${fromLabel} ---\n\n`;
+  const combined = `${existing}${separator}${incoming}`;
+  if (combined.length <= MAX_THREAD_CHARS) return combined;
+  const keep = MAX_THREAD_CHARS - TRUNCATION_MARKER.length;
+  const tail = combined.slice(combined.length - keep);
+  return `${TRUNCATION_MARKER}${tail}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -230,52 +258,73 @@ serve(async (req) => {
     const threadId = extractThreadId(form);
 
     // Thread-based dedupe. If we've seen this thread before:
-    //   - status='pending'       → refresh raw_email_text with the latest blob
-    //                              (so new replies get picked up on next parse)
+    //   - status='pending'       → append the new reply onto the existing
+    //                              raw_email_text so parse-advance later sees
+    //                              the full conversation, not just the last
+    //                              reply. from_address / email_subject track
+    //                              the latest sender (most useful in the queue).
     //   - reviewed or dismissed  → leave JT's existing work alone, skip insert
+    //                              and skip attachments — don't silently
+    //                              re-open a settled thread.
+    let eventId: string | null = null;
     if (threadId) {
       const { data: existing, error: lookupErr } = await admin
         .from("inbound_parse_events")
-        .select("id, status")
+        .select("id, status, raw_email_text")
         .eq("gmail_thread_id", threadId)
         .maybeSingle();
       if (lookupErr) {
         console.error("inbound-email thread lookup failed:", lookupErr.message);
       } else if (existing) {
-        if (existing.status === "pending") {
-          await admin
-            .from("inbound_parse_events")
-            .update({
-              raw_email_text: rawEmailText,
-              email_subject: subject,
-              from_address: from,
-            })
-            .eq("id", existing.id);
+        if (existing.status !== "pending") {
+          return ok({ ok: true, deduped: true, event_id: existing.id });
         }
-        return ok({ ok: true, deduped: true, event_id: existing.id });
+        const merged = appendToThread(
+          String(existing.raw_email_text ?? ""),
+          rawEmailText,
+          from,
+        );
+        const { error: updateErr } = await admin
+          .from("inbound_parse_events")
+          .update({
+            raw_email_text: merged,
+            email_subject: subject,
+            from_address: from,
+          })
+          .eq("id", existing.id);
+        if (updateErr) {
+          console.error("inbound-email thread update failed:", updateErr.message);
+        }
+        eventId = String(existing.id);
       }
     }
 
-    const match = await findBestMatch(admin, teamId, subject, rawEmailText);
+    if (!eventId) {
+      const match = await findBestMatch(admin, teamId, subject, rawEmailText);
 
-    const { data: event, error: insertErr } = await admin
-      .from("inbound_parse_events")
-      .insert({
-        team_id: teamId,
-        raw_email_text: rawEmailText,
-        from_address: from,
-        email_subject: subject,
-        gmail_thread_id: threadId,
-        matched_show_id: match?.showId ?? null,
-        match_confidence: match?.confidence ?? null,
-      })
-      .select("id")
-      .single();
-    if (insertErr || !event) {
-      console.error("inbound-email event insert failed:", insertErr?.message);
-      return ok();
+      const { data: event, error: insertErr } = await admin
+        .from("inbound_parse_events")
+        .insert({
+          team_id: teamId,
+          raw_email_text: rawEmailText,
+          from_address: from,
+          email_subject: subject,
+          gmail_thread_id: threadId,
+          matched_show_id: match?.showId ?? null,
+          match_confidence: match?.confidence ?? null,
+        })
+        .select("id")
+        .single();
+      if (insertErr || !event) {
+        console.error("inbound-email event insert failed:", insertErr?.message);
+        return ok();
+      }
+      eventId = String(event.id);
     }
-    const eventId: string = event.id;
+
+    // Unreachable — every branch above either assigned eventId or returned —
+    // but narrows the type for the attachment block.
+    if (!eventId) return ok();
 
     // Collect PDF attachments. SendGrid exposes them as attachment1, attachment2, …
     // and the count in the `attachments` field. Non-PDFs are silently skipped.
