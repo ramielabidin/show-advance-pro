@@ -46,7 +46,6 @@ const TEMPLATE_COLUMNS = [
   "tour_name",
   "venue_capacity",
   "ticket_price",
-  "age_restriction",
   "guarantee",
   "backend_deal",
   "hospitality",
@@ -64,8 +63,6 @@ const CSV_COLUMN_MAP: Record<string, string> = {
   cap: "venue_capacity",
   venue_capacity: "venue_capacity",
   ticket_price: "ticket_price",
-  age: "age_restriction",
-  age_restriction: "age_restriction",
   guarantee: "guarantee",
   backend_deal: "backend_deal",
   hospitality: "hospitality",
@@ -88,6 +85,46 @@ const FINANCIAL_FIELDS = new Set([
   "artist_comps",
   "merch_split",
 ]);
+
+/**
+ * Short labels for importable fields that aren't called out in the preview
+ * table's dedicated columns (Date/Venue/City/Tour). Used to show which
+ * extras each CSV row is carrying, so users can confirm their financials,
+ * contact info, etc. are actually coming through.
+ */
+const EXTRAS_LABELS: Record<string, string> = {
+  venue_address: "Address",
+  dos_contact_name: "Contact",
+  dos_contact_phone: "Phone",
+  hotel_name: "Hotel",
+  hotel_address: "Hotel addr",
+  venue_capacity: "Capacity",
+  ticket_price: "Ticket $",
+  guarantee: "Guarantee",
+  backend_deal: "Backend",
+  hospitality: "Hospitality",
+  support_act: "Support",
+  support_pay: "Support $",
+  merch_split: "Merch",
+  walkout_potential: "Walkout",
+  net_gross: "Net",
+  artist_comps: "Comps",
+};
+
+/** Returns the ordered list of populated extras for a parsed row. */
+function extrasForRow(row: ParsedRow): string[] {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const dbCol of Object.keys(EXTRAS_LABELS)) {
+    if (seen.has(dbCol)) continue;
+    const direct = row[dbCol]?.trim();
+    if (direct) {
+      seen.add(dbCol);
+      labels.push(EXTRAS_LABELS[dbCol]);
+    }
+  }
+  return labels;
+}
 
 /**
  * Strip currency symbols, commas, and spaces from a financial string.
@@ -736,6 +773,7 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
                     <TableHead>Venue</TableHead>
                     <TableHead>City</TableHead>
                     <TableHead>Tour</TableHead>
+                    <TableHead>Extras</TableHead>
                     <TableHead className="w-20">Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -748,6 +786,7 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
                         : action === "review"
                         ? "bg-pastel-yellow/30"
                         : "";
+                    const extras = extrasForRow(r.data);
                     return (
                       <TableRow key={i} className={rowClass}>
                         <TableCell className="text-muted-foreground">{i + 1}</TableCell>
@@ -756,6 +795,9 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
                         <TableCell>{r.data.city || "—"}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {r.data.tour_name || "—"}
+                        </TableCell>
+                        <TableCell className="text-[11px] text-muted-foreground max-w-[220px]">
+                          {extras.length > 0 ? extras.join(" · ") : "—"}
                         </TableCell>
                         <TableCell>
                           {action === "invalid" ? (

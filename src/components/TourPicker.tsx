@@ -37,13 +37,26 @@ interface TourWithShows {
   shows: { id: string; date: string }[];
 }
 
-function formatDateRange(shows: { date: string }[]): string | null {
-  if (shows.length === 0) return null;
-  const sorted = [...shows].sort((a, b) => a.date.localeCompare(b.date));
-  const first = sorted[0].date;
-  const last = sorted[sorted.length - 1].date;
-  if (first === last) return format(parseISO(first), "MMM d, yyyy");
-  return `${format(parseISO(first), "MMM d")} – ${format(parseISO(last), "MMM d, yyyy")}`;
+/**
+ * Prefer the tour's explicit start_date / end_date when set, falling back
+ * to the min/max of its shows. This lets tours define a date range before
+ * any shows exist (or override the computed range).
+ */
+function formatDateRange(
+  tour: { start_date: string | null; end_date: string | null },
+  shows: { date: string }[]
+): string | null {
+  let first = tour.start_date;
+  let last = tour.end_date;
+  if ((!first || !last) && shows.length > 0) {
+    const sorted = [...shows].sort((a, b) => a.date.localeCompare(b.date));
+    first = first ?? sorted[0].date;
+    last = last ?? sorted[sorted.length - 1].date;
+  }
+  if (!first && !last) return null;
+  if (first && last && first === last) return format(parseISO(first), "MMM d, yyyy");
+  if (first && last) return `${format(parseISO(first), "MMM d")} – ${format(parseISO(last), "MMM d, yyyy")}`;
+  return format(parseISO((first ?? last)!), "MMM d, yyyy");
 }
 
 function hasUpcomingShow(shows: { date: string }[]): boolean {
@@ -315,7 +328,7 @@ function TourRow({
   onClick: () => void;
 }) {
   const shows = tour.shows ?? [];
-  const dateRange = formatDateRange(shows);
+  const dateRange = formatDateRange(tour, shows);
   return (
     <button
       onClick={onClick}
