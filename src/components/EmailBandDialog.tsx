@@ -14,6 +14,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -113,29 +114,16 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
   const sendDisabled = sendMutation.isPending || recipients.length === 0 || loadingMembers;
   const displayName = senderDisplayName(user?.user_metadata, user?.email);
 
-  // Defer opening until after the DropdownMenu finishes its close cycle.
-  // Without this, the click event that dismisses the menu bubbles to the
-  // Dialog overlay and immediately triggers onOpenChange(false).
-  const openDialog = () => setTimeout(() => setOpen(true), 0);
-
   return (
-    <>
-      {trigger ? (
-        <span
-          onClick={(e) => {
-            e.preventDefault();
-            openDialog();
-          }}
-        >
-          {trigger}
-        </span>
-      ) : (
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={openDialog}>
-          <Mail className="h-4 w-4" /> Email Band
-        </Button>
-      )}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-xl">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger || (
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <Mail className="h-4 w-4" /> Email Band
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Email Day Sheet</DialogTitle>
             <DialogDescription>
@@ -229,8 +217,7 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
               )}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }
