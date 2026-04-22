@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
 import { toast } from "sonner";
 import PendingEmailsModal from "@/components/PendingEmailsModal";
+import { saveParsedShow, type ParsedShow } from "@/lib/saveParsedShow";
 
 export type MatchConfidence = "high" | "low" | null;
 
@@ -39,6 +40,7 @@ interface PendingEmailsContextType {
   loading: boolean;
   upcomingShows: UpcomingShow[];
   review: (eventId: string, showId: string) => Promise<void>;
+  createFromEvent: (eventId: string) => Promise<void>;
   dismiss: (eventId: string) => Promise<void>;
 }
 
@@ -142,6 +144,61 @@ export function PendingEmailsProvider({ children }: { children: ReactNode }) {
     [events, navigate, queryClient, teamId],
   );
 
+  const createFromEvent = useCallback(
+    async (eventId: string) => {
+      if (!teamId) return;
+      const event = events.find((e) => e.id === eventId);
+      if (!event) return;
+
+      const { data: fnData, error: fnError } = await supabase.functions.invoke(
+        "parse-advance",
+        { body: { emailText: event.raw_email_text } },
+      );
+      if (fnError) {
+        toast.error(fnError.message || "Failed to parse email");
+        return;
+      }
+      if (fnData?.error) {
+        toast.error(fnData.error);
+        return;
+      }
+      const parsed = fnData?.show as ParsedShow | undefined;
+      if (!parsed?.venue_name || !parsed?.city || !parsed?.date) {
+        toast.error("AI could not extract required fields (venue, city, date)");
+        return;
+      }
+
+      let showId: string;
+      let isNew: boolean;
+      try {
+        ({ showId, isNew } = await saveParsedShow(parsed, teamId));
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to create show");
+        return;
+      }
+
+      const nowIso = new Date().toISOString();
+      await supabase
+        .from("inbound_parse_events")
+        .update({ status: "reviewed", reviewed_at: nowIso, reviewed_show_id: showId })
+        .eq("id", eventId);
+      await supabase
+        .from("inbound_email_attachments")
+        .update({ show_id: showId })
+        .eq("event_id", eventId);
+
+      queryClient.invalidateQueries({ queryKey: ["inbound-events-pending", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["inbound-events-recent", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["inbound-attachments", showId] });
+      queryClient.invalidateQueries({ queryKey: ["shows"] });
+      if (!isNew) queryClient.invalidateQueries({ queryKey: ["show", showId] });
+
+      toast.success(isNew ? "New show created from email" : "Existing show updated from email");
+      navigate(`/shows/${showId}`);
+    },
+    [events, navigate, queryClient, teamId],
+  );
+
   const dismiss = useCallback(
     async (eventId: string) => {
       setDismissed((prev) => {
@@ -168,6 +225,7 @@ export function PendingEmailsProvider({ children }: { children: ReactNode }) {
     loading: isLoading,
     upcomingShows,
     review,
+    createFromEvent,
     dismiss,
   };
 
