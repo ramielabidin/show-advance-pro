@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save, UserPlus, Trash2, Crown, Plus, Pencil, X, Users, Loader2, Music, Copy, Mail } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import BandDocuments from "@/components/BandDocuments";
@@ -46,6 +47,11 @@ import {
 const PARTY_ROLES = ["Artist", "Manager", "Crew", "Photographer", "Driver", "Other"] as const;
 
 const EMAIL_FORWARDING_DOMAIN = "parse.advancetouring.com";
+
+const TAB_KEYS = ["general", "integrations", "documents", "party", "songs", "team"] as const;
+type TabKey = (typeof TAB_KEYS)[number];
+const isTabKey = (v: string | null): v is TabKey =>
+  !!v && (TAB_KEYS as readonly string[]).includes(v);
 
 interface PartyMemberForm {
   name: string;
@@ -117,7 +123,7 @@ export default function SettingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inbound_parse_events")
-        .select("id, email_subject, from_address, status, created_at")
+        .select("id, email_subject, from_address, status, created_at, reviewed_show_id")
         .eq("team_id", teamId!)
         .order("created_at", { ascending: false })
         .limit(10);
@@ -131,7 +137,26 @@ export default function SettingsPage() {
     ? `${appSettings.inbound_email_token}@${EMAIL_FORWARDING_DOMAIN}`
     : null;
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [tab, setTab] = useState<TabKey>(() => {
+    const qs = new URLSearchParams(window.location.search);
+    if (qs.get("slack")) return "integrations";
+    if (qs.get("section") === "email-forwarding") return "integrations";
+    const fromTab = qs.get("tab");
+    return isTabKey(fromTab) ? fromTab : "general";
+  });
+
+  const handleTabChange = (v: string) => {
+    if (!isTabKey(v)) return;
+    setTab(v);
+    // Read from window.location so stale params (e.g. `slack` cleared via
+    // replaceState in the OAuth effect below) don't get reintroduced.
+    const next = new URLSearchParams(window.location.search);
+    next.set("tab", v);
+    setSearchParams(next, { replace: true });
+  };
+
   useEffect(() => {
     if (settingsLoading) return;
     if (searchParams.get("section") !== "email-forwarding") return;
@@ -579,6 +604,20 @@ export default function SettingsPage() {
     <div className="animate-fade-in stagger-list mx-auto max-w-[920px] space-y-6 sm:space-y-8">
       <PageTitle subline="Manage your artist profile and integrations">Settings</PageTitle>
 
+      <Tabs value={tab} onValueChange={handleTabChange}>
+        <div className="border-b border-border overflow-x-auto">
+          <TabsList className="h-auto bg-transparent p-0 gap-5 rounded-none flex-nowrap">
+            <TabsTrigger value="general" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">General</TabsTrigger>
+            <TabsTrigger value="integrations" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">Integrations</TabsTrigger>
+            <TabsTrigger value="documents" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">Documents</TabsTrigger>
+            <TabsTrigger value="party" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">Touring Party</TabsTrigger>
+            <TabsTrigger value="songs" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">Songs</TabsTrigger>
+            <TabsTrigger value="team" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">Team</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="general" className="mt-6 sm:mt-8 space-y-6 sm:space-y-8">
+
       {/* ── Active Artist ── */}
       <section>
         <SectionLabel>Active artist</SectionLabel>
@@ -662,6 +701,10 @@ export default function SettingsPage() {
           </Button>
         </div>
       </section>
+
+        </TabsContent>
+
+        <TabsContent value="integrations" className="mt-6 sm:mt-8 space-y-6 sm:space-y-8">
 
       {/* ── Integrations ── */}
       <section>
@@ -775,31 +818,48 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {recentInboundEvents.map((e) => (
-                    <div
-                      key={e.id}
-                      className="flex items-center justify-between rounded-md border px-3 py-2 gap-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {e.email_subject || "(no subject)"}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {e.from_address || "unknown sender"} · {formatDistanceToNow(new Date(e.created_at), { addSuffix: true })}
-                        </p>
+                  {recentInboundEvents.map((e) => {
+                    const linkTo =
+                      e.status === "reviewed" && e.reviewed_show_id
+                        ? `/shows/${e.reviewed_show_id}`
+                        : null;
+                    const rowClass = cn(
+                      "flex items-center justify-between rounded-md border px-3 py-2 gap-2",
+                      linkTo &&
+                        "hover:bg-accent/40 hover:border-border [transition:background-color_150ms_var(--ease-out),border-color_150ms_var(--ease-out)]",
+                    );
+                    const inner = (
+                      <>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {e.email_subject || "(no subject)"}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {e.from_address || "unknown sender"} · {formatDistanceToNow(new Date(e.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                        <Chip
+                          tone={
+                            e.status === "pending" ? "yellow"
+                            : e.status === "reviewed" ? "green"
+                            : "muted"
+                          }
+                          className="capitalize"
+                        >
+                          {e.status}
+                        </Chip>
+                      </>
+                    );
+                    return linkTo ? (
+                      <Link key={e.id} to={linkTo} className={rowClass}>
+                        {inner}
+                      </Link>
+                    ) : (
+                      <div key={e.id} className={rowClass}>
+                        {inner}
                       </div>
-                      <Chip
-                        tone={
-                          e.status === "pending" ? "yellow"
-                          : e.status === "reviewed" ? "green"
-                          : "muted"
-                        }
-                        className="capitalize"
-                      >
-                        {e.status}
-                      </Chip>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -807,8 +867,16 @@ export default function SettingsPage() {
         </div>
       </section>
 
+        </TabsContent>
+
+        <TabsContent value="documents" className="mt-6 sm:mt-8 space-y-6 sm:space-y-8">
+
       {/* ── Band Documents (full width) ── */}
       <BandDocuments />
+
+        </TabsContent>
+
+        <TabsContent value="party" className="mt-6 sm:mt-8 space-y-6 sm:space-y-8">
 
       {/* ── Touring Party ── */}
       <section>
@@ -957,6 +1025,10 @@ export default function SettingsPage() {
         </div>
       </section>
 
+        </TabsContent>
+
+        <TabsContent value="songs" className="mt-6 sm:mt-8 space-y-6 sm:space-y-8">
+
       {/* ── Song Catalog ── */}
       <section>
         <SectionLabel
@@ -1100,6 +1172,10 @@ export default function SettingsPage() {
         </div>
       </section>
 
+        </TabsContent>
+
+        <TabsContent value="team" className="mt-6 sm:mt-8 space-y-6 sm:space-y-8">
+
       {/* ── Team Members ── */}
       <section className="space-y-4">
         <SectionLabel>
@@ -1220,6 +1296,9 @@ export default function SettingsPage() {
           </div>
         )}
       </section>
+
+        </TabsContent>
+      </Tabs>
 
       <AlertDialog open={slackDisconnectOpen} onOpenChange={setSlackDisconnectOpen}>
         <AlertDialogContent>
