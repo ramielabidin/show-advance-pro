@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Advance — Show Detail · Recommended</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="stylesheet" href="assets/advance-tokens.css"/>
+<style>
+  html, body { margin:0; background: hsl(var(--background)); font-family: var(--font-sans); color: hsl(var(--foreground)); }
+  * { box-sizing: border-box; }
+  input, textarea, select, button { font-family: inherit; }
+  ::selection { background: hsl(var(--foreground)/0.15); }
+  .row:hover .edit-hint { opacity: 1; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="components/Base.jsx"></script>
+<script type="text/babel" src="components/Fixtures.jsx"></script>
+<script type="text/babel" src="components/TimePickers.jsx"></script>
+<script type="text/babel" src="components/InlineEdits.jsx"></script>
+
+<script type="text/babel">
+const { useState, useRef, useEffect } = React;
+
+/* Invisible-chrome inline editable text */
+function EditableText({value, onChange, multiline=false, mono=false, placeholder='Tap to add', style={}}){
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value||'');
+  const ref = useRef(null);
+  useEffect(()=>{ if(editing){ ref.current?.focus(); ref.current?.select?.(); } },[editing]);
+  useEffect(()=>{ setDraft(value||''); },[value]);
+
+  const save = ()=>{ onChange(draft); setEditing(false); };
+  const cancel = ()=>{ setDraft(value||''); setEditing(false); };
+  const Tag = multiline ? 'textarea' : 'input';
+
+  if(editing){
+    return (
+      <span style={{display:'inline-flex', alignItems:'center', gap:10, width:'100%'}}>
+        <Tag ref={ref} value={draft} onChange={e=>setDraft(e.target.value)}
+          onBlur={save}
+          onKeyDown={e=>{
+            if(e.key==='Enter' && (!multiline || e.metaKey || e.ctrlKey)){ e.preventDefault(); save(); }
+            if(e.key==='Escape'){ e.preventDefault(); cancel(); }
+          }}
+          placeholder={placeholder}
+          style={{
+            flex:1, minWidth:120, background:'transparent', border:'none',
+            borderBottom:'1px dashed hsl(var(--foreground)/0.4)',
+            outline:'none', padding:'3px 0',
+            fontFamily: mono?'var(--font-mono)':'var(--font-sans)',
+            fontSize:13, color:'hsl(var(--foreground))', lineHeight:1.55,
+            resize: multiline?'vertical':'none', minHeight: multiline?72:'auto',
+            ...style,
+          }}/>
+        <span style={{fontSize:10, color:'hsl(var(--muted-foreground)/0.7)', display:'inline-flex', gap:8, fontFamily:'var(--font-mono)', flexShrink:0}}>
+          <span><kbd style={kbdStyle}>{multiline?'⌘⏎':'⏎'}</kbd> save</span>
+          <span><kbd style={kbdStyle}>esc</kbd></span>
+        </span>
+      </span>
+    );
+  }
+
+  const hasValue = value != null && value !== '';
+  return (
+    <span className="editable-idle" onClick={()=>setEditing(true)}
+      style={{
+        display:'inline-block', cursor:'text',
+        fontFamily: mono?'var(--font-mono)':'inherit',
+        fontSize:13,
+        color: hasValue?'hsl(var(--foreground))':'hsl(var(--muted-foreground)/0.6)',
+        fontStyle: hasValue?'normal':'italic',
+        whiteSpace: multiline?'pre-line':'normal',
+        lineHeight: multiline?1.55:1.4,
+        borderBottom:'1px dashed transparent',
+        transition:'border-color 120ms var(--ease-out)',
+        ...style,
+      }}
+      onMouseEnter={e=>{ e.currentTarget.style.borderBottomColor='hsl(var(--foreground)/0.15)'; }}
+      onMouseLeave={e=>{ e.currentTarget.style.borderBottomColor='transparent'; }}
+    >{hasValue ? value : placeholder}</span>
+  );
+}
+const kbdStyle = {display:'inline-block', padding:'1px 5px', borderRadius:4, border:'1px solid hsl(var(--border))', background:'hsl(var(--muted)/0.4)', fontFamily:'var(--font-mono)', fontSize:10};
+
+/* A read/edit field row */
+function Row({label, value, onChange, mono, multiline, placeholder}){
+  return (
+    <div className="row" style={{display:'grid', gridTemplateColumns:'110px 1fr', gap:10, padding:'7px 0', alignItems: multiline?'flex-start':'center'}}>
+      <span style={{fontSize:13, color:'hsl(var(--muted-foreground))', paddingTop: multiline?2:0}}>{label}</span>
+      <EditableText value={value} onChange={onChange} mono={mono} multiline={multiline} placeholder={placeholder||`Tap to add ${label.toLowerCase()}`}/>
+    </div>
+  );
+}
+
+/* Time field row — uses editorial picker when clicked */
+function TimeRow({label, value, onChange}){
+  const [editing, setEditing] = useState(false);
+  return (
+    <div className="row" style={{display:'grid', gridTemplateColumns:'110px 1fr', gap:10, padding:'7px 0', alignItems:'center'}}>
+      <span style={{fontSize:13, color:'hsl(var(--muted-foreground))'}}>{label}</span>
+      {editing ? (
+        <div style={{display:'inline-flex', alignItems:'center', gap:10}}>
+          <TimePickerEditorial value={value} onChange={onChange}/>
+          <button onClick={()=>setEditing(false)} style={{border:'none', background:'transparent', color:'hsl(var(--muted-foreground))', cursor:'pointer', fontSize:12, fontFamily:'var(--font-mono)'}}>done</button>
+        </div>
+      ) : (
+        <span onClick={()=>setEditing(true)}
+          style={{cursor:'text', fontFamily:'var(--font-mono)', fontSize:13, color:'hsl(var(--foreground))', borderBottom:'1px dashed transparent', transition:'border-color 120ms var(--ease-out)', display:'inline-block', alignSelf:'flex-start'}}
+          onMouseEnter={e=>{ e.currentTarget.style.borderBottomColor='hsl(var(--foreground)/0.15)'; }}
+          onMouseLeave={e=>{ e.currentTarget.style.borderBottomColor='transparent'; }}
+        >{value}</span>
+      )}
+    </div>
+  );
+}
+
+/* Schedule */
+function ScheduleRow({row, onChange, onRemove, editing, setEditing}){
+  if(editing){
+    return (
+      <div style={{display:'grid', gridTemplateColumns:'auto 1fr auto', gap:14, alignItems:'center', padding:'10px 0'}}>
+        <TimePickerEditorial value={row.time} onChange={t=>onChange({...row, time:t})}/>
+        <input value={row.label} onChange={e=>onChange({...row, label:e.target.value})} placeholder="Activity"
+          style={{border:'none', borderBottom:'1px dashed hsl(var(--foreground)/0.3)', background:'transparent', outline:'none', fontSize:14, padding:'6px 0', color:'hsl(var(--foreground))', fontFamily:'var(--font-sans)'}}/>
+        <div style={{display:'inline-flex', gap:2}}>
+          <button onClick={()=>onChange({...row, band:!row.band})} title={row.band?'Artist set':'Mark as artist set'}
+            style={{width:32, height:32, border:'none', background:'transparent', borderRadius:6, cursor:'pointer', color: row.band?'var(--pastel-green-fg)':'hsl(var(--muted-foreground)/0.5)', display:'inline-flex', alignItems:'center', justifyContent:'center'}}>
+            <Icon name="mic" size={13}/>
+          </button>
+          <button onClick={onRemove}
+            style={{width:32, height:32, border:'none', background:'transparent', borderRadius:6, cursor:'pointer', color:'hsl(var(--muted-foreground))', display:'inline-flex', alignItems:'center', justifyContent:'center'}}>
+            <Icon name="trash-2" size={13}/>
+          </button>
+          <button onClick={()=>setEditing(false)}
+            style={{height:32, padding:'0 10px', border:'none', background:'hsl(var(--foreground))', color:'hsl(var(--background))', borderRadius:6, cursor:'pointer', fontSize:12, fontWeight:500, display:'inline-flex', alignItems:'center', gap:4}}>
+            <Icon name="check" size={12}/> Done
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="row" onClick={()=>setEditing(true)}
+      style={{display:'grid', gridTemplateColumns:'92px 1fr auto', gap:14, alignItems:'center', padding:'10px 0', cursor:'pointer', borderRadius:6, transition:'background 120ms var(--ease-out)'}}
+      onMouseEnter={e=>{ e.currentTarget.style.background='hsl(var(--muted)/0.3)'; }}
+      onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; }}>
+      <span style={{
+        fontFamily:'var(--font-mono)', fontSize:13, fontWeight:500,
+        color: row.band ? 'var(--pastel-green-fg)' : 'hsl(var(--foreground))',
+        letterSpacing:'-0.01em',
+      }}>{row.time}</span>
+      <span style={{fontSize:14, display:'flex', alignItems:'center', gap:7, fontWeight: row.band?500:400}}>
+        {row.band && <Icon name="mic" size={11} style={{color:'var(--pastel-green-fg)'}}/>}
+        {row.label}
+      </span>
+      <span style={{fontSize:10, color:'hsl(var(--muted-foreground)/0.7)', fontFamily:'var(--font-mono)', letterSpacing:'0.1em'}}>
+        {row.band ? 'SET' : ''}
+      </span>
+    </div>
+  );
+}
+
+function Schedule({rows, setRows}){
+  const [editIdx, setEditIdx] = useState(null);
+  return (
+    <Card style={{padding:'6px 14px'}}>
+      {rows.map((r, i)=>(
+        <div key={i} style={{borderBottom: i<rows.length-1?'1px solid hsl(var(--border)/0.5)':'none'}}>
+          <ScheduleRow row={r}
+            editing={editIdx===i}
+            setEditing={v=>setEditIdx(v?i:null)}
+            onChange={nr=>setRows(rs=>rs.map((x,j)=>j===i?nr:x))}
+            onRemove={()=>{ setRows(rs=>rs.filter((_,j)=>j!==i)); setEditIdx(null); }}/>
+        </div>
+      ))}
+      <button onClick={()=>{ setRows(rs=>[...rs, {time:'12:00 PM', label:'', band:false}]); setEditIdx(rows.length); }}
+        style={{margin:'6px 0 4px', display:'inline-flex', alignItems:'center', gap:6, border:'none', background:'transparent', color:'hsl(var(--muted-foreground))', cursor:'pointer', fontSize:12, padding:'4px 0'}}>
+        <Icon name="plus" size={12}/> Add entry
+      </button>
+    </Card>
+  );
+}
+
+/* Day-of contact card */
+function ContactCard({name, role, phone, email, setName, setRole, setPhone, setEmail}){
+  const initials = (name||'').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  return (
+    <Card style={{padding:'14px 16px'}}>
+      <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:12}}>
+        <div style={{width:38, height:38, borderRadius:999, background:'var(--pastel-blue-bg)', color:'var(--pastel-blue-fg)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--font-display)', fontSize:15, flexShrink:0}}>{initials||'—'}</div>
+        <div style={{flex:1, minWidth:0}}>
+          <div style={{fontSize:14, fontWeight:500, lineHeight:1.3}}>
+            <EditableText value={name} onChange={setName} placeholder="Add name" style={{fontSize:14, fontWeight:500}}/>
+          </div>
+          <div style={{fontSize:12, color:'hsl(var(--muted-foreground))', marginTop:2}}>
+            <EditableText value={role} onChange={setRole} placeholder="Role" style={{fontSize:12, color:'hsl(var(--muted-foreground))'}}/>
+          </div>
+        </div>
+      </div>
+      <div style={{display:'flex', flexDirection:'column', gap:8, paddingTop:10, borderTop:'1px solid hsl(var(--border)/0.6)'}}>
+        <div style={{display:'flex', alignItems:'center', gap:8}}>
+          <Icon name="phone" size={12} style={{color:'hsl(var(--muted-foreground))', flexShrink:0}}/>
+          <EditableText value={phone} onChange={setPhone} mono placeholder="Tap to add phone"/>
+        </div>
+        <div style={{display:'flex', alignItems:'center', gap:8}}>
+          <Icon name="mail" size={12} style={{color:'hsl(var(--muted-foreground))', flexShrink:0}}/>
+          <EditableText value={email} onChange={setEmail} mono placeholder="Tap to add email"/>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/* Guest list — editable row list with capacity/comp meter */
+function GuestList({allotment, entries, onChangeAllotment, onChangeEntries}){
+  const total = entries.reduce((s,e)=> s + (parseInt(e.count||'0',10)||0), 0);
+  const allotmentNum = parseInt(allotment||'0',10) || 0;
+  const over = allotmentNum > 0 && total > allotmentNum;
+  return (
+    <Card style={{padding:'12px 16px'}}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10, paddingBottom:10, borderBottom:'1px solid hsl(var(--border)/0.5)'}}>
+        <div style={{fontSize:12, color:'hsl(var(--muted-foreground))'}}>Allotment</div>
+        <div style={{display:'inline-flex', alignItems:'center', gap:10, fontSize:13, fontFamily:'var(--font-mono)'}}>
+          <EditableText value={allotment} onChange={onChangeAllotment} mono placeholder="—" style={{fontSize:13}}/>
+          <span style={{color: over?'var(--pastel-red-fg)':'hsl(var(--muted-foreground))'}}>· {total} on list</span>
+        </div>
+      </div>
+      {entries.map((e, i)=>(
+        <div key={i} style={{display:'grid', gridTemplateColumns:'1fr 60px 24px', gap:10, padding:'6px 0', alignItems:'center'}}>
+          <EditableText value={e.name} onChange={v=>onChangeEntries(entries.map((x,j)=>j===i?{...x, name:v}:x))} placeholder="Name"/>
+          <EditableText value={e.count} onChange={v=>onChangeEntries(entries.map((x,j)=>j===i?{...x, count:v}:x))} mono placeholder="×"/>
+          <button onClick={()=>onChangeEntries(entries.filter((_,j)=>j!==i))}
+            style={{width:24, height:24, border:'none', background:'transparent', color:'hsl(var(--muted-foreground)/0.6)', cursor:'pointer', borderRadius:4, display:'inline-flex', alignItems:'center', justifyContent:'center'}}>
+            <Icon name="x" size={12}/>
+          </button>
+        </div>
+      ))}
+      <button onClick={()=>onChangeEntries([...entries, {name:'', count:'1'}])}
+        style={{marginTop:6, display:'inline-flex', alignItems:'center', gap:6, border:'none', background:'transparent', color:'hsl(var(--muted-foreground))', cursor:'pointer', fontSize:12, padding:'4px 0'}}>
+        <Icon name="plus" size={12}/> Add guest
+      </button>
+    </Card>
+  );
+}
+
+function Tabs({value, onChange, items}){
+  return (
+    <div style={{display:'flex', gap:28, borderBottom:'1px solid hsl(var(--border))', marginBottom:32}}>
+      {items.map(it=>(
+        <button key={it.value} onClick={()=>onChange(it.value)}
+          style={{
+            position:'relative', padding:'0 0 14px', background:'transparent', border:'none', cursor:'pointer',
+            fontSize:14, fontWeight:500, letterSpacing:'-0.005em',
+            color: value===it.value ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
+            fontFamily:'var(--font-sans)',
+          }}>
+          {it.label}
+          {value===it.value && <span style={{position:'absolute', left:0, right:0, bottom:-1, height:2, background:'hsl(var(--foreground))'}}/>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PairedGroup({title, incomplete, children}){
+  return (
+    <div>
+      <SectionLabel incomplete={incomplete}>{title}</SectionLabel>
+      <div style={{paddingLeft:10}}>{children}</div>
+    </div>
+  );
+}
+
+function ShowInfoTab({show, patch, rows, setRows}){
+  return (
+    <>
+      {/* Drive line */}
+      <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:28, fontSize:13, color:'hsl(var(--muted-foreground))'}}>
+        <Icon name="car" size={13}/>
+        <span style={{fontFamily:'var(--font-mono)', color:'hsl(var(--foreground))', fontSize:13}}>{show.driveTime}</span>
+        <span>drive from {show.driveFrom}</span>
+        <span style={{color:'hsl(var(--muted-foreground)/0.6)'}}>·</span>
+        <span>leave by <span style={{fontFamily:'var(--font-mono)', color:'hsl(var(--foreground))'}}>8:27 AM</span> for 3:00 PM load in</span>
+      </div>
+
+      {/* Day of contact + Departure — paired */}
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:40, marginBottom:36}}>
+        <PairedGroup title="Day of Show Contact" incomplete={!show.dosEmail}>
+          <ContactCard
+            name={show.dosName} setName={v=>patch({dosName:v})}
+            role={show.dosRole} setRole={v=>patch({dosRole:v})}
+            phone={show.dosPhone} setPhone={v=>patch({dosPhone:v})}
+            email={show.dosEmail} setEmail={v=>patch({dosEmail:v})}/>
+        </PairedGroup>
+
+        <PairedGroup title="Departure">
+          <TimeRow label="Time" value={show.departureTime} onChange={v=>patch({departureTime:v})}/>
+          <Row label="Notes" value={show.departureNotes} onChange={v=>patch({departureNotes:v})} multiline/>
+        </PairedGroup>
+      </div>
+
+      {/* Arrival */}
+      <div style={{marginBottom:36}}>
+        <SectionLabel>Arrival</SectionLabel>
+        <div style={{paddingLeft:10}}>
+          <Row label="Load in" value={show.loadInDetails} onChange={v=>patch({loadInDetails:v})} multiline/>
+          <Row label="Parking" value={show.parkingNotes} onChange={v=>patch({parkingNotes:v})} multiline/>
+        </div>
+      </div>
+
+      {/* Schedule */}
+      <div style={{marginBottom:36}}>
+        <SectionLabel>Schedule</SectionLabel>
+        <Schedule rows={rows} setRows={setRows}/>
+      </div>
+
+      {/* Venue */}
+      <div style={{marginBottom:36}}>
+        <SectionLabel>Venue</SectionLabel>
+        <div style={{paddingLeft:10}}>
+          <Row label="Address" value={show.address} onChange={v=>patch({address:v})}/>
+          <Row label="Capacity" value={show.cap} onChange={v=>patch({cap:v})} mono/>
+          <Row label="Green room" value={show.greenRoom} onChange={v=>patch({greenRoom:v})} multiline/>
+          <Row label="Wi-Fi network" value={show.wifiNetwork} onChange={v=>patch({wifiNetwork:v})} mono/>
+          <Row label="Wi-Fi password" value={show.wifiPassword} onChange={v=>patch({wifiPassword:v})} mono/>
+          <Row label="Hospitality" value={show.hospitality} onChange={v=>patch({hospitality:v})} multiline/>
+        </div>
+      </div>
+
+      {/* Accommodations */}
+      <div style={{marginBottom:36}}>
+        <SectionLabel>Accommodations</SectionLabel>
+        <div style={{paddingLeft:10}}>
+          <Row label="Property" value={show.hotelName} onChange={v=>patch({hotelName:v})}/>
+          <Row label="Address" value={show.hotelAddress} onChange={v=>patch({hotelAddress:v})}/>
+          <Row label="Confirmation" value={show.hotelConf} onChange={v=>patch({hotelConf:v})} mono/>
+          <TimeRow label="Check in" value={show.hotelCheckIn} onChange={v=>patch({hotelCheckIn:v})}/>
+          <TimeRow label="Check out" value={show.hotelCheckOut} onChange={v=>patch({hotelCheckOut:v})}/>
+        </div>
+      </div>
+
+      {/* Guest list */}
+      <div style={{marginBottom:36}}>
+        <SectionLabel>Guest list</SectionLabel>
+        <GuestList
+          allotment={show.guestListAllotment}
+          entries={show.guestListEntries}
+          onChangeAllotment={v=>patch({guestListAllotment:v})}
+          onChangeEntries={v=>patch({guestListEntries:v})}/>
+      </div>
+
+      {/* Notes */}
+      <div>
+        <SectionLabel>Notes</SectionLabel>
+        <div style={{fontSize:14, lineHeight:1.6, paddingLeft:10}}>
+          <EditableText value={show.notes} onChange={v=>patch({notes:v})} multiline
+            style={{fontSize:14, lineHeight:1.6, display:'block', width:'100%'}}/>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function DealTab({show, patch}){
+  const gross = (parseFloat((show.ticketPrice||'0').replace(/[^0-9.]/g,''))||0) *
+                (parseInt((show.tixSold||'0').replace(/[^0-9]/g,''),10)||0);
+  return (
+    <>
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:40, marginBottom:36}}>
+        <PairedGroup title="Deal terms">
+          <Row label="Guarantee" value={show.guarantee} onChange={v=>patch({guarantee:v})} mono/>
+          <Row label="Backend" value={show.backendDeal} onChange={v=>patch({backendDeal:v})} multiline/>
+          <Row label="Ticket price" value={show.ticketPrice} onChange={v=>patch({ticketPrice:v})} mono/>
+          <Row label="Capacity" value={show.capacity} onChange={v=>patch({capacity:v})} mono/>
+        </PairedGroup>
+        <PairedGroup title="Settlement">
+          <Row label="Tickets sold" value={show.tixSold} onChange={v=>patch({tixSold:v})} mono/>
+          <Row label="Walkout" value={show.walkout} onChange={v=>patch({walkout:v})} mono/>
+          <Row label="Expenses" value={show.expenses} onChange={v=>patch({expenses:v})} mono/>
+          <Row label="Notes" value={show.settlementNotes} onChange={v=>patch({settlementNotes:v})} multiline placeholder="Add settlement notes"/>
+        </PairedGroup>
+      </div>
+
+      <div>
+        <SectionLabel>Revenue projection</SectionLabel>
+        <Card style={{padding:'18px 22px'}}>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:24}}>
+            <Stat label="Gross potential" value={`$${gross.toLocaleString()}`}/>
+            <Stat label="Projected walkout" value={show.walkout}/>
+            <Stat label="Sell-through" value={`${Math.round(((parseInt(show.tixSold||'0',10)||0) / (parseInt(show.capacity||'0',10)||1))*100)}%`}/>
+          </div>
+        </Card>
+      </div>
+    </>
+  );
+}
+
+function Stat({label, value}){
+  return (
+    <div>
+      <div style={{fontSize:11, textTransform:'uppercase', letterSpacing:'0.12em', color:'hsl(var(--muted-foreground))', marginBottom:6}}>{label}</div>
+      <div style={{font:'400 28px/1.1 var(--font-display)', letterSpacing:'-0.015em'}}>{value}</div>
+    </div>
+  );
+}
+
+function App(){
+  const [show, setShow] = useState(SHOW);
+  const patch = (p)=>setShow(s=>({...s, ...p}));
+  const [rows, setRows] = useState(show.schedule);
+  const [tab, setTab] = useState('show');
+
+  return (
+    <div style={{maxWidth:820, margin:'0 auto', padding:'36px 40px 80px'}}>
+      {/* Back */}
+      <a style={{display:'inline-flex', alignItems:'center', gap:6, fontSize:13, color:'hsl(var(--muted-foreground))', marginBottom:16, cursor:'pointer'}}>
+        <Icon name="arrow-left" size={13}/> All shows
+      </a>
+
+      {/* Header */}
+      <div style={{display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, marginBottom:6, flexWrap:'wrap'}}>
+        <div style={{minWidth:0, flex:'1 1 320px'}}>
+          <Eyebrow>{show.month} {show.day} · {show.weekday}</Eyebrow>
+          <h1 style={{font:'400 34px/1.05 var(--font-display)', letterSpacing:'-0.02em', color:'hsl(var(--foreground))', margin:0}}>
+            <EditableText value={show.venue} onChange={v=>patch({venue:v})}
+              style={{fontFamily:'var(--font-display)', fontSize:34, letterSpacing:'-0.02em', lineHeight:1.05, color:'hsl(var(--foreground))'}}/>
+          </h1>
+          <div style={{display:'flex', alignItems:'center', gap:8, fontSize:14, color:'hsl(var(--muted-foreground))', marginTop:8, flexWrap:'wrap'}}>
+            <span style={{display:'inline-flex', alignItems:'center', gap:5}}><Icon name="map-pin" size={12}/>{show.city}</span>
+            {show.tour && <Chip tone="blue">{show.tour}</Chip>}
+            {!show.advanced && <Chip tone="yellow">Needs advancing</Chip>}
+          </div>
+        </div>
+        <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
+          <Button variant="settle" size="md"><Icon name="check-circle-2" size={13}/>Settle</Button>
+          <Button variant="outline" size="md"><Icon name="check" size={13}/>Mark advanced</Button>
+          <Button variant="secondary" size="md"><Icon name="share-2" size={13}/>Share</Button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{marginTop:28}}>
+        <Tabs value={tab} onChange={setTab} items={[
+          {value:'show', label:'Show Info'},
+          {value:'deal', label:'Deal Info'},
+        ]}/>
+      </div>
+
+      {tab==='show'
+        ? <ShowInfoTab show={show} patch={patch} rows={rows} setRows={setRows}/>
+        : <DealTab show={show} patch={patch}/>
+      }
+
+      <div style={{fontSize:11, color:'hsl(var(--muted-foreground)/0.6)', fontFamily:'var(--font-mono)', letterSpacing:'0.08em', marginTop:60, paddingTop:20, borderTop:'1px solid hsl(var(--border)/0.6)'}}>
+        TIP · CLICK ANY FIELD TO EDIT · ⏎ SAVES · ESC CANCELS
+      </div>
+    </div>
+  );
+}
+
+setTimeout(()=>{
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  if(window.lucide) window.lucide.createIcons();
+}, 80);
+</script>
+</body>
+</html>
