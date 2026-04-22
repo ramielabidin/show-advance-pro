@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check:supabase": "node scripts/check-supabase.js"
+    "check:supabase": "node scripts/check-supabase.js",
+    "preview:email": "vite-node scripts/preview-email.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
