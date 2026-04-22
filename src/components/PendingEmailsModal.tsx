@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Mail } from "lucide-react";
+import { Loader2, Mail, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -27,10 +27,11 @@ function formatShowDate(iso: string): string {
 }
 
 export default function PendingEmailsModal() {
-  const { events, upcomingShows, review, dismiss } = usePendingEmails();
+  const { events, upcomingShows, review, createFromEvent, dismiss } = usePendingEmails();
   const [index, setIndex] = useState(0);
   const [manualShowId, setManualShowId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const current = events[Math.min(index, events.length - 1)];
   const open = !!current;
@@ -67,10 +68,22 @@ export default function PendingEmailsModal() {
     }
   };
 
+  const handleCreate = async () => {
+    if (!current) return;
+    setCreating(true);
+    try {
+      await createFromEvent(current.id);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const handleDismiss = () => {
     dismiss(current.id);
     setIndex(0);
   };
+
+  const busy = submitting || creating;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -115,11 +128,11 @@ export default function PendingEmailsModal() {
                 <ConfidenceRow confidence={confidence} />
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">No match found</p>
                 <Select value={manualShowId ?? undefined} onValueChange={setManualShowId}>
                   <SelectTrigger className="h-11 sm:h-9">
-                    <SelectValue placeholder="Select a show…" />
+                    <SelectValue placeholder="Link to existing show…" />
                   </SelectTrigger>
                   <SelectContent>
                     {upcomingShows.length === 0 ? (
@@ -135,16 +148,39 @@ export default function PendingEmailsModal() {
                     )}
                   </SelectContent>
                 </Select>
+                <div className="relative flex items-center gap-2">
+                  <div className="flex-1 border-t border-border" />
+                  <span className="text-xs text-muted-foreground">or</span>
+                  <div className="flex-1 border-t border-border" />
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full h-11 sm:h-9 gap-1.5"
+                  onClick={handleCreate}
+                  disabled={busy}
+                >
+                  {creating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating show…
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      Create new show from this email
+                    </>
+                  )}
+                </Button>
               </div>
             )}
           </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="ghost" onClick={handleDismiss} disabled={submitting}>
+          <Button variant="ghost" onClick={handleDismiss} disabled={busy}>
             Dismiss
           </Button>
-          <Button onClick={handleReview} disabled={submitting || !selectedShowId}>
+          <Button onClick={handleReview} disabled={busy || !selectedShowId}>
             Review Now
           </Button>
         </DialogFooter>
