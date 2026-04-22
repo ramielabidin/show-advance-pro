@@ -53,6 +53,7 @@ import { useGuestLink } from "@/hooks/useGuestLink";
 import GuestListEditor, { GuestListView, parseGuestList, guestTotal, parseComps } from "@/components/GuestListEditor";
 import ScheduleEditor, { type ScheduleRow } from "@/components/ScheduleEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
+import InlineEditable from "@/components/InlineEditable";
 import { toast } from "sonner";
 import { cn, formatCityState, normalizePhone } from "@/lib/utils";
 import { normalizeTime } from "@/lib/timeFormat";
@@ -630,25 +631,6 @@ export default function ShowDetailPage() {
     </div>
   );
 
-  // Compact check button rendered inside an inline-edit input/textarea.
-  // onMouseDown prevents the input from blurring first (which would double-fire the save).
-  const InlineSaveIcon = ({ onSave, position }: { onSave: () => void; position: "input" | "textarea" }) => (
-    <button
-      type="button"
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={onSave}
-      disabled={updateMutation.isPending}
-      aria-label="Save"
-      className={cn(
-        "absolute h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)] disabled:opacity-50",
-        position === "input" && "right-1.5 top-1/2 -translate-y-1/2",
-        position === "textarea" && "right-1.5 bottom-1.5",
-      )}
-    >
-      <Check className="h-3.5 w-3.5" />
-    </button>
-  );
-
   // Renders a field with inline edit support only
   const editField = (key: keyof Show, label: string, opts?: { mono?: boolean; multiline?: boolean; alwaysShow?: boolean; timeFormat?: boolean; structuredTime?: boolean; hideTbd?: boolean; phoneFormat?: boolean; placeholder?: string; currency?: boolean; compact?: boolean; labelHidden?: boolean }) => {
     // Inline editing for this specific field
@@ -680,38 +662,17 @@ export default function ShowDetailPage() {
       return (
         <div ref={inlineRef} className="space-y-1">
           {!opts?.labelHidden && <Label className="text-xs text-muted-foreground">{label}</Label>}
-          {opts?.multiline ? (
-            <div className="relative">
-              <Textarea
-                value={inlineValue}
-                onChange={(e) => setInlineValue(e.target.value)}
-                className="text-sm min-h-[44px] ring-1 ring-ring/40 pr-10"
-                autoFocus
-                placeholder={opts?.placeholder}
-                onBlur={handleBlurSave}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
-                }}
-              />
-              <InlineSaveIcon onSave={handleBlurSave} position="textarea" />
-            </div>
-          ) : (
-            <div className="relative">
-              <Input
-                value={inlineValue}
-                onChange={(e) => setInlineValue(e.target.value)}
-                className={cn("text-sm h-11 sm:h-9 ring-1 ring-ring/40 pr-10", opts?.mono && "font-mono")}
-                placeholder={opts?.timeFormat ? "e.g. 9:00 AM or 2:30 PM" : undefined}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") { e.preventDefault(); handleBlurSave(); }
-                  if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
-                }}
-                onBlur={handleBlurSave}
-              />
-              <InlineSaveIcon onSave={handleBlurSave} position="input" />
-            </div>
-          )}
+          <InlineEditable
+            value={inlineValue}
+            onChange={setInlineValue}
+            onSave={handleBlurSave}
+            onCancel={cancelInline}
+            multiline={opts?.multiline}
+            mono={opts?.mono}
+            placeholder={opts?.placeholder ?? (opts?.timeFormat ? "e.g. 9:00 AM or 2:30 PM" : undefined)}
+            inputMode={opts?.phoneFormat ? "tel" : undefined}
+            saving={updateMutation.isPending}
+          />
         </div>
       );
     }
