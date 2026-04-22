@@ -422,11 +422,13 @@ export default function ShowDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["show", id] });
       queryClient.invalidateQueries({ queryKey: ["shows"] });
-      setEditingSchedule(false);
       setInlineField(null);
       toast.success("Show updated");
     },
-    onError: () => toast.error("Failed to update show"),
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to update show: ${msg}`);
+    },
   });
 
   const deleteMutation = useMutation({
