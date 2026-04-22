@@ -1,21 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, type KeyboardEvent } from "react";
 import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-const HOURS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
-const MINUTES = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
+import { normalizeTime } from "@/lib/timeFormat";
 
 function parseTime(raw: string): { hour: string; minute: string; ampm: "AM" | "PM" } | null {
   if (!raw || raw === "TBD") return null;
   const s = raw.trim();
 
-  // "H:MM AM/PM" or "HH:MM AM/PM"
   const withAmPm = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
   if (withAmPm) {
     return {
@@ -25,7 +15,6 @@ function parseTime(raw: string): { hour: string; minute: string; ampm: "AM" | "P
     };
   }
 
-  // "H:MM" or "HH:MM" (24h or ambiguous) — treat >=12 as PM
   const noAmPm = s.match(/^(\d{1,2}):(\d{2})$/);
   if (noAmPm) {
     const h = parseInt(noAmPm[1], 10);
@@ -39,14 +28,6 @@ function parseTime(raw: string): { hour: string; minute: string; ampm: "AM" | "P
   return null;
 }
 
-/** Snap minute string to nearest 5-min increment for the select */
-function snapMinute(min: string): string {
-  const n = parseInt(min, 10);
-  if (isNaN(n)) return "00";
-  const snapped = Math.round(n / 5) * 5;
-  return String(Math.min(55, Math.max(0, snapped))).padStart(2, "0");
-}
-
 interface TimeInputProps {
   value: string; // "H:MM AM/PM", "TBD", or ""
   onChange: (value: string) => void;
@@ -58,70 +39,97 @@ export default function TimeInput({ value, onChange, autoFocus, hideTbd }: TimeI
   const isTbd = value === "TBD";
   const parsed = parseTime(value);
 
-  const [hour, setHour] = useState(parsed?.hour ?? "");
-  const [minute, setMinute] = useState(parsed?.minute ? snapMinute(parsed.minute) : "00");
+  // Display the time portion only ("8:25") — AM/PM lives in the rail
+  const [raw, setRaw] = useState(parsed ? `${parsed.hour}:${parsed.minute.padStart(2, "0")}` : "");
   const [ampm, setAmpm] = useState<"AM" | "PM">(parsed?.ampm ?? "AM");
 
-  // Sync state if parent value changes (e.g. after AI parse)
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, [autoFocus]);
+
+  // Sync if parent value changes externally (AI parse, reset, etc.)
   useEffect(() => {
     if (value === "TBD") return;
     const p = parseTime(value);
     if (p) {
-      setHour(p.hour);
-      setMinute(snapMinute(p.minute));
+      setRaw(`${p.hour}:${p.minute.padStart(2, "0")}`);
       setAmpm(p.ampm);
+    } else if (!value) {
+      setRaw("");
     }
   }, [value]);
 
-  const emit = (h: string, m: string, a: "AM" | "PM") => {
-    if (h) onChange(`${h}:${m} ${a}`);
+  const normalize = (text: string, rail: "AM" | "PM") => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    // If user typed an explicit meridiem ("8p", "9am", "8:30 PM"), trust it
+    // Otherwise, append the rail selection so "8:30" + PM rail → "8:30 PM"
+    const hasExplicitMeridiem = /[ap]/i.test(trimmed);
+    const toParse = hasExplicitMeridiem ? trimmed : `${trimmed} ${rail}`;
+    const normalized = normalizeTime(toParse);
+    if (!normalized) return;
+    // Update display to canonical H:MM form and sync rail
+    const p = parseTime(normalized);
+    if (p) {
+      setRaw(`${p.hour}:${p.minute.padStart(2, "0")}`);
+      setAmpm(p.ampm);
+    }
+    onChange(normalized);
   };
 
+  const handleBlur = () => normalize(raw, ampm);
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") e.currentTarget.blur();
+  };
+
+  const handleAmpmClick = (a: "AM" | "PM") => {
+    setAmpm(a);
+    // Re-emit immediately if there's already a valid time in the field
+    normalize(raw, a);
+  };
+
+  const inputClass =
+    "bg-transparent border-0 border-b border-dashed border-foreground/30 " +
+    "focus:border-foreground/60 focus:outline-none rounded-none p-0 " +
+    "font-display text-[28px] leading-none tracking-tight text-foreground " +
+    "placeholder:text-muted-foreground/40";
+
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="inline-flex items-center gap-3 flex-wrap">
       {!isTbd && (
-        <div className="flex items-center gap-1">
-          <Select
-            value={hour}
-            onValueChange={(h) => { setHour(h); emit(h, minute, ampm); }}
-          >
-            <SelectTrigger className="w-16 h-11 sm:h-9 text-sm font-mono" autoFocus={autoFocus}>
-              <SelectValue placeholder="--" />
-            </SelectTrigger>
-            <SelectContent>
-              {HOURS.map((h) => (
-                <SelectItem key={h} value={h} className="font-mono">{h}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="inline-flex items-center gap-3">
+          <input
+            ref={inputRef}
+            type="text"
+            value={raw}
+            onChange={(e) => setRaw(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            inputMode="text"
+            size={5}
+            placeholder="–:––"
+            aria-label="Time"
+            className={inputClass}
+          />
 
-          <span className="text-muted-foreground font-mono text-sm select-none">:</span>
-
-          <Select
-            value={minute}
-            onValueChange={(m) => { setMinute(m); emit(hour, m, ampm); }}
-          >
-            <SelectTrigger className="w-16 h-11 sm:h-9 text-sm font-mono">
-              <SelectValue placeholder="00" />
-            </SelectTrigger>
-            <SelectContent>
-              {MINUTES.map((m) => (
-                <SelectItem key={m} value={m} className="font-mono">{m}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="flex rounded-md border border-input overflow-hidden text-xs shrink-0">
+          <div className="inline-flex flex-col justify-center gap-0.5">
             {(["AM", "PM"] as const).map((a) => (
               <button
                 key={a}
                 type="button"
-                onClick={() => { setAmpm(a); emit(hour, minute, a); }}
+                onClick={() => handleAmpmClick(a)}
+                aria-pressed={ampm === a}
                 className={cn(
-                  "px-2.5 py-1.5 font-medium transition-colors",
+                  "text-[11px] font-mono font-semibold uppercase tracking-[0.14em]",
+                  "py-1 pl-1.5 pr-1 border-l-2 text-left transition-colors select-none min-w-[32px]",
                   ampm === a
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-background text-muted-foreground hover:bg-muted"
+                    ? "border-foreground text-foreground"
+                    : "border-transparent text-muted-foreground/50 hover:text-muted-foreground"
                 )}
               >
                 {a}
@@ -136,10 +144,10 @@ export default function TimeInput({ value, onChange, autoFocus, hideTbd }: TimeI
           type="button"
           onClick={() => onChange(isTbd ? "" : "TBD")}
           className={cn(
-            "text-xs px-2.5 py-1.5 rounded-md border font-medium transition-colors",
+            "text-[11px] font-mono font-medium uppercase tracking-[0.1em] px-2 py-1 rounded-md border transition-colors",
             isTbd
               ? "bg-muted text-foreground border-input"
-              : "text-muted-foreground border-transparent hover:border-input hover:text-foreground"
+              : "text-muted-foreground/70 border-transparent hover:border-input hover:text-foreground"
           )}
         >
           TBD
