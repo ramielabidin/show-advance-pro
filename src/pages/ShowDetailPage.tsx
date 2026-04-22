@@ -53,7 +53,7 @@ import { useGuestLink } from "@/hooks/useGuestLink";
 import GuestListEditor, { GuestListView, parseGuestList, guestTotal, parseComps } from "@/components/GuestListEditor";
 import ScheduleEditor, { type ScheduleRow } from "@/components/ScheduleEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
-import InlineEditable from "@/components/InlineEditable";
+import InlineEditable, { InlineField } from "@/components/InlineEditable";
 import { toast } from "sonner";
 import { cn, formatCityState, normalizePhone } from "@/lib/utils";
 import { normalizeTime } from "@/lib/timeFormat";
@@ -1042,22 +1042,21 @@ export default function ShowDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone}>
                 {dosEditor.isEditing ? (
-                  <div ref={inlineRef} className="space-y-2">
+                  <div ref={inlineRef} className="space-y-3">
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Name</Label>
-                      <Input
+                      <InlineField
                         value={dosEditor.get("dos_contact_name")}
-                        onChange={(e) => dosEditor.setField("dos_contact_name", e.target.value)}
-                        className="text-sm h-9"
+                        onChange={(v) => dosEditor.setField("dos_contact_name", v)}
                         autoFocus
                       />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Phone</Label>
-                      <Input
+                      <InlineField
                         value={dosEditor.get("dos_contact_phone")}
-                        onChange={(e) => dosEditor.setField("dos_contact_phone", e.target.value)}
-                        className="text-sm h-9 font-mono"
+                        onChange={(v) => dosEditor.setField("dos_contact_phone", v)}
+                        mono
                         inputMode="tel"
                       />
                     </div>
@@ -1085,7 +1084,7 @@ export default function ShowDetailPage() {
 
               <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
                 {departureEditor.isEditing ? (
-                  <div ref={inlineRef} className="space-y-2">
+                  <div ref={inlineRef} className="space-y-3">
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Time</Label>
                       <TimeInput
@@ -1096,10 +1095,10 @@ export default function ShowDetailPage() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Notes</Label>
-                      <Textarea
+                      <InlineField
                         value={departureEditor.get("departure_notes")}
-                        onChange={(e) => departureEditor.setField("departure_notes", e.target.value)}
-                        className="text-sm min-h-[44px]"
+                        onChange={(v) => departureEditor.setField("departure_notes", v)}
+                        multiline
                         placeholder="e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am"
                       />
                     </div>
@@ -1262,19 +1261,19 @@ export default function ShowDetailPage() {
                 <div ref={inlineRef} className="space-y-4">
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Load In</Label>
-                    <Textarea
+                    <InlineField
                       value={arrivalEditor.get("load_in_details")}
-                      onChange={(e) => arrivalEditor.setField("load_in_details", e.target.value)}
-                      className="text-sm min-h-[44px]"
+                      onChange={(v) => arrivalEditor.setField("load_in_details", v)}
+                      multiline
                       autoFocus
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Parking</Label>
-                    <Textarea
+                    <InlineField
                       value={arrivalEditor.get("parking_notes")}
-                      onChange={(e) => arrivalEditor.setField("parking_notes", e.target.value)}
-                      className="text-sm min-h-[44px]"
+                      onChange={(v) => arrivalEditor.setField("parking_notes", v)}
+                      multiline
                     />
                   </div>
                   <InlineActions onSave={arrivalEditor.save} onCancel={arrivalEditor.cancel} />
@@ -1306,40 +1305,40 @@ export default function ShowDetailPage() {
               defaultOpen={!!(show.green_room_info || show.wifi_network || show.wifi_password || show.hospitality)}
             >
               {venueEditor.isEditing ? (
-                <div ref={inlineRef} className="space-y-2">
+                <div ref={inlineRef} className="space-y-3">
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Green Room</Label>
-                    <Textarea
+                    <InlineField
                       value={venueEditor.get("green_room_info")}
-                      onChange={(e) => venueEditor.setField("green_room_info", e.target.value)}
-                      className="text-sm min-h-[44px]"
+                      onChange={(v) => venueEditor.setField("green_room_info", v)}
+                      multiline
                       autoFocus
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">WiFi Network</Label>
-                      <Input
+                      <InlineField
                         value={venueEditor.get("wifi_network")}
-                        onChange={(e) => venueEditor.setField("wifi_network", e.target.value)}
-                        className="text-sm h-9 font-mono"
+                        onChange={(v) => venueEditor.setField("wifi_network", v)}
+                        mono
                       />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">WiFi Password</Label>
-                      <Input
+                      <InlineField
                         value={venueEditor.get("wifi_password")}
-                        onChange={(e) => venueEditor.setField("wifi_password", e.target.value)}
-                        className="text-sm h-9 font-mono"
+                        onChange={(v) => venueEditor.setField("wifi_password", v)}
+                        mono
                       />
                     </div>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Hospitality</Label>
-                    <Textarea
+                    <InlineField
                       value={venueEditor.get("hospitality")}
-                      onChange={(e) => venueEditor.setField("hospitality", e.target.value)}
-                      className="text-sm min-h-[44px]"
+                      onChange={(v) => venueEditor.setField("hospitality", v)}
+                      multiline
                     />
                   </div>
                   <InlineActions onSave={venueEditor.save} onCancel={venueEditor.cancel} />
@@ -1386,27 +1385,27 @@ export default function ShowDetailPage() {
               defaultOpen={!!(show.hotel_name || show.hotel_address || show.hotel_confirmation || show.hotel_checkin || show.hotel_checkout)}
             >
               {hotelEditor.isEditing ? (
-                <div ref={inlineRef} className="space-y-2">
+                <div ref={inlineRef} className="space-y-3">
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Name</Label>
-                    <Input value={hotelEditor.get("hotel_name")} onChange={(e) => hotelEditor.setField("hotel_name", e.target.value)} className="text-sm h-9" autoFocus />
+                    <InlineField value={hotelEditor.get("hotel_name")} onChange={(v) => hotelEditor.setField("hotel_name", v)} autoFocus />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Address</Label>
-                    <Input value={hotelEditor.get("hotel_address")} onChange={(e) => hotelEditor.setField("hotel_address", e.target.value)} className="text-sm h-9" />
+                    <InlineField value={hotelEditor.get("hotel_address")} onChange={(v) => hotelEditor.setField("hotel_address", v)} />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Confirmation #</Label>
-                    <Input value={hotelEditor.get("hotel_confirmation")} onChange={(e) => hotelEditor.setField("hotel_confirmation", e.target.value)} className="text-sm h-9 font-mono" />
+                    <InlineField value={hotelEditor.get("hotel_confirmation")} onChange={(v) => hotelEditor.setField("hotel_confirmation", v)} mono />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Check In</Label>
-                      <Input value={hotelEditor.get("hotel_checkin")} onChange={(e) => hotelEditor.setField("hotel_checkin", e.target.value)} className="text-sm h-9 font-mono" />
+                      <InlineField value={hotelEditor.get("hotel_checkin")} onChange={(v) => hotelEditor.setField("hotel_checkin", v)} mono />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Check Out</Label>
-                      <Input value={hotelEditor.get("hotel_checkout")} onChange={(e) => hotelEditor.setField("hotel_checkout", e.target.value)} className="text-sm h-9 font-mono" />
+                      <InlineField value={hotelEditor.get("hotel_checkout")} onChange={(v) => hotelEditor.setField("hotel_checkout", v)} mono />
                     </div>
                   </div>
                   <InlineActions onSave={hotelEditor.save} onCancel={hotelEditor.cancel} />
