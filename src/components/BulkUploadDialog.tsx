@@ -94,7 +94,7 @@ const FINANCIAL_FIELDS = new Set([
  * For ranges like "$20/$25", takes the first value.
  * Returns null if the result is not a valid number.
  */
-function cleanFinancialField(val: string | undefined): string | null {
+export function cleanFinancialField(val: string | undefined): string | null {
   if (!val || !val.trim()) return null;
   const first = val.trim().split("/")[0];
   const cleaned = first.replace(/[^0-9.]/g, "");
@@ -110,7 +110,7 @@ function cleanFinancialField(val: string | undefined): string | null {
  * If no percentage is found the raw string is returned unchanged so free-text
  * notes like "see contract" are preserved.
  */
-function normalizeBackendDeal(raw: string): string {
+export function normalizeBackendDeal(raw: string): string {
   const pctMatch = raw.match(/(\d{1,3}(?:\.\d+)?)\s*%/);
   if (!pctMatch) return raw;
 
