@@ -47,3 +47,10 @@ verify_jwt = false
 # verify_jwt so SendGrid can reach it.
 [functions.inbound-email]
 verify_jwt = false
+
+# send-daysheet-email validates the caller's JWT itself via
+# supabase.auth.getUser() and enforces team-membership before sending.
+# Disable gateway verify_jwt for the same ES256 reason as the other
+# functions above — otherwise every call 401s at the gateway.
+[functions.send-daysheet-email]
+verify_jwt = false
