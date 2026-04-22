@@ -1,7 +1,7 @@
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, MoreHorizontal, Send, CheckCircle2, Circle, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Plus, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Plus, Check, Share2 } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -16,6 +16,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -47,7 +48,8 @@ import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
 import ShowAttachments from "@/components/ShowAttachments";
 import ExportPdfDialog from "@/components/ExportPdfDialog";
 import SetListDialog from "@/components/SetListDialog";
-import CopyGuestLinkButton, { CopyMagicLinkButton } from "@/components/CopyGuestLinkButton";
+import CopyGuestLinkButton from "@/components/CopyGuestLinkButton";
+import { useGuestLink } from "@/hooks/useGuestLink";
 import GuestListEditor, { GuestListView, parseGuestList, guestTotal, parseComps } from "@/components/GuestListEditor";
 import ScheduleEditor, { type ScheduleRow } from "@/components/ScheduleEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
@@ -76,6 +78,123 @@ function formatCurrency(raw: string): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: num % 1 !== 0 ? 2 : 0,
   }).format(num);
+}
+
+interface HeaderActionsProps {
+  show: Show;
+  showId: string;
+  isAdvancePending: boolean;
+  onToggleAdvanced: (next: boolean) => void;
+  onOpenSettle: () => void;
+  onOpenClearSettle: () => void;
+  onOpenDelete: () => void;
+  onParseUpdated: () => void;
+}
+
+function HeaderActions({
+  show,
+  showId,
+  isAdvancePending,
+  onToggleAdvanced,
+  onOpenSettle,
+  onOpenClearSettle,
+  onOpenDelete,
+  onParseUpdated,
+}: HeaderActionsProps) {
+  const { copyOrCreate: copyMagicLink, isPending: isCopyPending } = useGuestLink(showId, "daysheet");
+  const isSettled = !!show.is_settled;
+  const isAdvanced = !!show.advanced_at;
+
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      {/* Settle — primary action when unsettled, status+clear menu when settled */}
+      {isSettled ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5 rounded-full"
+              style={{ color: "var(--pastel-green-fg)" }}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Settled</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onOpenClearSettle}>Clear settlement…</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <Button
+          type="button"
+          size="sm"
+          onClick={onOpenSettle}
+          className="h-9 gap-1.5 rounded-full bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:bg-[hsl(var(--success))]/90"
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Settle</span>
+        </Button>
+      )}
+
+      {/* Mark advanced — toggles on click; visual state reflects advancement */}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onToggleAdvanced(!isAdvanced)}
+        disabled={isAdvancePending}
+        className="h-9 gap-1.5 rounded-full"
+        aria-label={isAdvanced ? "Unmark advanced" : "Mark advanced"}
+        title={isAdvanced ? "Click to unmark" : "Mark this show as advanced"}
+      >
+        <Check
+          className="h-3.5 w-3.5"
+          style={isAdvanced ? { color: "var(--pastel-green-fg)" } : undefined}
+        />
+        <span className="hidden sm:inline">{isAdvanced ? "Advanced" : "Mark advanced"}</span>
+      </Button>
+
+      {/* Share — everything else folds in here */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="secondary" size="sm" className="h-9 gap-1.5 rounded-full">
+            <Share2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Share</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email band</DropdownMenuItem>} />
+          <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
+          <ExportPdfDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
+          <SetListDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Set list</DropdownMenuItem>} />
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              copyMagicLink();
+            }}
+            disabled={isCopyPending}
+          >
+            <Sparkles className="h-3.5 w-3.5 mr-2" /> Copy magic link
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <ParseAdvanceForShowDialog
+            showId={showId}
+            currentShow={show}
+            onUpdated={onParseUpdated}
+            trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Import advance</DropdownMenuItem>}
+          />
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={onOpenDelete}
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete show
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 }
 
 export default function ShowDetailPage() {
@@ -834,100 +953,35 @@ export default function ShowDetailPage() {
           )}
         </div>
 
-        {/* Status chips + icon actions — unified mobile + desktop */}
+        {/* Status + actions — labeled buttons on desktop, icon-only on mobile */}
         <div className="pt-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
-            {/* Advanced chip — instant toggle */}
-            {(show as any).advanced_at ? (
-              <button
-                type="button"
-                onClick={() => toggleAdvancedMutation.mutate(false)}
-                disabled={toggleAdvancedMutation.isPending}
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium shrink-0 transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+            {!(show as any).advanced_at && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium shrink-0"
+                style={{ backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }}
               >
-                <CheckCircle2 className="h-3 w-3" /> Advanced
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => toggleAdvancedMutation.mutate(true)}
-                disabled={toggleAdvancedMutation.isPending}
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium shrink-0 bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-              >
-                <Circle className="h-3 w-3" /> Not advanced
-              </button>
-            )}
-
-            {/* Settled chip — routes to existing dialogs */}
-            {(show as any).is_settled ? (
-              <button
-                type="button"
-                onClick={() => setClearSettleOpen(true)}
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium shrink-0 transition-opacity hover:opacity-80"
-                style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
-              >
-                <CheckCircle2 className="h-3 w-3" /> Settled
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
-                  setSettleOpen(true);
-                }}
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium shrink-0 bg-muted text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Circle className="h-3 w-3" /> Not settled
-              </button>
+                Needs advancing
+              </span>
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Copy Magic Link (guest day sheet link) */}
-            <CopyMagicLinkButton showId={id!} />
-
-            {/* Share (paper plane) */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground">
-                  <Send className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <SlackPushDialog showId={id!} show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
-                <EmailBandDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email Band</DropdownMenuItem>} />
-                <ExportPdfDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
-                <SetListDialog show={show as Show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Set List</DropdownMenuItem>} />
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Overflow — state-dependent contents */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <ParseAdvanceForShowDialog
-                  showId={id!}
-                  currentShow={show as Show}
-                  onUpdated={() => {
-                    queryClient.invalidateQueries({ queryKey: ["show", id] });
-                    queryClient.invalidateQueries({ queryKey: ["shows"] });
-                  }}
-                  trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Import advance</DropdownMenuItem>}
-                />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Show
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <HeaderActions
+            show={show as Show}
+            showId={id!}
+            isAdvancePending={toggleAdvancedMutation.isPending}
+            onToggleAdvanced={(next) => toggleAdvancedMutation.mutate(next)}
+            onOpenSettle={() => {
+              setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
+              setSettleOpen(true);
+            }}
+            onOpenClearSettle={() => setClearSettleOpen(true)}
+            onOpenDelete={() => setDeleteOpen(true)}
+            onParseUpdated={() => {
+              queryClient.invalidateQueries({ queryKey: ["show", id] });
+              queryClient.invalidateQueries({ queryKey: ["shows"] });
+            }}
+          />
         </div>
 
         {/* Underlined text tabs */}
