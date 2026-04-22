@@ -106,7 +106,7 @@ export default function ScheduleEditor({ initial, onSave, saving }: ScheduleEdit
               type="text"
               value={draft.label}
               onChange={(e) => setDraft((d) => (d ? { ...d, label: e.target.value } : null))}
-              onKeyDown={(e) => { if (e.key === "Enter") commitRow(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); commitRow(); } }}
               placeholder="Activity"
               autoFocus
               className={INLINE_CHROME}
