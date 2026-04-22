@@ -1,7 +1,7 @@
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Plus, Check, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2 } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -41,7 +41,6 @@ import FieldRow from "@/components/FieldRow";
 import Eyebrow from "@/components/Eyebrow";
 import StatTile from "@/components/StatTile";
 import DriveTimeCallout from "@/components/DriveTimeCallout";
-import { Card } from "@/components/ui/card";
 import SlackPushDialog from "@/components/SlackPushDialog";
 import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
@@ -51,7 +50,7 @@ import SetListDialog from "@/components/SetListDialog";
 import CopyGuestLinkButton from "@/components/CopyGuestLinkButton";
 import { useGuestLink } from "@/hooks/useGuestLink";
 import GuestListEditor, { GuestListView, parseGuestList, guestTotal, parseComps } from "@/components/GuestListEditor";
-import ScheduleEditor, { type ScheduleRow } from "@/components/ScheduleEditor";
+import ScheduleEditor from "@/components/ScheduleEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
 import InlineEditable, { InlineField } from "@/components/InlineEditable";
 import { toast } from "sonner";
@@ -230,7 +229,7 @@ export default function ShowDetailPage() {
   const scheduleRef = useRef<HTMLDivElement>(null);
 
   const [lookingUpAddress, setLookingUpAddress] = useState(false);
-  const [editingSchedule, setEditingSchedule] = useState(false);
+  const [scheduleKey, setScheduleKey] = useState(0);
   const [driveCardDismissed, setDriveCardDismissed] = useState(() =>
     id ? localStorage.getItem(`drive-card-dismissed-${id}`) === "true" : false
   );
@@ -1162,77 +1161,34 @@ export default function ShowDetailPage() {
 
             {/* Schedule — full width */}
             <div ref={scheduleRef}>
-              <FieldGroup title="Schedule" incomplete={!editingSchedule && scheduleEntries.length === 0}>
-                {editingSchedule ? (
-                  <ScheduleEditor
-                    initial={scheduleEntries.map((e) => ({ time: e.time, label: e.label, is_band: e.is_band }))}
-                    onSave={async (rows) => {
-                      try {
-                        await supabase.from("schedule_entries").delete().eq("show_id", id!);
-                        if (rows.length > 0) {
-                          const inserts = rows.map((r, i) => ({
-                            show_id: id!,
-                            time: r.time,
-                            label: r.label,
-                            is_band: r.is_band,
-                            sort_order: i,
-                          }));
-                          const { error } = await supabase.from("schedule_entries").insert(inserts);
-                          if (error) throw error;
-                        }
-                        queryClient.invalidateQueries({ queryKey: ["show", id] });
-                        queryClient.invalidateQueries({ queryKey: ["shows"] });
-                        queryClient.invalidateQueries({ queryKey: ["schedule-counts"] });
-                        setEditingSchedule(false);
-                        toast.success("Schedule updated");
-                      } catch {
-                        toast.error("Failed to save schedule");
+              <FieldGroup title="Schedule" incomplete={scheduleEntries.length === 0}>
+                <ScheduleEditor
+                  key={scheduleKey}
+                  initial={scheduleEntries.map((e) => ({ time: e.time, label: e.label, is_band: e.is_band }))}
+                  onSave={async (rows) => {
+                    try {
+                      await supabase.from("schedule_entries").delete().eq("show_id", id!);
+                      if (rows.length > 0) {
+                        const inserts = rows.map((r, i) => ({
+                          show_id: id!,
+                          time: r.time,
+                          label: r.label,
+                          is_band: r.is_band,
+                          sort_order: i,
+                        }));
+                        const { error } = await supabase.from("schedule_entries").insert(inserts);
+                        if (error) throw error;
                       }
-                    }}
-                    onCancel={() => setEditingSchedule(false)}
-                    saving={false}
-                  />
-                ) : scheduleEntries.length > 0 ? (
-                  <button onClick={() => setEditingSchedule(true)} className="w-full text-left card-pressable">
-                    <Card className="p-3">
-                      {scheduleEntries.map((entry, i) => (
-                        <div
-                          key={entry.id}
-                          className={cn(
-                            "grid grid-cols-[70px_1fr] gap-3 items-center py-1.5 px-1",
-                            i < scheduleEntries.length - 1 && "border-b border-border/60",
-                          )}
-                        >
-                          <span className="font-mono text-sm shrink-0 whitespace-nowrap text-muted-foreground">
-                            {entry.time}
-                          </span>
-                          <span
-                            className={cn(
-                              "text-sm",
-                              entry.is_band
-                                ? "font-semibold text-[var(--pastel-green-fg)]"
-                                : "text-foreground",
-                            )}
-                          >
-                            {entry.label}
-                          </span>
-                        </div>
-                      ))}
-                    </Card>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      scheduleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                      setEditingSchedule(true);
-                    }}
-                    className="w-full rounded-[10px] border border-dashed border-border px-4 py-5 flex items-center gap-2.5 text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors"
-                  >
-                    <Plus className="h-4 w-4 shrink-0" />
-                    <span className="text-sm">Add schedule items (load-in, doors, set…)</span>
-                  </button>
-                )}
+                      queryClient.invalidateQueries({ queryKey: ["show", id] });
+                      queryClient.invalidateQueries({ queryKey: ["shows"] });
+                      queryClient.invalidateQueries({ queryKey: ["schedule-counts"] });
+                      setScheduleKey((k) => k + 1);
+                      toast.success("Schedule updated");
+                    } catch {
+                      toast.error("Failed to save schedule");
+                    }
+                  }}
+                />
               </FieldGroup>
             </div>
 

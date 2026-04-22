@@ -71,7 +71,7 @@ export default function TimeInput({ value, onChange, autoFocus, hideTbd }: TimeI
     const hasExplicitMeridiem = /[ap]/i.test(trimmed);
     const toParse = hasExplicitMeridiem ? trimmed : `${trimmed} ${rail}`;
     const normalized = normalizeTime(toParse);
-    if (!normalized) return;
+    if (!normalized) { setRaw(""); return; }
     // Update display to canonical H:MM form and sync rail
     const p = parseTime(normalized);
     if (p) {
