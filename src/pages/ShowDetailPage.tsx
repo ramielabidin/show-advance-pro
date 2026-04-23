@@ -1,6 +1,7 @@
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, Phone, Mail, FileText } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo } from "react";
@@ -193,7 +194,7 @@ export default function ShowDetailPage() {
   const queryClient = useQueryClient();
   const { teamId } = useTeam();
 
-  const [viewTab, setViewTab] = useState<"show" | "deal">("show");
+  const [viewTab, setViewTab] = useState<"show" | "deal" | "contacts">("show");
 
   // When we arrive here from the inbound-email "Review Now" flow, the
   // forwarded email body is handed off via location state. Consume it once,
@@ -747,7 +748,7 @@ export default function ShowDetailPage() {
       <Tabs
         value={viewTab}
         onValueChange={(v) => {
-          const next = v as "show" | "deal";
+          const next = v as "show" | "deal" | "contacts";
           setViewTab(next);
           if (next === "deal" && id && !dealTabSeen) {
             localStorage.setItem(`deal-tab-seen-${id}`, "true");
@@ -768,20 +769,6 @@ export default function ShowDetailPage() {
                 <CheckCircle2 className="h-2.5 w-2.5" />
                 Settled
               </Badge>
-            )}
-            {(show as any).advanced_at && (
-              <button
-                type="button"
-                onClick={() => toggleAdvancedMutation.mutate(false)}
-                disabled={toggleAdvancedMutation.isPending}
-                aria-label="Unmark advanced"
-                title="Click to unmark as advanced"
-                className="inline-flex items-center gap-1 rounded-full px-2 h-5 text-[10px] uppercase tracking-widest font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
-              >
-                <Check className="h-2.5 w-2.5" />
-                Advanced
-              </button>
             )}
             {(show as any).tours?.name && (
               <Link to={`/shows?view=tour&tourId=${(show as any).tours.id}`}>
@@ -855,12 +842,28 @@ export default function ShowDetailPage() {
             />
           </div>
         ) : (
-          <h1
-            className="text-2xl sm:text-3xl font-display font-bold tracking-tight leading-tight cursor-pointer hover:text-primary/80 transition-colors"
-            onClick={() => { setInlineField("venue_name"); setInlineValue(show.venue_name); }}
-          >
-            {show.venue_name}
-          </h1>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <h1
+              className="text-2xl sm:text-3xl font-display font-bold tracking-tight leading-tight cursor-pointer hover:text-primary/80 transition-colors"
+              onClick={() => { setInlineField("venue_name"); setInlineValue(show.venue_name); }}
+            >
+              {show.venue_name}
+            </h1>
+            {(show as any).advanced_at && (
+              <button
+                type="button"
+                onClick={() => toggleAdvancedMutation.mutate(false)}
+                disabled={toggleAdvancedMutation.isPending}
+                aria-label="Unmark advanced"
+                title="Click to unmark as advanced"
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0 transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+              >
+                <Check className="h-3 w-3" />
+                Advanced
+              </button>
+            )}
+          </div>
         )}
 
         {/* Address row */}
@@ -915,6 +918,21 @@ export default function ShowDetailPage() {
           )}
         </div>
 
+        {/* Drive-time — paired with address as venue context */}
+        {driveTimeLabel && departureOrigin && (
+          <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5">
+            <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} />
+            <span className="font-mono text-foreground">{driveTimeLabel}</span>
+            <span>drive from {departureOrigin.label}</span>
+            {driveTime?.distance_text && (
+              <>
+                <span className="text-border mx-0.5">·</span>
+                <span className="font-mono">{driveTime.distance_text}</span>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Status + actions — labeled buttons always */}
         <div className="pt-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
@@ -966,6 +984,12 @@ export default function ShowDetailPage() {
               {!dealTabSeen && (
                 <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" aria-hidden />
               )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="contacts"
+              className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
+            >
+              Contacts
             </TabsTrigger>
           </TabsList>
         </div>
@@ -1029,206 +1053,6 @@ export default function ShowDetailPage() {
             </div>
           ) : (
           <div className="space-y-6 sm:space-y-8">
-            {/* Drive-time — compact single line */}
-            {driveTimeLabel && departureOrigin && (
-              <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground flex-wrap">
-                <Car className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-                <span className="font-mono text-foreground">{driveTimeLabel}</span>
-                <span>drive from {departureOrigin.label}</span>
-                {driveTime?.distance_text && (
-                  <>
-                    <span className="text-border mx-0.5">·</span>
-                    <span className="font-mono">{driveTime.distance_text}</span>
-                  </>
-                )}
-                {recommendedDeparture && (
-                  <>
-                    <span className="text-border mx-0.5">·</span>
-                    <span>
-                      leave by{" "}
-                      <span className="font-mono text-foreground">{recommendedDeparture}</span>
-                      {" "}for load in
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Day of Show Contact + Departure — paired two-column */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone && !show.dos_contact_email}>
-                {dosEditor.isEditing ? (
-                  <div ref={inlineRef} className="space-y-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Name</Label>
-                      <InlineField
-                        value={dosEditor.get("dos_contact_name")}
-                        onChange={(v) => dosEditor.setField("dos_contact_name", v)}
-                        autoFocus
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Phone</Label>
-                      <InlineField
-                        value={dosEditor.get("dos_contact_phone")}
-                        onChange={(v) => dosEditor.setField("dos_contact_phone", v)}
-                        mono
-                        inputMode="tel"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Email</Label>
-                      <InlineField
-                        value={dosEditor.get("dos_contact_email")}
-                        onChange={(v) => dosEditor.setField("dos_contact_email", v)}
-                        mono
-                        inputMode="email"
-                      />
-                    </div>
-                    <InlineActions onSave={dosEditor.save} onCancel={dosEditor.cancel} />
-                  </div>
-                ) : dosEditor.empty ? (
-                  <EmptyFieldPrompt label="day of show contact" onClick={dosEditor.startEdit} />
-                ) : (
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={dosEditor.startEdit}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); dosEditor.startEdit(); }
-                    }}
-                    className="w-full text-left card-pressable cursor-pointer"
-                  >
-                    {/* Avatar + name */}
-                    <div className="flex items-center gap-3">
-                      <div className="h-[38px] w-[38px] rounded-full bg-[var(--pastel-blue-bg)] text-[var(--pastel-blue-fg)] flex items-center justify-center shrink-0 select-none">
-                        <span className="font-display text-[15px] leading-none">
-                          {(show.dos_contact_name ?? "")
-                            .trim()
-                            .split(/\s+/)
-                            .slice(0, 2)
-                            .map((w) => w[0])
-                            .join("")
-                            .toUpperCase() || "?"}
-                        </span>
-                      </div>
-                      <span className="text-sm font-medium text-foreground">{show.dos_contact_name}</span>
-                    </div>
-                    {/* Phone / email links — stopPropagation so clicks open the app, not edit mode */}
-                    {(show.dos_contact_phone || show.dos_contact_email) && (
-                      <div
-                        className="mt-2.5 pt-2.5 border-t border-border/60 space-y-1.5 pl-[50px]"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {show.dos_contact_phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
-                            <a
-                              href={`tel:${show.dos_contact_phone}`}
-                              className="text-sm font-mono text-foreground hover:underline"
-                            >
-                              {show.dos_contact_phone}
-                            </a>
-                          </div>
-                        )}
-                        {show.dos_contact_email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
-                            <a
-                              href={`mailto:${show.dos_contact_email}`}
-                              className="text-sm font-mono text-foreground hover:underline"
-                            >
-                              {show.dos_contact_email}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </FieldGroup>
-
-              <Separator className="md:hidden" />
-
-              <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
-                {departureEditor.isEditing ? (
-                  <div ref={inlineRef} className="space-y-3">
-                    <div className="space-y-2">
-                      <Label className="block text-xs text-muted-foreground">Time</Label>
-                      <TimeInput
-                        value={departureEditor.get("departure_time")}
-                        onChange={(val) => departureEditor.setField("departure_time", val)}
-                        autoFocus
-                        hideTbd
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Notes</Label>
-                      <InlineField
-                        value={departureEditor.get("departure_notes")}
-                        onChange={(v) => departureEditor.setField("departure_notes", v)}
-                        multiline
-                        placeholder="e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am"
-                      />
-                    </div>
-                    <InlineActions onSave={departureEditor.save} onCancel={departureEditor.cancel} />
-                  </div>
-                ) : departureEditor.empty ? (
-                  <>
-                    <EmptyFieldPrompt label="departure" onClick={departureEditor.startEdit} />
-                    {recommendedDeparture && !suggestionDismissed && (
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xs gap-1.5"
-                          onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture } as any)}
-                          disabled={updateMutation.isPending}
-                        >
-                          <Clock className="h-3 w-3" />
-                          Use {recommendedDeparture}
-                          <span className="text-muted-foreground">· load-in − drive − 45 min</span>
-                        </Button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (id) localStorage.setItem(`departure-suggestion-dismissed-${id}`, "true");
-                            setSuggestionDismissed(true);
-                          }}
-                          className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
-                          aria-label="Dismiss departure suggestion"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={departureEditor.startEdit}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); departureEditor.startEdit(); }
-                    }}
-                    className="w-full text-left space-y-2 card-pressable cursor-pointer"
-                  >
-                    <FieldRow label="Time" value={show.departure_time} mono />
-                    {show.departure_notes ? (
-                      <FieldRow label="Notes" value={show.departure_notes} />
-                    ) : (
-                      <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                        <span className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">Notes</span>
-                        <span className="text-sm text-muted-foreground/50">Add notes…</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </FieldGroup>
-            </div>
-
-            <Separator />
-
             {/* Schedule — full width */}
             <div ref={scheduleRef}>
               <FieldGroup title="Schedule" incomplete={scheduleEntries.length === 0}>
@@ -1276,7 +1100,90 @@ export default function ShowDetailPage() {
 
             <Separator />
 
-            {/* Arrival — full width, below schedule */}
+            <FieldGroup
+              title="Departure"
+              collapsible
+              defaultOpen={!!show.departure_time || !!show.departure_notes || (!!recommendedDeparture && !suggestionDismissed)}
+              incomplete={!show.departure_time && !show.departure_notes}
+            >
+              {departureEditor.isEditing ? (
+                <div ref={inlineRef} className="space-y-3">
+                  <div className="space-y-2">
+                    <Label className="block text-xs text-muted-foreground">Time</Label>
+                    <TimeInput
+                      value={departureEditor.get("departure_time")}
+                      onChange={(val) => departureEditor.setField("departure_time", val)}
+                      autoFocus
+                      hideTbd
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Notes</Label>
+                    <InlineField
+                      value={departureEditor.get("departure_notes")}
+                      onChange={(v) => departureEditor.setField("departure_notes", v)}
+                      multiline
+                      placeholder="e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am"
+                    />
+                  </div>
+                  <InlineActions onSave={departureEditor.save} onCancel={departureEditor.cancel} />
+                </div>
+              ) : departureEditor.empty ? (
+                <>
+                  <EmptyFieldPrompt label="departure" onClick={departureEditor.startEdit} />
+                  {recommendedDeparture && !suggestionDismissed && (
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5"
+                        onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture } as any)}
+                        disabled={updateMutation.isPending}
+                      >
+                        <Clock className="h-3 w-3" />
+                        Use {recommendedDeparture}
+                        <span className="text-muted-foreground">· load-in − drive − 45 min</span>
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (id) localStorage.setItem(`departure-suggestion-dismissed-${id}`, "true");
+                          setSuggestionDismissed(true);
+                        }}
+                        className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
+                        aria-label="Dismiss departure suggestion"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={departureEditor.startEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); departureEditor.startEdit(); }
+                  }}
+                  className="w-full text-left space-y-2 card-pressable cursor-pointer"
+                >
+                  <FieldRow label="Time" value={show.departure_time} mono />
+                  {show.departure_notes ? (
+                    <FieldRow label="Notes" value={show.departure_notes} />
+                  ) : (
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+                      <span className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">Notes</span>
+                      <span className="text-sm text-muted-foreground/50">Add notes…</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </FieldGroup>
+
+            <Separator />
+
+            {/* Arrival — full width */}
             <FieldGroup
               title="Arrival"
               collapsible
@@ -1511,6 +1418,93 @@ export default function ShowDetailPage() {
             </FieldGroup>
           </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="contacts">
+          <div className="space-y-6 sm:space-y-8">
+            <Card className="p-5 sm:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Day of Show Contact</h2>
+                {!show.dos_contact_name && !show.dos_contact_phone && !show.dos_contact_email && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" aria-hidden />
+                )}
+              </div>
+              {dosEditor.isEditing ? (
+                <div ref={inlineRef} className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Name</Label>
+                    <InlineField
+                      value={dosEditor.get("dos_contact_name")}
+                      onChange={(v) => dosEditor.setField("dos_contact_name", v)}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Phone</Label>
+                    <InlineField
+                      value={dosEditor.get("dos_contact_phone")}
+                      onChange={(v) => dosEditor.setField("dos_contact_phone", v)}
+                      mono
+                      inputMode="tel"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Email</Label>
+                    <InlineField
+                      value={dosEditor.get("dos_contact_email")}
+                      onChange={(v) => dosEditor.setField("dos_contact_email", v)}
+                      mono
+                      inputMode="email"
+                    />
+                  </div>
+                  <InlineActions onSave={dosEditor.save} onCancel={dosEditor.cancel} />
+                </div>
+              ) : dosEditor.empty ? (
+                <EmptyFieldPrompt label="day of show contact" onClick={dosEditor.startEdit} />
+              ) : (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={dosEditor.startEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); dosEditor.startEdit(); }
+                  }}
+                  className="w-full text-left card-pressable cursor-pointer"
+                >
+                  <div className="text-sm font-medium text-foreground">{show.dos_contact_name}</div>
+                  {(show.dos_contact_phone || show.dos_contact_email) && (
+                    <div
+                      className="mt-2.5 pt-2.5 border-t border-border/60 space-y-1.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {show.dos_contact_phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <a
+                            href={`tel:${show.dos_contact_phone}`}
+                            className="text-sm font-mono text-foreground hover:underline"
+                          >
+                            {show.dos_contact_phone}
+                          </a>
+                        </div>
+                      )}
+                      {show.dos_contact_email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <a
+                            href={`mailto:${show.dos_contact_email}`}
+                            className="text-sm font-mono text-foreground hover:underline"
+                          >
+                            {show.dos_contact_email}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="deal">
