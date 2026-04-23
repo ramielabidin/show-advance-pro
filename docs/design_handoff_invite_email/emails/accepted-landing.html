@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Welcome — Advance</title>
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500&display=swap");
+  :root{
+    --bg:#f4efe6; --card:#fbf8f2; --fg:#1f1d1a; --fg2:#8b8375; --bd:#e5dfd2;
+    --blue-bg:#e1f3fe; --blue-fg:#1f6c9f;
+    --green-bg:#edf3ec; --green-fg:#346538;
+  }
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:'DM Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  .shell{max-width:520px;margin:0 auto;padding:56px 24px 80px;}
+  .mark{display:flex;align-items:center;gap:10px;margin-bottom:40px;}
+  .mark-tile{width:28px;height:28px;border-radius:6px;background:#221F1C;color:#F9F7F4;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:17px;}
+  .mark-word{font-family:'DM Serif Display',serif;font-size:20px;letter-spacing:-0.02em;}
+
+  .success-dot{
+    width:64px;height:64px;border-radius:50%;
+    background:var(--green-bg);color:var(--green-fg);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:24px;
+    animation:pop .5s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+
+  .eyebrow{font-size:11px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--fg2);margin-bottom:14px;}
+  h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:42px;line-height:1.05;letter-spacing:-0.03em;margin:0 0 16px;}
+  .lede{font-size:16px;line-height:1.55;color:#2a2824;margin:0 0 32px;max-width:440px;}
+
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:22px 24px;margin-bottom:24px;}
+  .card-label{font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--fg2);margin-bottom:6px;}
+  .card h3{font-family:'DM Serif Display',serif;font-weight:400;font-size:22px;line-height:1.1;letter-spacing:-0.02em;margin:0 0 8px;}
+  .card-meta{font-size:13px;color:var(--fg2);}
+  .card-meta .mono{font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--fg);}
+
+  .next{border-top:1px solid var(--bd);padding-top:16px;margin-top:18px;}
+  .next ol{list-style:none;padding:0;margin:0;}
+  .next li{display:flex;gap:12px;align-items:flex-start;padding:8px 0;font-size:14px;color:#2a2824;}
+  .next .num{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fg2);min-width:18px;padding-top:2px;}
+  .next .chk{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--bd);flex-shrink:0;margin-top:1px;}
+  .next li.done .chk{background:var(--green-bg);border-color:var(--green-bg);position:relative;}
+  .next li.done .chk::after{content:"";position:absolute;left:5px;top:2px;width:5px;height:10px;border:solid var(--green-fg);border-width:0 1.8px 1.8px 0;transform:rotate(45deg);}
+  .next li.done span{color:var(--fg2);text-decoration:line-through;text-decoration-color:var(--bd);}
+
+  .cta{display:inline-flex;align-items:center;gap:8px;background:#1f1d1a;color:#f9f7f4;padding:15px 24px;border-radius:24px;font-size:14px;font-weight:500;text-decoration:none;margin-top:8px;}
+  .cta:hover{transform:translateY(-1px);}
+  .fine{margin-top:32px;font-size:12px;color:var(--fg2);}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <div class="mark">
+      <div class="mark-tile">A</div>
+      <div class="mark-word">Advance</div>
+    </div>
+
+    <div class="success-dot" aria-hidden="true">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+
+    <div class="eyebrow">You're in</div>
+    <h1>Welcome to the crew.</h1>
+    <p class="lede">Your account's set up. Maya's tour is waiting on your dashboard — take a look before doors.</p>
+
+    <div class="card">
+      <div class="card-label">You joined</div>
+      <h3>Midwest Run · Spring 26</h3>
+      <div class="card-meta"><span class="mono">14 shows</span> · <span class="mono">Apr 28 — May 18</span> · Chicago → Minneapolis</div>
+
+      <div class="next">
+        <div class="card-label" style="margin-bottom:8px;">Next up</div>
+        <ol>
+          <li class="done"><span class="chk"></span><span>Accept invite</span></li>
+          <li><span class="chk"></span><span>Add your phone so the crew can reach you</span></li>
+          <li><span class="chk"></span><span>Open Apr 28 — Lincoln Hall, Chicago</span></li>
+        </ol>
+      </div>
+    </div>
+
+    <a class="cta" href="#">Go to dashboard &rarr;</a>
+
+    <div class="fine">Signed in as <span style="font-family:'JetBrains Mono',monospace;">you@band.fm</span> · <a href="#" style="color:inherit;border-bottom:1px solid currentColor;text-decoration:none;">switch account</a></div>
+  </div>
+</body>
+</html>
