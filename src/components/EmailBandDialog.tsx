@@ -140,7 +140,7 @@ export default function EmailBandDialog({ show, trigger }: EmailBandDialogProps)
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline" size="sm" className="gap-1.5">
-            <Mail className="h-4 w-4" /> Email Band
+            <Mail className="h-4 w-4" /> Email Day Sheet
           </Button>
         )}
       </DialogTrigger>
