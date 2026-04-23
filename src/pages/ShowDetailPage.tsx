@@ -82,8 +82,6 @@ function formatCurrency(raw: string): string {
 interface HeaderActionsProps {
   show: Show;
   showId: string;
-  isAdvancePending: boolean;
-  onToggleAdvanced: (next: boolean) => void;
   onOpenSettle: () => void;
   onOpenClearSettle: () => void;
   onOpenDelete: () => void;
@@ -93,8 +91,6 @@ interface HeaderActionsProps {
 function HeaderActions({
   show,
   showId,
-  isAdvancePending,
-  onToggleAdvanced,
   onOpenSettle,
   onOpenClearSettle,
   onOpenDelete,
@@ -102,7 +98,6 @@ function HeaderActions({
 }: HeaderActionsProps) {
   const { copyOrCreate: copyMagicLink, isPending: isCopyPending } = useGuestLink(showId, "daysheet");
   const isSettled = !!show.is_settled;
-  const isAdvanced = !!show.advanced_at;
 
   return (
     <div className="flex items-center gap-1.5 shrink-0">
@@ -117,7 +112,7 @@ function HeaderActions({
               style={{ color: "var(--pastel-green-fg)" }}
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Settled</span>
+              <span>Settled</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -132,27 +127,9 @@ function HeaderActions({
           className="h-9 gap-1.5 rounded-full bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:bg-[hsl(var(--success))]/90"
         >
           <CheckCircle2 className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Settle</span>
+          <span>Settle</span>
         </Button>
       )}
-
-      {/* Mark advanced — toggles on click; visual state reflects advancement */}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => onToggleAdvanced(!isAdvanced)}
-        disabled={isAdvancePending}
-        className="h-9 gap-1.5 rounded-full"
-        aria-label={isAdvanced ? "Unmark advanced" : "Mark advanced"}
-        title={isAdvanced ? "Click to unmark" : "Mark this show as advanced"}
-      >
-        <Check
-          className="h-3.5 w-3.5"
-          style={isAdvanced ? { color: "var(--pastel-green-fg)" } : undefined}
-        />
-        <span className="hidden sm:inline">{isAdvanced ? "Advanced" : "Mark advanced"}</span>
-      </Button>
 
       <ParseAdvanceForShowDialog
         showId={showId}
@@ -168,7 +145,7 @@ function HeaderActions({
             title="Import advance"
           >
             <FileText className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Import</span>
+            <span>Import</span>
           </Button>
         }
       />
@@ -178,7 +155,7 @@ function HeaderActions({
         <DropdownMenuTrigger asChild>
           <Button variant="secondary" size="sm" className="h-9 gap-1.5 rounded-full">
             <Share2 className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Share</span>
+            <span>Share</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -792,6 +769,20 @@ export default function ShowDetailPage() {
                 Settled
               </Badge>
             )}
+            {(show as any).advanced_at && (
+              <button
+                type="button"
+                onClick={() => toggleAdvancedMutation.mutate(false)}
+                disabled={toggleAdvancedMutation.isPending}
+                aria-label="Unmark advanced"
+                title="Click to unmark as advanced"
+                className="inline-flex items-center gap-1 rounded-full px-2 h-5 text-[10px] uppercase tracking-widest font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+              >
+                <Check className="h-2.5 w-2.5" />
+                Advanced
+              </button>
+            )}
             {(show as any).tours?.name && (
               <Link to={`/shows?view=tour&tourId=${(show as any).tours.id}`}>
                 <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 hover:bg-secondary/80 transition-colors">
@@ -924,24 +915,27 @@ export default function ShowDetailPage() {
           )}
         </div>
 
-        {/* Status + actions — labeled buttons on desktop, icon-only on mobile */}
-        <div className="pt-3 flex items-center justify-between gap-3">
+        {/* Status + actions — labeled buttons always */}
+        <div className="pt-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
             {!(show as any).advanced_at && (
-              <span
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium shrink-0"
+              <button
+                type="button"
+                onClick={() => toggleAdvancedMutation.mutate(true)}
+                disabled={toggleAdvancedMutation.isPending}
+                aria-label="Mark as advanced"
+                title="Click to mark as advanced"
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium shrink-0 transition-opacity hover:opacity-80 disabled:opacity-50"
                 style={{ backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }}
               >
                 Needs advancing
-              </span>
+              </button>
             )}
           </div>
 
           <HeaderActions
             show={show as Show}
             showId={id!}
-            isAdvancePending={toggleAdvancedMutation.isPending}
-            onToggleAdvanced={(next) => toggleAdvancedMutation.mutate(next)}
             onOpenSettle={() => {
               setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
               setSettleOpen(true);
