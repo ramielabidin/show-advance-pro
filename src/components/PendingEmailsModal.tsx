@@ -87,7 +87,7 @@ export default function PendingEmailsModal() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <Mail className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -102,8 +102,8 @@ export default function PendingEmailsModal() {
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="rounded-md border bg-muted/30 px-3 py-2.5 space-y-1">
-            <p className="text-sm font-medium text-foreground truncate">
+          <div className="rounded-md border bg-muted/30 px-3 py-2.5 space-y-1 min-w-0">
+            <p className="text-sm font-medium text-foreground break-words">
               {current.email_subject || "(no subject)"}
             </p>
             <p className="text-xs text-muted-foreground truncate">
