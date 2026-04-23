@@ -248,7 +248,7 @@ function renderKeyMoments(show: RenderShow): string {
     .join("");
 
   return `
-  <tr><td style="padding:0 0 20px 0;border-top:1px solid ${T.rule};border-bottom:1px solid ${T.rule};">
+  <tr><td style="padding:0 0 20px 0;border-top:1px solid ${T.rule};">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       <tbody><tr>${tds}</tr></tbody>
     </table>
