@@ -1,6 +1,7 @@
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, Phone, Mail, FileText } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo } from "react";
@@ -193,7 +194,7 @@ export default function ShowDetailPage() {
   const queryClient = useQueryClient();
   const { teamId } = useTeam();
 
-  const [viewTab, setViewTab] = useState<"show" | "deal">("show");
+  const [viewTab, setViewTab] = useState<"show" | "deal" | "contacts">("show");
 
   // When we arrive here from the inbound-email "Review Now" flow, the
   // forwarded email body is handed off via location state. Consume it once,
@@ -747,7 +748,7 @@ export default function ShowDetailPage() {
       <Tabs
         value={viewTab}
         onValueChange={(v) => {
-          const next = v as "show" | "deal";
+          const next = v as "show" | "deal" | "contacts";
           setViewTab(next);
           if (next === "deal" && id && !dealTabSeen) {
             localStorage.setItem(`deal-tab-seen-${id}`, "true");
@@ -768,20 +769,6 @@ export default function ShowDetailPage() {
                 <CheckCircle2 className="h-2.5 w-2.5" />
                 Settled
               </Badge>
-            )}
-            {(show as any).advanced_at && (
-              <button
-                type="button"
-                onClick={() => toggleAdvancedMutation.mutate(false)}
-                disabled={toggleAdvancedMutation.isPending}
-                aria-label="Unmark advanced"
-                title="Click to unmark as advanced"
-                className="inline-flex items-center gap-1 rounded-full px-2 h-5 text-[10px] uppercase tracking-widest font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
-              >
-                <Check className="h-2.5 w-2.5" />
-                Advanced
-              </button>
             )}
             {(show as any).tours?.name && (
               <Link to={`/shows?view=tour&tourId=${(show as any).tours.id}`}>
@@ -855,12 +842,28 @@ export default function ShowDetailPage() {
             />
           </div>
         ) : (
-          <h1
-            className="text-2xl sm:text-3xl font-display font-bold tracking-tight leading-tight cursor-pointer hover:text-primary/80 transition-colors"
-            onClick={() => { setInlineField("venue_name"); setInlineValue(show.venue_name); }}
-          >
-            {show.venue_name}
-          </h1>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <h1
+              className="text-2xl sm:text-3xl font-display font-bold tracking-tight leading-tight cursor-pointer hover:text-primary/80 transition-colors"
+              onClick={() => { setInlineField("venue_name"); setInlineValue(show.venue_name); }}
+            >
+              {show.venue_name}
+            </h1>
+            {(show as any).advanced_at && (
+              <button
+                type="button"
+                onClick={() => toggleAdvancedMutation.mutate(false)}
+                disabled={toggleAdvancedMutation.isPending}
+                aria-label="Unmark advanced"
+                title="Click to unmark as advanced"
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0 transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+              >
+                <Check className="h-3 w-3" />
+                Advanced
+              </button>
+            )}
+          </div>
         )}
 
         {/* Address row */}
@@ -916,7 +919,7 @@ export default function ShowDetailPage() {
         </div>
 
         {/* Status + actions — labeled buttons always */}
-        <div className="pt-3 flex items-center justify-between gap-3 flex-wrap">
+        <div className="pt-3 flex items-center justify-start sm:justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
             {!(show as any).advanced_at && (
               <button
@@ -957,6 +960,12 @@ export default function ShowDetailPage() {
               className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
             >
               Show Info
+            </TabsTrigger>
+            <TabsTrigger
+              value="contacts"
+              className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
+            >
+              Contacts
             </TabsTrigger>
             <TabsTrigger
               value="deal"
@@ -1054,103 +1063,7 @@ export default function ShowDetailPage() {
               </div>
             )}
 
-            {/* Day of Show Contact + Departure — paired two-column */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <FieldGroup title="Day of Show Contact" incomplete={!show.dos_contact_name && !show.dos_contact_phone && !show.dos_contact_email}>
-                {dosEditor.isEditing ? (
-                  <div ref={inlineRef} className="space-y-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Name</Label>
-                      <InlineField
-                        value={dosEditor.get("dos_contact_name")}
-                        onChange={(v) => dosEditor.setField("dos_contact_name", v)}
-                        autoFocus
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Phone</Label>
-                      <InlineField
-                        value={dosEditor.get("dos_contact_phone")}
-                        onChange={(v) => dosEditor.setField("dos_contact_phone", v)}
-                        mono
-                        inputMode="tel"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Email</Label>
-                      <InlineField
-                        value={dosEditor.get("dos_contact_email")}
-                        onChange={(v) => dosEditor.setField("dos_contact_email", v)}
-                        mono
-                        inputMode="email"
-                      />
-                    </div>
-                    <InlineActions onSave={dosEditor.save} onCancel={dosEditor.cancel} />
-                  </div>
-                ) : dosEditor.empty ? (
-                  <EmptyFieldPrompt label="day of show contact" onClick={dosEditor.startEdit} />
-                ) : (
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={dosEditor.startEdit}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); dosEditor.startEdit(); }
-                    }}
-                    className="w-full text-left card-pressable cursor-pointer"
-                  >
-                    {/* Avatar + name */}
-                    <div className="flex items-center gap-3">
-                      <div className="h-[38px] w-[38px] rounded-full bg-[var(--pastel-blue-bg)] text-[var(--pastel-blue-fg)] flex items-center justify-center shrink-0 select-none">
-                        <span className="font-display text-[15px] leading-none">
-                          {(show.dos_contact_name ?? "")
-                            .trim()
-                            .split(/\s+/)
-                            .slice(0, 2)
-                            .map((w) => w[0])
-                            .join("")
-                            .toUpperCase() || "?"}
-                        </span>
-                      </div>
-                      <span className="text-sm font-medium text-foreground">{show.dos_contact_name}</span>
-                    </div>
-                    {/* Phone / email links — stopPropagation so clicks open the app, not edit mode */}
-                    {(show.dos_contact_phone || show.dos_contact_email) && (
-                      <div
-                        className="mt-2.5 pt-2.5 border-t border-border/60 space-y-1.5 pl-[50px]"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {show.dos_contact_phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
-                            <a
-                              href={`tel:${show.dos_contact_phone}`}
-                              className="text-sm font-mono text-foreground hover:underline"
-                            >
-                              {show.dos_contact_phone}
-                            </a>
-                          </div>
-                        )}
-                        {show.dos_contact_email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
-                            <a
-                              href={`mailto:${show.dos_contact_email}`}
-                              className="text-sm font-mono text-foreground hover:underline"
-                            >
-                              {show.dos_contact_email}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </FieldGroup>
-
-              <Separator className="md:hidden" />
-
-              <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
+            <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
                 {departureEditor.isEditing ? (
                   <div ref={inlineRef} className="space-y-3">
                     <div className="space-y-2">
@@ -1225,7 +1138,6 @@ export default function ShowDetailPage() {
                   </div>
                 )}
               </FieldGroup>
-            </div>
 
             <Separator />
 
@@ -1511,6 +1423,106 @@ export default function ShowDetailPage() {
             </FieldGroup>
           </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="contacts">
+          <div className="space-y-6 sm:space-y-8">
+            <Card className="p-5 sm:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Day of Show Contact</h2>
+                {!show.dos_contact_name && !show.dos_contact_phone && !show.dos_contact_email && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" aria-hidden />
+                )}
+              </div>
+              {dosEditor.isEditing ? (
+                <div ref={inlineRef} className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Name</Label>
+                    <InlineField
+                      value={dosEditor.get("dos_contact_name")}
+                      onChange={(v) => dosEditor.setField("dos_contact_name", v)}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Phone</Label>
+                    <InlineField
+                      value={dosEditor.get("dos_contact_phone")}
+                      onChange={(v) => dosEditor.setField("dos_contact_phone", v)}
+                      mono
+                      inputMode="tel"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Email</Label>
+                    <InlineField
+                      value={dosEditor.get("dos_contact_email")}
+                      onChange={(v) => dosEditor.setField("dos_contact_email", v)}
+                      mono
+                      inputMode="email"
+                    />
+                  </div>
+                  <InlineActions onSave={dosEditor.save} onCancel={dosEditor.cancel} />
+                </div>
+              ) : dosEditor.empty ? (
+                <EmptyFieldPrompt label="day of show contact" onClick={dosEditor.startEdit} />
+              ) : (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={dosEditor.startEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); dosEditor.startEdit(); }
+                  }}
+                  className="w-full text-left card-pressable cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-[38px] w-[38px] rounded-full bg-[var(--pastel-blue-bg)] text-[var(--pastel-blue-fg)] flex items-center justify-center shrink-0 select-none">
+                      <span className="font-display text-[15px] leading-none">
+                        {(show.dos_contact_name ?? "")
+                          .trim()
+                          .split(/\s+/)
+                          .slice(0, 2)
+                          .map((w) => w[0])
+                          .join("")
+                          .toUpperCase() || "?"}
+                      </span>
+                    </div>
+                    <span className="text-sm font-medium text-foreground">{show.dos_contact_name}</span>
+                  </div>
+                  {(show.dos_contact_phone || show.dos_contact_email) && (
+                    <div
+                      className="mt-2.5 pt-2.5 border-t border-border/60 space-y-1.5 pl-[50px]"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {show.dos_contact_phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <a
+                            href={`tel:${show.dos_contact_phone}`}
+                            className="text-sm font-mono text-foreground hover:underline"
+                          >
+                            {show.dos_contact_phone}
+                          </a>
+                        </div>
+                      )}
+                      {show.dos_contact_email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <a
+                            href={`mailto:${show.dos_contact_email}`}
+                            className="text-sm font-mono text-foreground hover:underline"
+                          >
+                            {show.dos_contact_email}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="deal">
