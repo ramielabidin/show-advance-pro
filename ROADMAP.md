@@ -64,10 +64,16 @@ These inform every decision downstream. When in doubt, refer back here.
 **Why first:** The marketing site will feature screenshots of day sheets, PDF exports, and Slack notifications. These need to be launch-ready before the marketing site is built, or the site undercuts its own message about UI quality.
 
 **Tasks:**
-- [ ] Design and implement custom HTML email templates via SendGrid
-  - Match app's type system, color palette, spacing
-  - Templates needed: day sheet, tour invite, show update, guest list confirmation
-  - Test across Gmail, Apple Mail, Outlook, iOS Mail
+- Custom HTML email templates via SendGrid (match app's type system, color palette, spacing; test across Gmail, Apple Mail, Outlook, iOS Mail)
+  - [x] Day sheet email (`send-daysheet-email`)
+  - [x] Team invite email (`send-team-invite-email`, Dispatch design variant, auto-accept via existing signup trigger)
+  - [ ] Tour invite email — tour-scoped invite (Crew Pass design variant is parked in `docs/design_handoff_invite_email/`, ready to adapt once tour-level invite flow is built)
+  - [ ] Show update email
+  - [ ] Guest list confirmation email
+- [ ] Team invite landing page (`/invite/:code`)
+  - Today the invite email CTA leads straight to the auth page with no team context, which feels phishing-adjacent for someone who wasn't expecting it
+  - Need a public route that displays team name, inviter, and "You've been invited to X" before the sign-in / sign-up handoff
+  - Likely requires a `token` (and `expires_at`) column on `team_invites` plus a public edge function that resolves the token into display-safe fields
 - [ ] Redesign PDF exports to match app UI
   - Same fonts, spacing, restraint
   - Day sheet PDF is highest priority — this is what gets printed and taped to dressing room doors
