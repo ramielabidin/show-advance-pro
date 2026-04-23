@@ -17,7 +17,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const DEFAULT_APP_URL = "https://app.advancetouring.com/";
+const DEFAULT_APP_URL = "https://advancetouring.com";
 const DEFAULT_ROLE_LABEL = "Member — full access to shows, tours, and day sheets";
 
 function json(body: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
@@ -68,7 +68,7 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const sendgridKey = Deno.env.get("SENDGRID_API_KEY");
     const fromEmail = Deno.env.get("SENDGRID_FROM_EMAIL");
-    const appUrl = (Deno.env.get("PUBLIC_APP_URL") ?? DEFAULT_APP_URL).trim() || DEFAULT_APP_URL;
+    const appUrl = (Deno.env.get("APP_URL") ?? DEFAULT_APP_URL).trim() || DEFAULT_APP_URL;
     if (!supabaseUrl || !anonKey || !serviceRoleKey) {
       console.error("send-team-invite-email: missing Supabase env");
       return json({ error: "Server misconfigured" }, 500);
