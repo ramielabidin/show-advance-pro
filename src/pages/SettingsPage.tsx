@@ -574,14 +574,18 @@ export default function SettingsPage() {
         throw error;
       }
 
-      const { error: sendError } = await supabase.functions.invoke(
-        "send-team-invite-email",
-        { body: { inviteId: inserted.id } },
-      );
-      // Row is inserted either way; if the email failed to send, surface
-      // it in the success toast rather than rolling back (user can re-send
-      // by removing and re-adding).
-      return { sent: !sendError, sendErrorMessage: sendError?.message };
+      const { data: sendData, error: sendError } = await supabase.functions.invoke<{
+        success?: boolean;
+        error?: string;
+      }>("send-team-invite-email", { body: { inviteId: inserted.id } });
+      // Row is inserted either way; if the email failed to send, surface it
+      // in the toast rather than rolling back (owner can re-send by removing
+      // and re-adding). We require an explicit success flag from the function
+      // because the Supabase SDK has swallowed gateway-level 401s into a
+      // null-error response in the past, causing false "sent" reports.
+      const sent = !sendError && sendData?.success === true;
+      const sendErrorMessage = sendError?.message ?? sendData?.error;
+      return { sent, sendErrorMessage };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["team-invites", teamId] });

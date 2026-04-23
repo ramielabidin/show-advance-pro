@@ -54,3 +54,9 @@ verify_jwt = false
 # functions above — otherwise every call 401s at the gateway.
 [functions.send-daysheet-email]
 verify_jwt = false
+
+# send-team-invite-email validates the caller's JWT itself via
+# supabase.auth.getUser() and checks team ownership before sending.
+# Disable gateway verify_jwt for the same ES256 reason.
+[functions.send-team-invite-email]
+verify_jwt = false
