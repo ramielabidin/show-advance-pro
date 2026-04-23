@@ -290,8 +290,10 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
         doc.text(value, x + 58, rowY);
       };
 
-      const contactName = val(show.dos_contact_name);
-      const contactPhone = val(show.dos_contact_phone);
+      const contactsList = [...(show.show_contacts ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+      const dos = contactsList.find((c) => c.role === "day_of_show") ?? contactsList[0];
+      const contactName = val(dos?.name);
+      const contactPhone = val(dos?.phone);
       const wifiNet = val(show.wifi_network);
       const wifiPw = val(show.wifi_password);
 

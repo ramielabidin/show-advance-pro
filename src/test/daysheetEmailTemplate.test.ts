@@ -20,8 +20,18 @@ function baseShow(overrides: Partial<RenderShow> = {}): RenderShow {
       { id: "2", time: "5:00 PM", label: "Sound Check", is_band: false, sort_order: 2 },
       { id: "3", time: "9:30 PM", label: "Band", is_band: true, sort_order: 3 },
     ],
-    dos_contact_name: "Alex Promoter",
-    dos_contact_phone: "(202) 555-0199",
+    show_contacts: [
+      {
+        id: "c1",
+        name: "Alex Promoter",
+        phone: "(202) 555-0199",
+        email: null,
+        role: "day_of_show",
+        role_label: null,
+        notes: null,
+        sort_order: 0,
+      },
+    ],
     departure_time: null,
     departure_notes: null,
     parking_notes: "Street parking on V St; load-in alley entrance",
@@ -91,8 +101,7 @@ describe("renderDaysheetEmail", () => {
 
   it("omits sections whose hasData() returns false", () => {
     const minimal = baseShow({
-      dos_contact_name: null,
-      dos_contact_phone: null,
+      show_contacts: [],
       parking_notes: null,
       load_in_details: null,
       green_room_info: null,
@@ -112,6 +121,76 @@ describe("renderDaysheetEmail", () => {
     expect(html).not.toContain(">At The Venue<");
     expect(html).not.toContain(">Accommodations<");
     expect(html).not.toContain(">Guest List<");
+  });
+
+  it("renders DOS and Other Contacts sections when multiple contacts exist", () => {
+    const { html, text } = renderDaysheetEmail(
+      baseShow({
+        show_contacts: [
+          {
+            id: "c1",
+            name: "Alex Promoter",
+            phone: "(202) 555-0199",
+            email: null,
+            role: "day_of_show",
+            role_label: null,
+            notes: null,
+            sort_order: 0,
+          },
+          {
+            id: "c2",
+            name: "Jamie Tech",
+            phone: "(202) 555-0122",
+            email: "jamie@venue.test",
+            role: "production",
+            role_label: null,
+            notes: null,
+            sort_order: 1,
+          },
+          {
+            id: "c3",
+            name: "Sam Runner",
+            phone: null,
+            email: null,
+            role: "custom",
+            role_label: "Runner",
+            notes: "Arrives 4pm",
+            sort_order: 2,
+          },
+        ],
+      }),
+    );
+    expect(html).toContain(">Day of Show Contact<");
+    expect(html).toContain(">Other Contacts<");
+    expect(html).toContain("Alex Promoter");
+    expect(html).toContain("Jamie Tech");
+    expect(html).toContain("Sam Runner");
+    expect(html).toContain("Runner");
+    expect(text).toContain("DAY OF SHOW CONTACT");
+    expect(text).toContain("OTHER CONTACTS");
+    expect(text).toContain("Jamie Tech");
+  });
+
+  it("renders only Contacts section when no DOS role is present", () => {
+    const { html } = renderDaysheetEmail(
+      baseShow({
+        show_contacts: [
+          {
+            id: "c1",
+            name: "Jamie Tech",
+            phone: "(202) 555-0122",
+            email: null,
+            role: "production",
+            role_label: null,
+            notes: null,
+            sort_order: 0,
+          },
+        ],
+      }),
+    );
+    expect(html).not.toContain(">Day of Show Contact<");
+    expect(html).toContain(">Contacts<");
+    expect(html).toContain("Jamie Tech");
   });
 
   it("treats TBD and N/A values as empty", () => {

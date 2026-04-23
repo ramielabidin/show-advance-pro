@@ -29,6 +29,17 @@ export interface GuestScheduleEntry {
   sort_order: number | null;
 }
 
+export interface GuestContact {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+  role: string;
+  role_label: string | null;
+  notes: string | null;
+  sort_order: number | null;
+}
+
 // Payload returned by the `get_guest_show` RPC. Deal / financial fields are
 // deliberately omitted server-side so they never reach the client.
 export interface GuestShowPayload {
@@ -40,8 +51,6 @@ export interface GuestShowPayload {
   venue_name: string | null;
   venue_address: string | null;
   city: string | null;
-  dos_contact_name: string | null;
-  dos_contact_phone: string | null;
   departure_time: string | null;
   departure_notes: string | null;
   parking_notes: string | null;
@@ -60,6 +69,7 @@ export interface GuestShowPayload {
   set_length: string | null;
   additional_info: string | null;
   schedule_entries: GuestScheduleEntry[];
+  contacts: GuestContact[];
 }
 
 const TOKEN_LENGTH = 17;

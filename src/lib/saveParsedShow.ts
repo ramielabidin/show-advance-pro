@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { isDuplicateContact } from "@/lib/contactRoles";
 
 export interface ParsedShowSchedule {
   time: string;
@@ -6,11 +7,21 @@ export interface ParsedShowSchedule {
   is_band?: boolean;
 }
 
+export interface ParsedShowContact {
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  role?: string;
+  role_label?: string | null;
+  notes?: string | null;
+}
+
 export interface ParsedShow {
   venue_name: string;
   city: string;
   date: string;
   schedule?: ParsedShowSchedule[];
+  contacts?: ParsedShowContact[];
   [key: string]: unknown;
 }
 
@@ -19,9 +30,22 @@ export interface SaveParsedShowResult {
   isNew: boolean;
 }
 
+function normalizeContact(c: ParsedShowContact) {
+  const role = c.role && c.role.trim() ? c.role.trim() : "day_of_show";
+  return {
+    name: (c.name ?? "").trim(),
+    phone: c.phone?.trim() || null,
+    email: c.email?.trim() || null,
+    role,
+    role_label: role === "custom" ? (c.role_label?.trim() || null) : null,
+    notes: c.notes?.trim() || null,
+  };
+}
+
 /**
  * Save a parsed show: match existing by venue_name + date (scoped to team),
- * update if found or insert if new, and replace schedule entries.
+ * update if found or insert if new, replace schedule entries, and append any
+ * parsed contacts (deduping against existing rows on the show).
  *
  * Mirrors the behaviour previously inlined in CreateShowDialog so the inbound
  * email review flow can save directly without opening that dialog.
@@ -35,7 +59,8 @@ export async function saveParsedShow(
   }
 
   const schedule = parsed.schedule ?? [];
-  const { schedule: _schedule, ...showFields } = parsed;
+  const contacts = (parsed.contacts ?? []).filter((c) => c && c.name && c.name.trim());
+  const { schedule: _schedule, contacts: _contacts, ...showFields } = parsed;
   const advanceImportedAt = new Date().toISOString();
 
   const { data: existingShows, error: lookupErr } = await supabase
@@ -68,6 +93,25 @@ export async function saveParsedShow(
       );
       if (scheduleErr) throw scheduleErr;
     }
+
+    if (contacts.length > 0) {
+      const { data: existingContacts, error: existingErr } = await supabase
+        .from("show_contacts")
+        .select("name, phone, email, sort_order")
+        .eq("show_id", showId);
+      if (existingErr) throw existingErr;
+      const baseSort = existingContacts?.length ?? 0;
+      const toInsert = contacts
+        .map(normalizeContact)
+        .filter((c) => !isDuplicateContact(c, existingContacts ?? []));
+      if (toInsert.length > 0) {
+        const { error: contactErr } = await supabase.from("show_contacts").insert(
+          toInsert.map((c, i) => ({ ...c, show_id: showId, sort_order: baseSort + i })),
+        );
+        if (contactErr) throw contactErr;
+      }
+    }
+
     return { showId, isNew: false };
   }
 
@@ -90,5 +134,17 @@ export async function saveParsedShow(
     );
     if (scheduleErr) throw scheduleErr;
   }
+
+  if (contacts.length > 0) {
+    const { error: contactErr } = await supabase.from("show_contacts").insert(
+      contacts.map(normalizeContact).map((c, i) => ({
+        ...c,
+        show_id: newShow.id,
+        sort_order: i,
+      })),
+    );
+    if (contactErr) throw contactErr;
+  }
+
   return { showId: newShow.id, isNew: true };
 }

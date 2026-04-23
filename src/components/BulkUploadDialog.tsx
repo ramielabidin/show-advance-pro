@@ -41,6 +41,7 @@ const TEMPLATE_COLUMNS = [
   "venue_address",
   "dos_contact_name",
   "dos_contact_phone",
+  "dos_contact_email",
   "hotel_name",
   "hotel_address",
   "tour_name",
@@ -96,6 +97,7 @@ const EXTRAS_LABELS: Record<string, string> = {
   venue_address: "Address",
   dos_contact_name: "Contact",
   dos_contact_phone: "Phone",
+  dos_contact_email: "Email",
   hotel_name: "Hotel",
   hotel_address: "Hotel addr",
   venue_capacity: "Capacity",
@@ -534,8 +536,6 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
           venue_name: r.data.venue_name.trim(),
           city: r.data.city.trim(),
           venue_address: r.data.venue_address?.trim() || null,
-          dos_contact_name: r.data.dos_contact_name?.trim() || null,
-          dos_contact_phone: r.data.dos_contact_phone?.trim() || null,
           hotel_name: r.data.hotel_name?.trim() || null,
           hotel_address: r.data.hotel_address?.trim() || null,
           tour_id,
@@ -546,10 +546,51 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
         return base;
       };
 
+      // Pull DOS contact fields out of the CSV row into a separate payload for
+      // the `show_contacts` table. Empty strings -> no contact to insert.
+      const dosContactFor = (r: ValidatedRow) => {
+        const name = r.data.dos_contact_name?.trim();
+        const phone = r.data.dos_contact_phone?.trim();
+        const email = r.data.dos_contact_email?.trim();
+        if (!name && !phone && !email) return null;
+        return {
+          name: name || "",
+          phone: phone || null,
+          email: email || null,
+          role: "day_of_show",
+          role_label: null,
+          sort_order: 0,
+        };
+      };
+
       if (toInsert.length > 0) {
         const insertRows = toInsert.map((r) => buildPayload(r, false));
-        const { error } = await supabase.from("shows").insert(insertRows);
+        const { data: inserted, error } = await supabase
+          .from("shows")
+          .insert(insertRows)
+          .select("id, venue_name, date");
         if (error) throw error;
+
+        // Insert day-of-show contacts for any rows that had contact columns.
+        // Match the returned rows to the source rows by (venue_name + date) — the
+        // same pair we enforce as unique per team. Preserve the CSV row order.
+        if (inserted && inserted.length > 0) {
+          const idByKey = new Map(
+            inserted.map((s) => [`${s.venue_name}|${s.date}`, s.id]),
+          );
+          const contactRows: Record<string, unknown>[] = [];
+          for (const r of toInsert) {
+            const dos = dosContactFor(r);
+            if (!dos) continue;
+            const showId = idByKey.get(`${r.data.venue_name.trim()}|${r.data.date.trim()}`);
+            if (!showId) continue;
+            contactRows.push({ ...dos, show_id: showId });
+          }
+          if (contactRows.length > 0) {
+            const { error: contactErr } = await supabase.from("show_contacts").insert(contactRows);
+            if (contactErr) throw contactErr;
+          }
+        }
       }
 
       for (const { row, showId } of toUpdate) {
@@ -560,6 +601,23 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
           .eq("id", showId)
           .eq("team_id", teamId);
         if (error) throw error;
+
+        // When the CSV provides contact info on an update, replace this show's
+        // existing day-of-show contact. Leave other roles (promoter, production,
+        // etc.) untouched. If the CSV cells are blank, do not delete anything —
+        // the plan is conservative about wiping user-edited contacts.
+        const dos = dosContactFor(row);
+        if (dos) {
+          await supabase
+            .from("show_contacts")
+            .delete()
+            .eq("show_id", showId)
+            .eq("role", "day_of_show");
+          const { error: contactErr } = await supabase
+            .from("show_contacts")
+            .insert({ ...dos, show_id: showId });
+          if (contactErr) throw contactErr;
+        }
       }
 
       return { inserted: toInsert.length, updated: toUpdate.length };

@@ -17,14 +17,13 @@ import {
 import { toast } from "sonner";
 import type { Show } from "@/lib/types";
 import { extractTextFromPdf } from "@/lib/pdfExtract";
+import { isDuplicateContact, roleLabel } from "@/lib/contactRoles";
 
 const FIELD_LABELS: Record<string, string> = {
   venue_name: "Venue Name",
   venue_address: "Venue Address",
   city: "City",
   date: "Date",
-  dos_contact_name: "Day of Show Contact",
-  dos_contact_phone: "Day of Show Phone",
   departure_time: "Departure Time",
   departure_notes: "Departure Notes",
   parking_notes: "Parking",
@@ -50,10 +49,21 @@ const FIELD_LABELS: Record<string, string> = {
   additional_info: "Additional Info",
 };
 
-// Fields to skip from merge consideration
-const SKIP_FIELDS = new Set(["schedule", "venue_name", "city", "date"]);
+// Fields to skip from the scalar merge loop — they are handled separately
+// (schedule has its own preview, contacts have their own confirm block,
+// and the three required identity fields shouldn't be offered as toggles).
+const SKIP_FIELDS = new Set(["schedule", "contacts", "venue_name", "city", "date"]);
 
 type PendingField = { key: string; label: string; newValue: string };
+
+type ParsedContact = {
+  name: string;
+  phone?: string;
+  email?: string;
+  role: string;
+  role_label?: string;
+  notes?: string;
+};
 
 interface Props {
   showId: string;
@@ -99,6 +109,8 @@ export default function ParseAdvanceForShowDialog({
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [parsedSchedule, setParsedSchedule] = useState<any[] | null>(null);
   const [scheduleSelected, setScheduleSelected] = useState(false);
+  const [parsedContacts, setParsedContacts] = useState<ParsedContact[]>([]);
+  const [contactsSelected, setContactsSelected] = useState<Set<number>>(new Set());
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [extractingPdf, setExtractingPdf] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,6 +122,8 @@ export default function ParseAdvanceForShowDialog({
     setSelectedKeys(new Set());
     setParsedSchedule(null);
     setScheduleSelected(false);
+    setParsedContacts([]);
+    setContactsSelected(new Set());
     setPdfFile(null);
     setExtractingPdf(false);
     setLoading(false);
@@ -168,13 +182,32 @@ export default function ParseAdvanceForShowDialog({
       nextSchedule = schedule;
     }
 
-    if (fields.length === 0 && !nextSchedule) {
+    // Contacts — append, deduping against what's already on the show.
+    const rawContacts = (parsed as Record<string, unknown>).contacts;
+    const existingContacts = currentShow.show_contacts ?? [];
+    const nextContacts: ParsedContact[] = Array.isArray(rawContacts)
+      ? rawContacts
+          .filter((c): c is ParsedContact => !!c && typeof c === "object" && typeof c.name === "string" && !!c.name.trim())
+          .map((c) => ({
+            name: c.name.trim(),
+            phone: c.phone?.trim() || undefined,
+            email: c.email?.trim() || undefined,
+            role: typeof c.role === "string" && c.role ? c.role : "day_of_show",
+            role_label: c.role_label?.trim() || undefined,
+            notes: c.notes?.trim() || undefined,
+          }))
+          .filter((c) => !isDuplicateContact(c, existingContacts))
+      : [];
+
+    if (fields.length === 0 && !nextSchedule && nextContacts.length === 0) {
       toast.info("No new fields found — all parsed data already exists on this show");
       return false;
     }
 
     setParsedSchedule(nextSchedule);
     setScheduleSelected(!!nextSchedule);
+    setParsedContacts(nextContacts);
+    setContactsSelected(new Set(nextContacts.map((_, i) => i)));
     setPendingFields(fields);
     setSelectedKeys(new Set(fields.map((f) => f.key)));
     setStep("confirm");
@@ -244,8 +277,10 @@ export default function ParseAdvanceForShowDialog({
 
     const hasUpdates = Object.keys(updates).length > 0;
     const hasSchedule = scheduleSelected && parsedSchedule && parsedSchedule.length > 0;
+    const selectedContacts = parsedContacts.filter((_, i) => contactsSelected.has(i));
+    const hasContacts = selectedContacts.length > 0;
 
-    if (!hasUpdates && !hasSchedule) {
+    if (!hasUpdates && !hasSchedule && !hasContacts) {
       toast.info("No fields selected");
       return;
     }
@@ -272,6 +307,23 @@ export default function ParseAdvanceForShowDialog({
         );
       }
 
+      if (hasContacts) {
+        const baseSort = (currentShow.show_contacts ?? []).length;
+        const { error: contactErr } = await supabase.from("show_contacts").insert(
+          selectedContacts.map((c, i) => ({
+            show_id: showId,
+            name: c.name,
+            phone: c.phone ?? null,
+            email: c.email ?? null,
+            role: c.role,
+            role_label: c.role === "custom" ? (c.role_label ?? null) : null,
+            notes: c.notes ?? null,
+            sort_order: baseSort + i,
+          }))
+        );
+        if (contactErr) throw contactErr;
+      }
+
       toast.success(`Updated ${Object.keys(updates).length} field(s)`);
       onUpdated();
       setOpen(false);
@@ -281,6 +333,15 @@ export default function ParseAdvanceForShowDialog({
     } finally {
       setSaving(false);
     }
+  };
+
+  const toggleContact = (i: number) => {
+    setContactsSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
   };
 
   const toggleField = (key: string) => {
@@ -398,7 +459,7 @@ export default function ParseAdvanceForShowDialog({
 
         {step === "confirm" && (
           <div className="space-y-4 pt-2">
-            {pendingFields.length === 0 && !parsedSchedule ? (
+            {pendingFields.length === 0 && !parsedSchedule && parsedContacts.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
                 No new data found to fill in.
               </p>
@@ -453,6 +514,43 @@ export default function ParseAdvanceForShowDialog({
                     </div>
                   </div>
                 )}
+                {parsedContacts.length > 0 && (
+                  <div className="rounded-md border border-border p-3 space-y-2">
+                    <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                      Contacts ({parsedContacts.length} found)
+                    </div>
+                    {parsedContacts.map((c, i) => (
+                      <div key={i} className="flex items-start gap-3">
+                        <Checkbox
+                          id={`contact-${i}`}
+                          checked={contactsSelected.has(i)}
+                          onCheckedChange={() => toggleContact(i)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <Label
+                            htmlFor={`contact-${i}`}
+                            className="text-sm font-medium cursor-pointer flex items-center gap-2 flex-wrap"
+                          >
+                            <span className="text-[10px] font-mono uppercase tracking-[0.1em] text-muted-foreground">
+                              {roleLabel({ role: c.role, role_label: c.role_label ?? null })}
+                            </span>
+                            <span>{c.name}</span>
+                          </Label>
+                          {(c.phone || c.email) && (
+                            <div className="text-xs text-muted-foreground mt-0.5 font-mono space-x-2">
+                              {c.phone && <span>{c.phone}</span>}
+                              {c.email && <span>{c.email}</span>}
+                            </div>
+                          )}
+                          {c.notes && (
+                            <div className="text-xs text-muted-foreground mt-0.5">{c.notes}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <DialogFooter className="gap-2 sm:gap-0">
@@ -463,7 +561,7 @@ export default function ParseAdvanceForShowDialog({
               )}
               <Button
                 onClick={handleSave}
-                disabled={saving || (selectedKeys.size === 0 && !scheduleSelected)}
+                disabled={saving || (selectedKeys.size === 0 && !scheduleSelected && contactsSelected.size === 0)}
                 className="gap-1.5"
               >
                 {saving ? (
@@ -471,7 +569,7 @@ export default function ParseAdvanceForShowDialog({
                 ) : (
                   <Check className="h-4 w-4" />
                 )}
-                Update {selectedKeys.size + (scheduleSelected ? 1 : 0)} field(s)
+                Update {selectedKeys.size + (scheduleSelected ? 1 : 0) + contactsSelected.size} field(s)
               </Button>
             </DialogFooter>
           </div>

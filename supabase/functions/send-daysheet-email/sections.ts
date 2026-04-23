@@ -29,9 +29,19 @@ export interface ScheduleEntryLike {
   sort_order: number | null;
 }
 
+export interface ShowContactLike {
+  id?: string;
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+  role: string;
+  role_label: string | null;
+  notes: string | null;
+  sort_order: number | null;
+}
+
 export interface ShowLike {
-  dos_contact_name?: string | null;
-  dos_contact_phone?: string | null;
+  show_contacts?: ShowContactLike[] | null;
   venue_address?: string | null;
   city?: string | null;
   departure_time?: string | null;
@@ -67,7 +77,7 @@ export function val(f: unknown): string | null {
 export function hasData(show: ShowLike, key: SectionKey): boolean {
   switch (key) {
     case "contact":
-      return v(show.dos_contact_name) || v(show.dos_contact_phone);
+      return !!(show.show_contacts && show.show_contacts.length > 0);
     case "venue":
       return v(show.venue_address) || v(show.city);
     case "schedule":

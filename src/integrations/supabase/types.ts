@@ -343,6 +343,56 @@ export type Database = {
           },
         ]
       }
+      show_contacts: {
+        Row: {
+          id: string
+          show_id: string
+          name: string
+          phone: string | null
+          email: string | null
+          role: string
+          role_label: string | null
+          notes: string | null
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          show_id: string
+          name?: string
+          phone?: string | null
+          email?: string | null
+          role?: string
+          role_label?: string | null
+          notes?: string | null
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          show_id?: string
+          name?: string
+          phone?: string | null
+          email?: string | null
+          role?: string
+          role_label?: string | null
+          notes?: string | null
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "show_contacts_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "shows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       show_party_members: {
         Row: {
           id: string
@@ -391,9 +441,6 @@ export type Database = {
           date: string
           departure_notes: string | null
           departure_time: string | null
-          dos_contact_name: string | null
-          dos_contact_phone: string | null
-          dos_contact_email: string | null
           green_room_info: string | null
           guarantee: string | null
           guest_list_details: string | null
@@ -442,9 +489,6 @@ export type Database = {
           date: string
           departure_notes?: string | null
           departure_time?: string | null
-          dos_contact_name?: string | null
-          dos_contact_phone?: string | null
-          dos_contact_email?: string | null
           green_room_info?: string | null
           guarantee?: string | null
           guest_list_details?: string | null
@@ -493,9 +537,6 @@ export type Database = {
           date?: string
           departure_notes?: string | null
           departure_time?: string | null
-          dos_contact_name?: string | null
-          dos_contact_phone?: string | null
-          dos_contact_email?: string | null
           green_room_info?: string | null
           guarantee?: string | null
           guest_list_details?: string | null

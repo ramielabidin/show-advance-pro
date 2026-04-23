@@ -7,6 +7,7 @@ import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
 import { cn, formatCityState } from "@/lib/utils";
 import { hasData, type SectionKey } from "@/lib/daysheetSections";
+import { roleLabel } from "@/lib/contactRoles";
 import type { Show } from "@/lib/types";
 import type { GuestShowPayload } from "@/lib/guestLinks";
 import GuestGuestList from "./GuestGuestList";
@@ -118,15 +119,40 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
           </FieldGroup>
         )}
 
-        {has("contact") && (
-          <>
-            {has("schedule") && <Separator />}
-            <FieldGroup title="Day of Show Contact" contentClassName="space-y-2">
-              <FieldRow label="Name" value={show.dos_contact_name} />
-              <FieldRow label="Phone" value={show.dos_contact_phone} mono />
-            </FieldGroup>
-          </>
-        )}
+        {has("contact") && (() => {
+          const contacts = [...(show.contacts ?? [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+          const dos = contacts.find((c) => c.role === "day_of_show");
+          const others = contacts.filter((c) => c !== dos);
+          return (
+            <>
+              {has("schedule") && <Separator />}
+              {dos && (
+                <FieldGroup title="Day of Show Contact" contentClassName="space-y-2">
+                  <FieldRow label="Name" value={dos.name} />
+                  <FieldRow label="Phone" value={dos.phone} mono />
+                  <FieldRow label="Email" value={dos.email} mono />
+                </FieldGroup>
+              )}
+              {others.length > 0 && (
+                <>
+                  {dos && <Separator />}
+                  <FieldGroup title="Other Contacts" contentClassName="space-y-3">
+                    {others.map((c) => (
+                      <div key={c.id} className="space-y-1">
+                        <div className="text-[11px] font-mono uppercase tracking-[0.1em] text-muted-foreground">
+                          {roleLabel(c)}
+                        </div>
+                        <FieldRow label="Name" value={c.name} />
+                        <FieldRow label="Phone" value={c.phone} mono />
+                        <FieldRow label="Email" value={c.email} mono />
+                      </div>
+                    ))}
+                  </FieldGroup>
+                </>
+              )}
+            </>
+          );
+        })()}
 
         {has("departure") && (
           <>
