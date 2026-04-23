@@ -1110,7 +1110,12 @@ export default function ShowDetailPage() {
               </div>
             )}
 
-            <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
+            <FieldGroup
+              title="Departure"
+              collapsible
+              defaultOpen={!!show.departure_time || !!show.departure_notes || (!!recommendedDeparture && !suggestionDismissed)}
+              incomplete={!show.departure_time && !show.departure_notes}
+            >
               {departureEditor.isEditing ? (
                 <div ref={inlineRef} className="space-y-3">
                   <div className="space-y-2">
