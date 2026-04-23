@@ -101,6 +101,13 @@ export default function SettingsPage() {
   const [pendingRemovePartyId, setPendingRemovePartyId] = useState<string | null>(null);
   const [pendingRemoveMemberId, setPendingRemoveMemberId] = useState<string | null>(null);
 
+  // Team identity (the business/account name, distinct from the artist name).
+  // Falls back to the artist name when unset.
+  const [teamName, setTeamName] = useState("");
+  useEffect(() => {
+    setTeamName(team?.team_name ?? "");
+  }, [team?.team_name]);
+
   // ── App Settings ──
   const { isLoading: settingsLoading, data: appSettings } = useQuery({
     queryKey: ["app-settings", teamId],
@@ -556,6 +563,22 @@ export default function SettingsPage() {
       return data;
     },
     enabled: !!teamId && isOwner,
+  });
+
+  const saveTeamNameMutation = useMutation({
+    mutationFn: async () => {
+      const trimmed = teamName.trim();
+      const { error } = await supabase
+        .from("teams")
+        .update({ team_name: trimmed.length > 0 ? trimmed : null })
+        .eq("id", teamId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-teams"] });
+      toast.success("Team name saved");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to save team name"),
   });
 
   const inviteMutation = useMutation({
@@ -1196,6 +1219,43 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="team" className="mt-6 sm:mt-8 space-y-6 sm:space-y-8">
+
+      {/* ── Team identity ── */}
+      <section>
+        <SectionLabel>Team name</SectionLabel>
+        <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
+          <p className="text-sm text-muted-foreground">
+            The name of your overall account — shown on team-invite emails. Set this when your business name
+            differs from your artist name (e.g. <span className="text-foreground">Juice Music, LLC</span> for
+            an artist called <span className="text-foreground">Juice</span>). Leave blank to use the artist name
+            ({team?.name}).
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="team-name">Name</Label>
+            <Input
+              id="team-name"
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              placeholder={team?.name ?? ""}
+              className="text-sm h-11 sm:h-9"
+              disabled={!isOwner || saveTeamNameMutation.isPending}
+            />
+          </div>
+          {isOwner && (
+            <Button
+              onClick={() => saveTeamNameMutation.mutate()}
+              disabled={
+                saveTeamNameMutation.isPending ||
+                teamName.trim() === (team?.team_name ?? "")
+              }
+              className="gap-1.5 w-full sm:w-auto h-11 sm:h-9"
+            >
+              <Save className="h-4 w-4" />
+              {saveTeamNameMutation.isPending ? "Saving…" : "Save"}
+            </Button>
+          )}
+        </div>
+      </section>
 
       {/* ── Team Members ── */}
       <section className="space-y-4">

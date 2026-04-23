@@ -10,6 +10,7 @@ import { toast } from "sonner";
 interface Team {
   id: string;
   name: string;
+  team_name: string | null;
   created_by: string;
   created_at: string;
 }
@@ -115,7 +116,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("team_members")
-        .select("team_id, role, teams(id, name, created_by, created_at)")
+        .select("team_id, role, teams(id, name, team_name, created_by, created_at)")
         .eq("user_id", session!.user.id)
         .limit(1)
         .single();
