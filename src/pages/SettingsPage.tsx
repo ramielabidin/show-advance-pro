@@ -560,20 +560,37 @@ export default function SettingsPage() {
 
   const inviteMutation = useMutation({
     mutationFn: async (email: string) => {
-      const { error } = await supabase.from("team_invites").insert({
-        team_id: teamId!,
-        email: email.toLowerCase().trim(),
-        invited_by: session!.user.id,
-      });
+      const { data: inserted, error } = await supabase
+        .from("team_invites")
+        .insert({
+          team_id: teamId!,
+          email: email.toLowerCase().trim(),
+          invited_by: session!.user.id,
+        })
+        .select("id")
+        .single();
       if (error) {
         if (error.code === "23505") throw new Error("Already invited");
         throw error;
       }
+
+      const { error: sendError } = await supabase.functions.invoke(
+        "send-team-invite-email",
+        { body: { inviteId: inserted.id } },
+      );
+      // Row is inserted either way; if the email failed to send, surface
+      // it in the success toast rather than rolling back (user can re-send
+      // by removing and re-adding).
+      return { sent: !sendError, sendErrorMessage: sendError?.message };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["team-invites", teamId] });
       setInviteEmail("");
-      toast.success("Invite sent");
+      if (result.sent) {
+        toast.success("Invite sent");
+      } else {
+        toast.warning("Invite saved, but the email didn't send.");
+      }
     },
     onError: (err: Error) => toast.error(err.message || "Failed to send invite"),
   });
