@@ -41,7 +41,7 @@ export function hasData(
 ): boolean {
   switch (key) {
     case "contact":
-      return v(show.dos_contact_name) || v(show.dos_contact_phone);
+      return !!(show.show_contacts?.length);
     case "venue":
       return v(show.venue_address) || v(show.city);
     case "schedule":

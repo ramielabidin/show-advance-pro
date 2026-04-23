@@ -35,7 +35,7 @@ $$ LANGUAGE plpgsql SET search_path = public;
 --   teams → team_members, team_invites
 --   teams → touring_party_members, tours, app_settings
 --   tours  → shows
---   shows  → schedule_entries, show_party_members
+--   shows  → schedule_entries, show_contacts, show_party_members
 --   touring_party_members → show_party_members
 -- =============================================================
 
@@ -99,8 +99,6 @@ CREATE TABLE public.shows (
   venue_address        text,
   city                 text        NOT NULL,
   date                 date        NOT NULL,
-  dos_contact_name     text,
-  dos_contact_phone    text,
   departure_time       text,
   departure_location   text,
   parking_notes        text,
@@ -154,6 +152,22 @@ CREATE TABLE public.schedule_entries (
   sort_order integer NOT NULL DEFAULT 0
 );
 
+-- ---------------- show_contacts ----------------
+CREATE TABLE public.show_contacts (
+  id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  show_id    uuid        NOT NULL REFERENCES public.shows(id) ON DELETE CASCADE,
+  name       text        NOT NULL DEFAULT '',
+  phone      text,
+  email      text,
+  role       text        NOT NULL DEFAULT 'custom',
+  role_label text,
+  notes      text,
+  sort_order integer     NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_show_contacts_show_id ON public.show_contacts(show_id);
+
 -- ---------------- show_party_members ----------------
 CREATE TABLE public.show_party_members (
   id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -205,6 +219,10 @@ CREATE TRIGGER update_app_settings_updated_at
 
 CREATE TRIGGER update_band_documents_updated_at
   BEFORE UPDATE ON public.band_documents
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_show_contacts_updated_at
+  BEFORE UPDATE ON public.show_contacts
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
@@ -312,6 +330,7 @@ ALTER TABLE public.touring_party_members  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tours                  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shows                  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.schedule_entries       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.show_contacts          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.show_party_members     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.app_settings           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.band_documents         ENABLE ROW LEVEL SECURITY;
@@ -426,6 +445,22 @@ CREATE POLICY "Team members can update settings"
 -- ---- schedule_entries (scoped through shows) ----
 CREATE POLICY "Team members can access schedule entries"
   ON public.schedule_entries FOR ALL TO authenticated
+  USING (
+    show_id IN (
+      SELECT id FROM public.shows
+      WHERE team_id IN (SELECT public.user_team_ids(auth.uid()))
+    )
+  )
+  WITH CHECK (
+    show_id IN (
+      SELECT id FROM public.shows
+      WHERE team_id IN (SELECT public.user_team_ids(auth.uid()))
+    )
+  );
+
+-- ---- show_contacts (scoped through shows) ----
+CREATE POLICY "Team members can access show contacts"
+  ON public.show_contacts FOR ALL TO authenticated
   USING (
     show_id IN (
       SELECT id FROM public.shows

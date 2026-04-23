@@ -13,8 +13,26 @@ import {
   hasData,
   val,
   type ShowLike,
+  type ShowContactLike,
   type SectionKey,
 } from "./sections.ts";
+
+// Keep in sync with `src/lib/contactRoles.ts` (Deno can't import from src/).
+const ROLE_LABELS_EDGE: Record<string, string> = {
+  day_of_show: "Day of Show",
+  promoter: "Promoter",
+  production: "Production",
+  hospitality: "Hospitality",
+  custom: "Contact",
+};
+
+function roleLabelEdge(c: Pick<ShowContactLike, "role" | "role_label">): string {
+  if (c.role === "custom") {
+    const label = c.role_label?.trim();
+    return label || "Contact";
+  }
+  return ROLE_LABELS_EDGE[c.role] ?? "Contact";
+}
 
 // ---------------------------------------------------------------------------
 // Theme (flattened from src/index.css light-mode tokens)
@@ -310,13 +328,47 @@ function renderSchedule(show: RenderShow): string {
 }
 
 function renderContact(show: RenderShow): string {
-  return section(
-    "Day of Show Contact",
-    fieldTable([
-      { label: "Name", value: show.dos_contact_name },
-      { label: "Phone", value: show.dos_contact_phone, mono: true },
-    ]),
+  const contacts = [...(show.show_contacts ?? [])].sort(
+    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
   );
+  if (contacts.length === 0) return "";
+  const dos = contacts.find((c) => c.role === "day_of_show");
+  const others = contacts.filter((c) => c !== dos);
+
+  let out = "";
+  if (dos) {
+    out += section(
+      "Day of Show Contact",
+      fieldTable([
+        { label: "Name", value: dos.name },
+        { label: "Phone", value: dos.phone, mono: true },
+        { label: "Email", value: dos.email, mono: true },
+      ]),
+    );
+  }
+  if (others.length > 0) {
+    const blocks = others
+      .map((c) => {
+        const table = fieldTable([
+          { label: "Name", value: c.name },
+          { label: "Phone", value: c.phone, mono: true },
+          { label: "Email", value: c.email, mono: true },
+          { label: "Notes", value: c.notes },
+        ]);
+        if (!table) return "";
+        return `
+          <div style="padding:12px 0;">
+            <div style="font-family:${T.sans};font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:${T.muted};padding-bottom:6px;">${escapeHtml(roleLabelEdge(c))}</div>
+            ${table}
+          </div>`;
+      })
+      .filter(Boolean)
+      .join("");
+    if (blocks) {
+      out += section(dos ? "Other Contacts" : "Contacts", blocks);
+    }
+  }
+  return out;
 }
 
 function renderDeparture(show: RenderShow): string {
@@ -539,12 +591,32 @@ function renderPlainText(show: RenderShow, opts: RenderOptions): string {
   }
 
   if (hasData(show, "contact")) {
-    parts.push(
-      plainSection("Day of Show Contact", [
-        plainField("Name", show.dos_contact_name),
-        plainField("Phone", show.dos_contact_phone),
-      ]),
+    const contacts = [...(show.show_contacts ?? [])].sort(
+      (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
     );
+    const dos = contacts.find((c) => c.role === "day_of_show");
+    const others = contacts.filter((c) => c !== dos);
+    if (dos) {
+      parts.push(
+        plainSection("Day of Show Contact", [
+          plainField("Name", dos.name),
+          plainField("Phone", dos.phone),
+          plainField("Email", dos.email),
+        ]),
+      );
+    }
+    if (others.length > 0) {
+      const lines: string[] = [];
+      for (const c of others) {
+        lines.push(roleLabelEdge(c).toUpperCase());
+        lines.push(plainField("Name", c.name));
+        lines.push(plainField("Phone", c.phone));
+        lines.push(plainField("Email", c.email));
+        if (val(c.notes)) lines.push(plainField("Notes", c.notes));
+        lines.push("");
+      }
+      parts.push(plainSection(dos ? "Other Contacts" : "Contacts", lines));
+    }
   }
 
   if (hasData(show, "departure")) {

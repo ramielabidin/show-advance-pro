@@ -15,6 +15,20 @@ export interface ScheduleEntry {
   sort_order: number;
 }
 
+export interface ShowContact {
+  id: string;
+  show_id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  role: string;
+  role_label: string | null;
+  notes: string | null;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Song {
   id: string;
   team_id: string;
@@ -33,9 +47,6 @@ export interface Show {
   venue_address: string | null;
   city: string;
   date: string;
-  dos_contact_name: string | null;
-  dos_contact_phone: string | null;
-  dos_contact_email: string | null;
   departure_time: string | null;
   departure_notes: string | null;
   parking_notes: string | null;
@@ -78,6 +89,7 @@ export interface Show {
   updated_at: string;
   set_list?: SetListEntry[] | null;
   schedule_entries?: ScheduleEntry[];
+  show_contacts?: ShowContact[];
   show_party_members?: ShowPartyMember[];
 }
 

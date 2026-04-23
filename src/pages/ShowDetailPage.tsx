@@ -2,7 +2,7 @@ import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, Phone, Mail, FileText } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, FileText } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -51,6 +51,7 @@ import CopyGuestLinkButton from "@/components/CopyGuestLinkButton";
 import { useGuestLink } from "@/hooks/useGuestLink";
 import GuestListEditor, { GuestListView, parseGuestList, guestTotal, parseComps } from "@/components/GuestListEditor";
 import ScheduleEditor from "@/components/ScheduleEditor";
+import ContactsEditor, { type ContactRow } from "@/components/ContactsEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
 import InlineEditable, { InlineField } from "@/components/InlineEditable";
 import { toast } from "sonner";
@@ -256,7 +257,7 @@ export default function ShowDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shows")
-        .select("*, schedule_entries(*), tours(*)")
+        .select("*, schedule_entries(*), show_contacts(*), tours(*)")
         .eq("id", id!)
         .single();
       if (error) throw error;
@@ -405,7 +406,7 @@ export default function ShowDetailPage() {
 
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<Show>) => {
-      const { schedule_entries, show_party_members, tours, ...showUpdates } = updates as any;
+      const { schedule_entries, show_contacts, show_party_members, tours, ...showUpdates } = updates as any;
       if (showUpdates.tour_id === "" || showUpdates.tour_id === "none") showUpdates.tour_id = null;
       const { error } = await supabase.from("shows").update(showUpdates).eq("id", id!);
       if (error) throw error;
@@ -490,21 +491,10 @@ export default function ShowDetailPage() {
   });
 
   // --- Group editors ---
-  // Each of the five paired-field cards below (DoS contact, Departure, Arrival,
-  // Venue, Accommodations) delegates its edit/save/cancel state machine to
+  // Each of the paired-field cards below (Departure, Arrival, Venue,
+  // Accommodations) delegates its edit/save/cancel state machine to
   // useGroupEditor. They all share the single `inlineField` gate, so only one
-  // can be open at a time.
-  const dosEditor = useGroupEditor({
-    groupKey: "dos_group",
-    keys: ["dos_contact_name", "dos_contact_phone", "dos_contact_email"] as const,
-    show,
-    inlineField,
-    setInlineField,
-    updateMutation,
-    normalizers: { dos_contact_phone: normalizePhone },
-    isEmpty: s => !s.dos_contact_name && !s.dos_contact_phone && !s.dos_contact_email,
-  });
-
+  // can be open at a time. (Contacts live in their own multi-row editor below.)
   const departureEditor = useGroupEditor({
     groupKey: "departure_group",
     keys: ["departure_time", "departure_notes"] as const,
@@ -1424,85 +1414,51 @@ export default function ShowDetailPage() {
           <div className="space-y-6 sm:space-y-8">
             <Card className="p-5 sm:p-6">
               <div className="flex items-center gap-2 mb-4">
-                <h2 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Day of Show Contact</h2>
-                {!show.dos_contact_name && !show.dos_contact_phone && !show.dos_contact_email && (
+                <h2 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Contacts</h2>
+                {(show.show_contacts?.length ?? 0) === 0 && (
                   <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" aria-hidden />
                 )}
               </div>
-              {dosEditor.isEditing ? (
-                <div ref={inlineRef} className="space-y-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Name</Label>
-                    <InlineField
-                      value={dosEditor.get("dos_contact_name")}
-                      onChange={(v) => dosEditor.setField("dos_contact_name", v)}
-                      autoFocus
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Phone</Label>
-                    <InlineField
-                      value={dosEditor.get("dos_contact_phone")}
-                      onChange={(v) => dosEditor.setField("dos_contact_phone", v)}
-                      mono
-                      inputMode="tel"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Email</Label>
-                    <InlineField
-                      value={dosEditor.get("dos_contact_email")}
-                      onChange={(v) => dosEditor.setField("dos_contact_email", v)}
-                      mono
-                      inputMode="email"
-                    />
-                  </div>
-                  <InlineActions onSave={dosEditor.save} onCancel={dosEditor.cancel} />
-                </div>
-              ) : dosEditor.empty ? (
-                <EmptyFieldPrompt label="day of show contact" onClick={dosEditor.startEdit} />
-              ) : (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={dosEditor.startEdit}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); dosEditor.startEdit(); }
-                  }}
-                  className="w-full text-left card-pressable cursor-pointer"
-                >
-                  <div className="text-sm font-medium text-foreground">{show.dos_contact_name}</div>
-                  {(show.dos_contact_phone || show.dos_contact_email) && (
-                    <div
-                      className="mt-2.5 pt-2.5 border-t border-border/60 space-y-1.5"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {show.dos_contact_phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <a
-                            href={`tel:${show.dos_contact_phone}`}
-                            className="text-sm font-mono text-foreground hover:underline"
-                          >
-                            {show.dos_contact_phone}
-                          </a>
-                        </div>
-                      )}
-                      {show.dos_contact_email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <a
-                            href={`mailto:${show.dos_contact_email}`}
-                            className="text-sm font-mono text-foreground hover:underline"
-                          >
-                            {show.dos_contact_email}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+              <ContactsEditor
+                key={(show.show_contacts ?? []).map((c) => c.id).join(",") || "empty"}
+                initial={(show.show_contacts ?? [])
+                  .slice()
+                  .sort((a, b) => a.sort_order - b.sort_order)
+                  .map<ContactRow>((c) => ({
+                    id: c.id,
+                    name: c.name ?? "",
+                    phone: c.phone ?? "",
+                    email: c.email ?? "",
+                    role: c.role ?? "custom",
+                    role_label: c.role_label ?? "",
+                    notes: c.notes ?? "",
+                  }))}
+                onSave={async (rows) => {
+                  try {
+                    await supabase.from("show_contacts").delete().eq("show_id", id!);
+                    if (rows.length > 0) {
+                      const inserts = rows.map((r, i) => ({
+                        show_id: id!,
+                        name: r.name,
+                        phone: r.phone || null,
+                        email: r.email || null,
+                        role: r.role,
+                        role_label: r.role === "custom" ? (r.role_label || null) : null,
+                        notes: r.notes || null,
+                        sort_order: i,
+                      }));
+                      const { error } = await supabase.from("show_contacts").insert(inserts);
+                      if (error) throw error;
+                    }
+                    queryClient.invalidateQueries({ queryKey: ["show", id] });
+                    queryClient.invalidateQueries({ queryKey: ["shows"] });
+                    toast.success("Contacts updated");
+                  } catch (err) {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    toast.error(`Failed to save contacts: ${msg}`);
+                  }
+                }}
+              />
             </Card>
           </div>
         </TabsContent>

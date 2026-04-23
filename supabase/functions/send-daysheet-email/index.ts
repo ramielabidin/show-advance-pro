@@ -138,7 +138,7 @@ serve(async (req) => {
 
     const { data: show, error: showError } = await admin
       .from("shows")
-      .select("*, schedule_entries(*), teams(name)")
+      .select("*, schedule_entries(*), show_contacts(*), teams(name)")
       .eq("id", showId)
       .single();
     if (showError || !show) return json({ error: "Show not found" }, 404);

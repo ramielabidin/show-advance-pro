@@ -163,6 +163,7 @@ Key rules:
 - If multiple emails are in a thread, synthesize the most up-to-date information.
 - For the schedule, extract ALL timed events (not just the band's). Mark only the band's actual performance/set slot with is_band=true — do NOT mark logistical events like load in or soundcheck as is_band.
 - For additional_info, include anything relevant that doesn't fit the structured fields — production specs, dressing room codes, misc venue policies, etc.
+- For contacts, extract every distinct person mentioned in a role at the show. Look in email signatures, forwarded headers, explicit "DOS:" / "Promoter:" / "Production:" / "Hospitality:" lines, and CC'd names with a stated title. Choose the most specific role from day_of_show, promoter, production, hospitality. Use custom (with role_label set) for anything else. Do not duplicate the same person across multiple roles — pick the most accurate one. If no role is clearly stated, default to day_of_show.
 - Dates should be in YYYY-MM-DD format.
 - Times should be in simple format like "3:00 PM" or "15:00".
 - If a field isn't clearly present in the text, OMIT it entirely. Never guess or fabricate values.
@@ -193,8 +194,26 @@ Simplify and clarify the language for the touring crew:
               venue_address: { type: "string", description: "Full street address of the venue" },
               city: { type: "string", description: "City and state, e.g. 'Nashville, TN'" },
               date: { type: "string", description: "Show date in YYYY-MM-DD format" },
-              dos_contact_name: { type: "string", description: "Day of show contact person name" },
-              dos_contact_phone: { type: "string", description: "Day of show contact phone number" },
+              contacts: {
+                type: "array",
+                description: "All distinct people mentioned with a role at the show (day-of-show contact, promoter, production/tech, hospitality, etc.). Include contacts pulled from email signatures, forwarded headers, and explicit 'DOS:' / 'Promoter:' / 'Production:' lines. Do not duplicate the same person across multiple roles.",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string", description: "Person's full name" },
+                    phone: { type: "string", description: "Phone number, preserving the original format" },
+                    email: { type: "string", description: "Email address" },
+                    role: {
+                      type: "string",
+                      enum: ["day_of_show", "promoter", "production", "hospitality", "custom"],
+                      description: "The role this contact plays at the show. Use 'day_of_show' for the primary venue contact for show day, 'promoter' for the promoter, 'production' for production/tech/stage management, 'hospitality' for catering/green-room/runner contacts, or 'custom' for anything else (set role_label when using custom).",
+                    },
+                    role_label: { type: "string", description: "Short label for the role when role='custom' (e.g. 'Box Office', 'Security', 'Runner')." },
+                    notes: { type: "string", description: "Short note about this contact if one is stated (e.g. 'arrives 4pm')." },
+                  },
+                  required: ["name", "role"],
+                },
+              },
               departure_time: { type: "string", description: "Departure/call time" },
               departure_notes: { type: "string", description: "Departure notes and meetup location" },
               parking_notes: { type: "string", description: "Parking instructions" },
