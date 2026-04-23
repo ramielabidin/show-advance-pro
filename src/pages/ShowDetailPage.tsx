@@ -1,7 +1,7 @@
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, Phone, Mail } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, Phone, Mail, FileText } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -154,6 +154,25 @@ function HeaderActions({
         <span className="hidden sm:inline">{isAdvanced ? "Advanced" : "Mark advanced"}</span>
       </Button>
 
+      <ParseAdvanceForShowDialog
+        showId={showId}
+        currentShow={show}
+        onUpdated={onParseUpdated}
+        trigger={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 gap-1.5 rounded-full"
+            aria-label="Import advance"
+            title="Import advance"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Import</span>
+          </Button>
+        }
+      />
+
       {/* Share — everything else folds in here */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -178,12 +197,6 @@ function HeaderActions({
             <Sparkles className="h-3.5 w-3.5 mr-2" /> Copy magic link
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <ParseAdvanceForShowDialog
-            showId={showId}
-            currentShow={show}
-            onUpdated={onParseUpdated}
-            trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Import advance</DropdownMenuItem>}
-          />
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
             onClick={onOpenDelete}
