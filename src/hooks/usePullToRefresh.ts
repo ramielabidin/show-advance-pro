@@ -4,6 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const THRESHOLD = 52;
 
 /**
+ * Minimum time the refreshing spinner stays visible after release.
+ * Without this, a fast network call (or a no-op refresh) would flash the
+ * spinner for a single frame and leave the user unsure anything happened.
+ */
+const MIN_SPINNER_DURATION = 500;
+
+/**
  * Rubber-band resistance: the indicator moves quickly at first and
  * increasingly resists the further the user pulls.
  * Approaches ~MAX_VISUAL asymptotically — never quite reaches it.
@@ -91,7 +98,10 @@ export function usePullToRefresh(
       setIsReleasing(false);
       setPullY(THRESHOLD);
       try {
-        await onRefreshRef.current();
+        await Promise.all([
+          onRefreshRef.current(),
+          new Promise((resolve) => setTimeout(resolve, MIN_SPINNER_DURATION)),
+        ]);
       } finally {
         isRefreshingRef.current = false;
         setIsRefreshing(false);

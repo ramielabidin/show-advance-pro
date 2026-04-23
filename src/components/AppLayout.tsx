@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { Calendar, Settings, LogOut, Moon, Sun, FileText } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -17,9 +18,13 @@ export default function AppLayout() {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
 
-  async function handleRefresh() {
-    await queryClient.invalidateQueries();
-  }
+  // Refetch every query that's currently rendered on the page. `invalidateQueries`
+  // alone only awaits active refetches, and with the default `staleTime: 0` the
+  // "mark everything stale" half is a no-op — so being explicit here keeps the
+  // intent obvious and ensures the spinner actually waits for the network.
+  const handleRefresh = useCallback(async () => {
+    await queryClient.refetchQueries({ type: "active" });
+  }, [queryClient]);
   return (
     <div className="min-h-screen bg-background pb-16 md:pb-0">
       {/* Desktop top nav */}
