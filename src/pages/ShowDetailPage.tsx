@@ -918,6 +918,21 @@ export default function ShowDetailPage() {
           )}
         </div>
 
+        {/* Drive-time — paired with address as venue context */}
+        {driveTimeLabel && departureOrigin && (
+          <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5">
+            <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} />
+            <span className="font-mono text-foreground">{driveTimeLabel}</span>
+            <span>drive from {departureOrigin.label}</span>
+            {driveTime?.distance_text && (
+              <>
+                <span className="text-border mx-0.5">·</span>
+                <span className="font-mono">{driveTime.distance_text}</span>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Status + actions — labeled buttons always */}
         <div className="pt-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
@@ -1084,21 +1099,6 @@ export default function ShowDetailPage() {
             </div>
 
             <Separator />
-
-            {/* Drive-time — compact single line */}
-            {driveTimeLabel && departureOrigin && (
-              <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground flex-wrap">
-                <Car className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-                <span className="font-mono text-foreground">{driveTimeLabel}</span>
-                <span>drive from {departureOrigin.label}</span>
-                {driveTime?.distance_text && (
-                  <>
-                    <span className="text-border mx-0.5">·</span>
-                    <span className="font-mono">{driveTime.distance_text}</span>
-                  </>
-                )}
-              </div>
-            )}
 
             <FieldGroup
               title="Departure"
