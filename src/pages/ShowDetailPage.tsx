@@ -1097,16 +1097,6 @@ export default function ShowDetailPage() {
                     <span className="font-mono">{driveTime.distance_text}</span>
                   </>
                 )}
-                {recommendedDeparture && (
-                  <>
-                    <span className="text-border mx-0.5">·</span>
-                    <span>
-                      leave by{" "}
-                      <span className="font-mono text-foreground">{recommendedDeparture}</span>
-                      {" "}for load in
-                    </span>
-                  </>
-                )}
               </div>
             )}
 
