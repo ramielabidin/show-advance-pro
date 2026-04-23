@@ -646,18 +646,21 @@ export type Database = {
           created_by: string
           id: string
           name: string
+          team_name: string | null
         }
         Insert: {
           created_at?: string
           created_by: string
           id?: string
           name: string
+          team_name?: string | null
         }
         Update: {
           created_at?: string
           created_by?: string
           id?: string
           name?: string
+          team_name?: string | null
         }
         Relationships: []
       }
