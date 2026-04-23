@@ -29,6 +29,7 @@ import CreateShowDialog from "@/components/CreateShowDialog";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
 import TourPicker from "@/components/TourPicker";
 import { useTeam } from "@/components/TeamProvider";
+import { useAuth } from "@/components/AuthProvider";
 import { parseDollar } from "@/components/RevenueSimulator";
 import SectionLabel from "@/components/SectionLabel";
 import ShowCard from "@/components/ShowCard";
@@ -110,6 +111,7 @@ export default function DashboardPage() {
   const requestedScope = parseScope(searchParams.get("scope"));
   const requestedTourId = searchParams.get("tourId");
   const { team } = useTeam();
+  const { session } = useAuth();
   const [revenueCollapsed, setRevenueCollapsed] = useState(false);
 
   const { data: shows = [], isLoading: showsLoading } = useQuery<ShowWithTour[]>({
@@ -140,7 +142,11 @@ export default function DashboardPage() {
   const hour = today.getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
-  const artistName = team?.name ?? null;
+  const userFullName =
+    (session?.user?.user_metadata?.full_name as string | undefined)?.trim() ||
+    (session?.user?.user_metadata?.name as string | undefined)?.trim() ||
+    "";
+  const userFirstName = userFullName.split(/\s+/)[0] || null;
   const todayStr = format(today, "yyyy-MM-dd");
 
   const showToday = useMemo(
@@ -149,11 +155,11 @@ export default function DashboardPage() {
   );
 
   const headerLine = showToday
-    ? artistName
-      ? `Have a great show, ${artistName}`
+    ? userFirstName
+      ? `Have a great show, ${userFirstName}`
       : "Have a great show tonight"
-    : artistName
-      ? `${greeting}, ${artistName}`
+    : userFirstName
+      ? `${greeting}, ${userFirstName}`
       : greeting;
 
   const autoTourId = useMemo(() => autoPickedTourId(tours), [tours]);
