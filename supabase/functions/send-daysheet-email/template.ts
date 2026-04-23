@@ -248,7 +248,7 @@ function renderKeyMoments(show: RenderShow): string {
     .join("");
 
   return `
-  <tr><td style="padding:0 0 40px 0;border-top:1px solid ${T.rule};">
+  <tr><td style="padding:0 0 20px 0;border-top:1px solid ${T.rule};border-bottom:1px solid ${T.rule};">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       <tbody><tr>${tds}</tr></tbody>
     </table>
@@ -471,12 +471,6 @@ function renderHeader(show: RenderShow): string {
   const doors = findScheduleMatch(show, /^doors?\b/);
   const addr = val(show.venue_address) ? stripCountry(show.venue_address!) : "";
 
-  const artistHtml = artist && venue
-    ? `<tr><td style="padding:0 0 8px 0;">
-         <div style="font-family:${T.sans};font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${T.muted};font-weight:500;">${escapeHtml(artist)}</div>
-       </td></tr>`
-    : "";
-
   const subParts = [
     dateStr,
     city,
@@ -495,7 +489,6 @@ function renderHeader(show: RenderShow): string {
     : "";
 
   return `
-  ${artistHtml}
   <tr><td style="padding:0 0 12px 0;">
     <h1 style="font-family:${T.serif};font-size:40px;line-height:1.0;letter-spacing:-0.035em;font-weight:400;color:${T.fg};margin:0;word-break:break-word;">${title}</h1>
   </td></tr>
