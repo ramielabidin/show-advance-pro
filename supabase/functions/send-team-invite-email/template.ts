@@ -109,7 +109,7 @@ function renderBody(inviterName: string): string {
   return `
     <tr><td class="pad" style="padding:22px 0 0 0;">
       <p class="sans" style="margin:0 0 14px 0;font-family:${T.sans};font-size:16px;line-height:1.6;color:${T.body};">
-        ${nameHtml} added you to her team on Advance &mdash; the quiet little tool tour managers use to send day sheets and keep shows straight.
+        ${nameHtml} added you to their team on Advance &mdash; the quiet little tool tour managers use to send day sheets and keep shows straight.
       </p>
       <p class="sans" style="margin:0;font-family:${T.sans};font-size:16px;line-height:1.6;color:${T.body};">
         Set up your account and you&rsquo;ll show up on the team.
@@ -169,7 +169,7 @@ function renderCta(acceptUrl: string): string {
 function renderSignOff(inviteCode: string | null | undefined): string {
   const code = (inviteCode ?? "").trim();
   const tagline = code
-    ? `&mdash; Advance &middot; advance.fm/invite/${escapeHtml(code)}`
+    ? `&mdash; Advance &middot; advancetouring.com/invite/${escapeHtml(code)}`
     : `&mdash; Advance &middot; advancetouring.com`;
   return `
     <tr><td class="pad" style="padding:40px 0 0 0;">
@@ -199,7 +199,7 @@ function renderPlainText(p: InviteParams): string {
   lines.push(`— YOUR ROLE:  ${p.roleLabel}`);
   lines.push("");
   const code = (p.inviteCode ?? "").trim();
-  lines.push(code ? `— Advance · advance.fm/invite/${code}` : `— Advance · advancetouring.com`);
+  lines.push(code ? `— Advance · advancetouring.com/invite/${code}` : `— Advance · advancetouring.com`);
   lines.push("— Not expecting this? Ignore; nothing happens.");
   return lines.join("\n");
 }

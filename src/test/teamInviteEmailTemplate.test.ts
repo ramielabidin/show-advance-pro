@@ -39,7 +39,7 @@ describe("renderInviteEmail", () => {
   it("bolds the inviter name in the first body paragraph", () => {
     const { html } = renderInviteEmail(baseParams());
     expect(html).toContain(
-      `<strong style="font-weight:600;">Maya Okafor</strong> added you to her team on Advance`,
+      `<strong style="font-weight:600;">Maya Okafor</strong> added you to their team on Advance`,
     );
   });
 
@@ -80,13 +80,15 @@ describe("renderInviteEmail", () => {
 
   it("shows the invite-code short-link in the sign-off when provided", () => {
     const { html } = renderInviteEmail(baseParams({ inviteCode: "a7k2p9" }));
-    expect(html).toContain("advance.fm/invite/a7k2p9");
+    expect(html).toContain("advancetouring.com/invite/a7k2p9");
   });
 
   it("falls back to a generic sign-off when no invite code is provided", () => {
     const { html } = renderInviteEmail(baseParams({ inviteCode: null }));
     expect(html).toContain("advancetouring.com");
-    expect(html).not.toContain("advance.fm/invite/");
+    // Scoped to the sign-off pattern so the CTA's /invite/accept href
+    // doesn't false-positive the "no invite code" assertion.
+    expect(html).not.toContain("&middot; advancetouring.com/invite/");
   });
 
   it("escapes HTML in user-supplied fields", () => {
