@@ -345,42 +345,42 @@ export type Database = {
       }
       show_contacts: {
         Row: {
-          id: string
-          show_id: string
-          name: string
-          phone: string | null
+          created_at: string
           email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
           role: string
           role_label: string | null
-          notes: string | null
+          show_id: string
           sort_order: number
-          created_at: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          show_id: string
-          name?: string
-          phone?: string | null
+          created_at?: string
           email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
           role?: string
           role_label?: string | null
-          notes?: string | null
+          show_id: string
           sort_order?: number
-          created_at?: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          show_id?: string
-          name?: string
-          phone?: string | null
+          created_at?: string
           email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
           role?: string
           role_label?: string | null
-          notes?: string | null
+          show_id?: string
           sort_order?: number
-          created_at?: string
           updated_at?: string
         }
         Relationships: [
