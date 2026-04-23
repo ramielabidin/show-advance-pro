@@ -159,7 +159,7 @@ function HeaderActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email band</DropdownMenuItem>} />
+          <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
           <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
           <ExportPdfDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
           <SetListDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Set list</DropdownMenuItem>} />
