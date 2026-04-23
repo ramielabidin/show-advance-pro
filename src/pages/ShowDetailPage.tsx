@@ -919,7 +919,7 @@ export default function ShowDetailPage() {
         </div>
 
         {/* Status + actions — labeled buttons always */}
-        <div className="pt-3 flex items-center justify-start sm:justify-between gap-3 flex-wrap">
+        <div className="pt-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
             {!(show as any).advanced_at && (
               <button
@@ -962,12 +962,6 @@ export default function ShowDetailPage() {
               Show Info
             </TabsTrigger>
             <TabsTrigger
-              value="contacts"
-              className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
-            >
-              Contacts
-            </TabsTrigger>
-            <TabsTrigger
               value="deal"
               className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
             >
@@ -975,6 +969,12 @@ export default function ShowDetailPage() {
               {!dealTabSeen && (
                 <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" aria-hidden />
               )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="contacts"
+              className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
+            >
+              Contacts
             </TabsTrigger>
           </TabsList>
         </div>
@@ -1038,109 +1038,6 @@ export default function ShowDetailPage() {
             </div>
           ) : (
           <div className="space-y-6 sm:space-y-8">
-            {/* Drive-time — compact single line */}
-            {driveTimeLabel && departureOrigin && (
-              <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground flex-wrap">
-                <Car className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-                <span className="font-mono text-foreground">{driveTimeLabel}</span>
-                <span>drive from {departureOrigin.label}</span>
-                {driveTime?.distance_text && (
-                  <>
-                    <span className="text-border mx-0.5">·</span>
-                    <span className="font-mono">{driveTime.distance_text}</span>
-                  </>
-                )}
-                {recommendedDeparture && (
-                  <>
-                    <span className="text-border mx-0.5">·</span>
-                    <span>
-                      leave by{" "}
-                      <span className="font-mono text-foreground">{recommendedDeparture}</span>
-                      {" "}for load in
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
-
-            <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
-                {departureEditor.isEditing ? (
-                  <div ref={inlineRef} className="space-y-3">
-                    <div className="space-y-2">
-                      <Label className="block text-xs text-muted-foreground">Time</Label>
-                      <TimeInput
-                        value={departureEditor.get("departure_time")}
-                        onChange={(val) => departureEditor.setField("departure_time", val)}
-                        autoFocus
-                        hideTbd
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Notes</Label>
-                      <InlineField
-                        value={departureEditor.get("departure_notes")}
-                        onChange={(v) => departureEditor.setField("departure_notes", v)}
-                        multiline
-                        placeholder="e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am"
-                      />
-                    </div>
-                    <InlineActions onSave={departureEditor.save} onCancel={departureEditor.cancel} />
-                  </div>
-                ) : departureEditor.empty ? (
-                  <>
-                    <EmptyFieldPrompt label="departure" onClick={departureEditor.startEdit} />
-                    {recommendedDeparture && !suggestionDismissed && (
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xs gap-1.5"
-                          onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture } as any)}
-                          disabled={updateMutation.isPending}
-                        >
-                          <Clock className="h-3 w-3" />
-                          Use {recommendedDeparture}
-                          <span className="text-muted-foreground">· load-in − drive − 45 min</span>
-                        </Button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (id) localStorage.setItem(`departure-suggestion-dismissed-${id}`, "true");
-                            setSuggestionDismissed(true);
-                          }}
-                          className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
-                          aria-label="Dismiss departure suggestion"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={departureEditor.startEdit}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); departureEditor.startEdit(); }
-                    }}
-                    className="w-full text-left space-y-2 card-pressable cursor-pointer"
-                  >
-                    <FieldRow label="Time" value={show.departure_time} mono />
-                    {show.departure_notes ? (
-                      <FieldRow label="Notes" value={show.departure_notes} />
-                    ) : (
-                      <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                        <span className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">Notes</span>
-                        <span className="text-sm text-muted-foreground/50">Add notes…</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </FieldGroup>
-
-            <Separator />
-
             {/* Schedule — full width */}
             <div ref={scheduleRef}>
               <FieldGroup title="Schedule" incomplete={scheduleEntries.length === 0}>
@@ -1188,7 +1085,110 @@ export default function ShowDetailPage() {
 
             <Separator />
 
-            {/* Arrival — full width, below schedule */}
+            {/* Drive-time — compact single line */}
+            {driveTimeLabel && departureOrigin && (
+              <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground flex-wrap">
+                <Car className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                <span className="font-mono text-foreground">{driveTimeLabel}</span>
+                <span>drive from {departureOrigin.label}</span>
+                {driveTime?.distance_text && (
+                  <>
+                    <span className="text-border mx-0.5">·</span>
+                    <span className="font-mono">{driveTime.distance_text}</span>
+                  </>
+                )}
+                {recommendedDeparture && (
+                  <>
+                    <span className="text-border mx-0.5">·</span>
+                    <span>
+                      leave by{" "}
+                      <span className="font-mono text-foreground">{recommendedDeparture}</span>
+                      {" "}for load in
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+
+            <FieldGroup title="Departure" incomplete={!show.departure_time && !show.departure_notes}>
+              {departureEditor.isEditing ? (
+                <div ref={inlineRef} className="space-y-3">
+                  <div className="space-y-2">
+                    <Label className="block text-xs text-muted-foreground">Time</Label>
+                    <TimeInput
+                      value={departureEditor.get("departure_time")}
+                      onChange={(val) => departureEditor.setField("departure_time", val)}
+                      autoFocus
+                      hideTbd
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Notes</Label>
+                    <InlineField
+                      value={departureEditor.get("departure_notes")}
+                      onChange={(v) => departureEditor.setField("departure_notes", v)}
+                      multiline
+                      placeholder="e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am"
+                    />
+                  </div>
+                  <InlineActions onSave={departureEditor.save} onCancel={departureEditor.cancel} />
+                </div>
+              ) : departureEditor.empty ? (
+                <>
+                  <EmptyFieldPrompt label="departure" onClick={departureEditor.startEdit} />
+                  {recommendedDeparture && !suggestionDismissed && (
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5"
+                        onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture } as any)}
+                        disabled={updateMutation.isPending}
+                      >
+                        <Clock className="h-3 w-3" />
+                        Use {recommendedDeparture}
+                        <span className="text-muted-foreground">· load-in − drive − 45 min</span>
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (id) localStorage.setItem(`departure-suggestion-dismissed-${id}`, "true");
+                          setSuggestionDismissed(true);
+                        }}
+                        className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
+                        aria-label="Dismiss departure suggestion"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={departureEditor.startEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); departureEditor.startEdit(); }
+                  }}
+                  className="w-full text-left space-y-2 card-pressable cursor-pointer"
+                >
+                  <FieldRow label="Time" value={show.departure_time} mono />
+                  {show.departure_notes ? (
+                    <FieldRow label="Notes" value={show.departure_notes} />
+                  ) : (
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+                      <span className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">Notes</span>
+                      <span className="text-sm text-muted-foreground/50">Add notes…</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </FieldGroup>
+
+            <Separator />
+
+            {/* Arrival — full width */}
             <FieldGroup
               title="Arrival"
               collapsible
@@ -1476,23 +1476,10 @@ export default function ShowDetailPage() {
                   }}
                   className="w-full text-left card-pressable cursor-pointer"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="h-[38px] w-[38px] rounded-full bg-[var(--pastel-blue-bg)] text-[var(--pastel-blue-fg)] flex items-center justify-center shrink-0 select-none">
-                      <span className="font-display text-[15px] leading-none">
-                        {(show.dos_contact_name ?? "")
-                          .trim()
-                          .split(/\s+/)
-                          .slice(0, 2)
-                          .map((w) => w[0])
-                          .join("")
-                          .toUpperCase() || "?"}
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium text-foreground">{show.dos_contact_name}</span>
-                  </div>
+                  <div className="text-sm font-medium text-foreground">{show.dos_contact_name}</div>
                   {(show.dos_contact_phone || show.dos_contact_email) && (
                     <div
-                      className="mt-2.5 pt-2.5 border-t border-border/60 space-y-1.5 pl-[50px]"
+                      className="mt-2.5 pt-2.5 border-t border-border/60 space-y-1.5"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {show.dos_contact_phone && (
