@@ -60,3 +60,21 @@ verify_jwt = false
 # Disable gateway verify_jwt for the same ES256 reason.
 [functions.send-team-invite-email]
 verify_jwt = false
+
+# resolve-team-invite is called from the public /invite/:token landing
+# page before the recipient is signed in — it has no JWT and returns
+# display-safe invite context by token.
+[functions.resolve-team-invite]
+verify_jwt = false
+
+# accept-team-invite handles both the new-user signup path (no JWT; uses
+# the Admin API to create the user with email_confirm=true) and the
+# existing-user path (self-validates the JWT). Disable gateway verify_jwt
+# so the signup path is reachable without a session.
+[functions.accept-team-invite]
+verify_jwt = false
+
+# decline-team-invite is called from the public /invite/:token page. No
+# JWT; the token itself is unguessable and single-use.
+[functions.decline-team-invite]
+verify_jwt = false

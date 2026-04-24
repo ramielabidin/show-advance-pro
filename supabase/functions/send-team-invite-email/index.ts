@@ -104,7 +104,7 @@ serve(async (req) => {
 
     const { data: invite, error: inviteError } = await admin
       .from("team_invites")
-      .select("id, team_id, email, invited_by, created_at")
+      .select("id, team_id, email, invited_by, created_at, token")
       .eq("id", inviteId)
       .maybeSingle();
     if (inviteError) {
@@ -141,7 +141,8 @@ serve(async (req) => {
 
     const inviterName = resolveSenderName(user.user_metadata, user.email);
     const inviterEmail = user.email ?? "";
-    const inviteCode = invite.id.replace(/-/g, "").slice(0, 6);
+    const inviteCode = invite.token.slice(0, 6);
+    const acceptUrl = `${appUrl.replace(/\/$/, "")}/invite/${invite.token}`;
 
     // Prefer the team's display name (e.g. "Juice Music, LLC") over the
     // artist name when set — this is what the recipient is being invited to.
@@ -152,7 +153,7 @@ serve(async (req) => {
       inviterEmail,
       teamName: teamDisplayName,
       roleLabel: DEFAULT_ROLE_LABEL,
-      acceptUrl: appUrl,
+      acceptUrl,
       inviteCode,
     });
 
@@ -165,7 +166,7 @@ serve(async (req) => {
         inviterEmail,
         teamName: teamDisplayName,
         roleLabel: DEFAULT_ROLE_LABEL,
-        acceptUrl: appUrl,
+        acceptUrl,
         inviteCode,
       }),
       content: [
