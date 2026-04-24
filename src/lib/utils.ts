@@ -49,12 +49,13 @@ export function formatCityState(city: string | null | undefined): string {
   if (!city) return "";
   const clean = city.replace(/\*+$/, "").trim();
 
-  // "City ST" — no comma, 2-letter code at end
-  const noComma = clean.match(/^(.+?)\s+([A-Z]{2})$/);
-  if (noComma) return `${noComma[1]}, ${noComma[2]}`;
-
   const lastComma = clean.lastIndexOf(",");
-  if (lastComma === -1) return clean;
+  if (lastComma === -1) {
+    // "City ST" — no comma, 2-letter code at end
+    const noComma = clean.match(/^(.+?)\s+([A-Z]{2})$/);
+    if (noComma) return `${noComma[1]}, ${noComma[2]}`;
+    return clean;
+  }
 
   const cityPart = clean.slice(0, lastComma).trim();
   const statePart = clean.slice(lastComma + 1).trim();
