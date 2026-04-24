@@ -714,25 +714,27 @@ export default function ShowDetailPage() {
           compsAllotment={show.artist_comps}
           onChange={setGuestDraft}
         />
-        <div className="flex items-center gap-1.5 pt-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleGuestCancel}
-            disabled={!isDirty || updateMutation.isPending}
-            className="h-7 text-xs"
-          >
-            <X className="h-3 w-3 mr-1" /> Cancel
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleGuestSave}
-            disabled={!isDirty || updateMutation.isPending}
-            className="h-7 text-xs"
-          >
-            <Save className="h-3 w-3 mr-1" /> Save
-          </Button>
-        </div>
+        {isDirty && (
+          <div className="flex items-center gap-1.5 pt-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleGuestCancel}
+              disabled={updateMutation.isPending}
+              className="h-7 text-xs"
+            >
+              <X className="h-3 w-3 mr-1" /> Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleGuestSave}
+              disabled={updateMutation.isPending}
+              className="h-7 text-xs"
+            >
+              <Save className="h-3 w-3 mr-1" /> Save
+            </Button>
+          </div>
+        )}
       </div>
     );
   };

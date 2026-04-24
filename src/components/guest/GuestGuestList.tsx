@@ -55,25 +55,27 @@ export default function GuestGuestList({ token, initialValue, compsAllotment }: 
         compsAllotment={compsAllotment}
         onChange={setDraftValue}
       />
-      <div className="flex items-center gap-1.5 pt-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleCancel}
-          disabled={!isDirty || mutation.isPending}
-          className="h-7 text-xs"
-        >
-          <X className="h-3 w-3 mr-1" /> Cancel
-        </Button>
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={!isDirty || mutation.isPending}
-          className="h-7 text-xs"
-        >
-          <Save className="h-3 w-3 mr-1" /> Save
-        </Button>
-      </div>
+      {isDirty && (
+        <div className="flex items-center gap-1.5 pt-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCancel}
+            disabled={mutation.isPending}
+            className="h-7 text-xs"
+          >
+            <X className="h-3 w-3 mr-1" /> Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={mutation.isPending}
+            className="h-7 text-xs"
+          >
+            <Save className="h-3 w-3 mr-1" /> Save
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

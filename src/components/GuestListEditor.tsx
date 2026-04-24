@@ -200,10 +200,10 @@ export default function GuestListEditor({ value, compsAllotment, onChange }: Gue
             placeholder="Guest name"
             className="text-sm h-11 sm:h-9 flex-1"
           />
-          <div className="flex items-center shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             <span
               className={cn(
-                "text-xs pr-0.5",
+                "text-xs",
                 entry.plusOnes > 0 ? "text-foreground" : "text-muted-foreground",
               )}
             >
@@ -216,7 +216,6 @@ export default function GuestListEditor({ value, compsAllotment, onChange }: Gue
               max={9}
               value={entry.plusOnes === 0 ? "" : String(entry.plusOnes)}
               onChange={(e) => handlePlusGuestsChange(i, e.target.value)}
-              placeholder="0"
               aria-label="Additional guests"
               className="text-sm h-11 sm:h-9 w-11 px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
