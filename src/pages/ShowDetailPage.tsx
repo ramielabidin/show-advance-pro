@@ -405,14 +405,14 @@ export default function ShowDetailPage() {
   }, [id, show, queryClient]);
 
   const updateMutation = useMutation({
-    mutationFn: async (updates: Partial<Show>) => {
+    mutationFn: async (updates: Partial<Show> & { tours?: unknown }) => {
       const {
         schedule_entries: _schedule_entries,
         show_contacts: _show_contacts,
         show_party_members: _show_party_members,
         tours: _tours,
         ...showUpdates
-      } = updates as any;
+      } = updates;
       if (showUpdates.tour_id === "" || showUpdates.tour_id === "none") showUpdates.tour_id = null;
       const { error } = await supabase.from("shows").update(showUpdates).eq("id", id!);
       if (error) throw error;
@@ -448,7 +448,7 @@ export default function ShowDetailPage() {
         actual_tickets_sold: values.actual_tickets_sold || null,
         actual_walkout: values.actual_walkout || null,
         settlement_notes: values.settlement_notes || null,
-      } as any).eq("id", id!);
+      }).eq("id", id!);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -465,7 +465,7 @@ export default function ShowDetailPage() {
     mutationFn: async (nextAdvanced: boolean) => {
       const { error } = await supabase.from("shows").update({
         advanced_at: nextAdvanced ? new Date().toISOString() : null,
-      } as any).eq("id", id!);
+      }).eq("id", id!);
       if (error) throw error;
     },
     onSuccess: (_data, nextAdvanced) => {
@@ -484,7 +484,7 @@ export default function ShowDetailPage() {
         actual_tickets_sold: null,
         actual_walkout: null,
         settlement_notes: null,
-      } as any).eq("id", id!);
+      }).eq("id", id!);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -565,7 +565,7 @@ export default function ShowDetailPage() {
   const saveInline = () => {
     if (!inlineField) return;
     const val = inlineTimeFormat.current ? normalizeTime(inlineValue) : inlineValue;
-    updateMutation.mutate({ [inlineField]: val || null } as any);
+    updateMutation.mutate({ [inlineField]: val || null } as Partial<Show>);
   };
 
   // --- Backend deal structured inline edit ---
@@ -585,7 +585,7 @@ export default function ShowDetailPage() {
   const saveBackendDeal = () => {
     const pctNum = parseFloat(backendDealForm.pct);
     if (!backendDealForm.pct || isNaN(pctNum)) {
-      updateMutation.mutate({ backend_deal: null } as any);
+      updateMutation.mutate({ backend_deal: null });
       return;
     }
     const pctStr = pctNum % 1 === 0 ? String(Math.round(pctNum)) : String(pctNum);
@@ -598,7 +598,7 @@ export default function ShowDetailPage() {
       const t2Str = tier2Num % 1 === 0 ? String(Math.round(tier2Num)) : String(tier2Num);
       deal += `, then ${t2Str}% above ${thresholdNum} tickets`;
     }
-    updateMutation.mutate({ backend_deal: deal } as any);
+    updateMutation.mutate({ backend_deal: deal });
   };
 
   const scheduleEntries = show.schedule_entries?.sort((a, b) => a.sort_order - b.sort_order) ?? [];
@@ -624,7 +624,7 @@ export default function ShowDetailPage() {
         let val = inlineTimeFormat.current ? normalizeTime(inlineValue) : inlineValue;
         if (opts?.currency && val) val = formatCurrency(val);
         if (opts?.phoneFormat && val) val = normalizePhone(val);
-        updateMutation.mutate({ [inlineField]: val || null } as any);
+        updateMutation.mutate({ [inlineField]: val || null } as Partial<Show>);
       };
 
       // Structured time picker (departure, changeover)
@@ -786,7 +786,7 @@ export default function ShowDetailPage() {
               onChange={(e) => setInlineValue(e.target.value)}
               onBlur={() => {
                 if (inlineValue && inlineValue !== show.date) {
-                  updateMutation.mutate({ date: inlineValue } as any);
+                  updateMutation.mutate({ date: inlineValue });
                 } else {
                   setInlineField(null);
                 }
@@ -822,7 +822,7 @@ export default function ShowDetailPage() {
               onChange={(e) => setInlineValue(e.target.value)}
               onBlur={() => {
                 if (inlineValue.trim() && inlineValue !== show.venue_name) {
-                  updateMutation.mutate({ venue_name: inlineValue.trim() } as any);
+                  updateMutation.mutate({ venue_name: inlineValue.trim() });
                 } else {
                   setInlineField(null);
                 }
@@ -1133,7 +1133,7 @@ export default function ShowDetailPage() {
                         variant="outline"
                         size="sm"
                         className="h-8 text-xs gap-1.5"
-                        onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture } as any)}
+                        onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture })}
                         disabled={updateMutation.isPending}
                       >
                         <Clock className="h-3 w-3" />
