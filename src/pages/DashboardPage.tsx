@@ -17,7 +17,6 @@ import {
   DollarSign,
   CheckCircle2,
   Info,
-  Mic,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -942,10 +941,10 @@ function FeaturedShowCard({
                 <span className="inline-flex items-center mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
                   {format(date, "MMM d, yyyy")}
                 </span>
-              ) : (
+              ) : daysAway > 0 ? (
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1 mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full",
+                    "inline-flex items-center mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full",
                     !isUrgent && "bg-secondary text-muted-foreground",
                   )}
                   style={
@@ -954,12 +953,9 @@ function FeaturedShowCard({
                       : undefined
                   }
                 >
-                  {daysAway <= 0 && (
-                    <Mic className="mic-glow h-3 w-3 shrink-0" strokeWidth={2.25} aria-hidden="true" />
-                  )}
                   {daysLabel}
                 </span>
-              )}
+              ) : null}
             </div>
 
             {/* Advance status dot */}
