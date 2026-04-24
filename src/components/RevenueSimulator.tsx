@@ -14,10 +14,10 @@ function parseDollar(val: string | null | undefined): number | null {
   // Handle slash-separated values like "$20/$25/$30" — use the first number
   if (val.includes("/")) {
     const first = val.split("/")[0];
-    const n = parseFloat(first.replace(/[^0-9.\-]/g, ""));
+    const n = parseFloat(first.replace(/[^0-9.-]/g, ""));
     return isNaN(n) ? null : n;
   }
-  const num = parseFloat(val.replace(/[^0-9.\-]/g, ""));
+  const num = parseFloat(val.replace(/[^0-9.-]/g, ""));
   return isNaN(num) ? null : num;
 }
 
