@@ -71,4 +71,34 @@ describe("formatCityState", () => {
   it("returns empty string for empty string", () => {
     expect(formatCityState("")).toBe("");
   });
+
+  it("normalizes a full US state name to 2-letter code", () => {
+    expect(formatCityState("Los Angeles, California")).toBe("Los Angeles, CA");
+  });
+
+  it("normalizes full state names case-insensitively", () => {
+    expect(formatCityState("Austin, texas")).toBe("Austin, TX");
+  });
+
+  it("normalizes multi-word state names", () => {
+    expect(formatCityState("Brooklyn, New York")).toBe("Brooklyn, NY");
+    expect(formatCityState("Charleston, South Carolina")).toBe("Charleston, SC");
+  });
+
+  it("normalizes District of Columbia", () => {
+    expect(formatCityState("Washington, District of Columbia")).toBe("Washington, DC");
+  });
+
+  it("leaves non-US states untouched", () => {
+    expect(formatCityState("Toronto, Ontario")).toBe("Toronto, Ontario");
+    expect(formatCityState("London, England")).toBe("London, England");
+  });
+
+  it("handles missing space after comma", () => {
+    expect(formatCityState("Albany,NY")).toBe("Albany, NY");
+  });
+
+  it("returns city-only input unchanged", () => {
+    expect(formatCityState("Nashville")).toBe("Nashville");
+  });
 });
