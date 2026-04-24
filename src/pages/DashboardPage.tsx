@@ -422,14 +422,14 @@ export default function DashboardPage() {
         {showToday && (
           <Link
             to={`/shows/${showToday.id}`}
-            className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground [transition:color_150ms_var(--ease-out)] truncate max-w-full"
+            className="mt-2 flex items-start gap-2 text-sm text-muted-foreground hover:text-foreground [transition:color_150ms_var(--ease-out)]"
           >
             <Mic
-              className="mic-glow h-3.5 w-3.5 shrink-0"
+              className="mic-glow h-3.5 w-3.5 shrink-0 mt-0.5"
               strokeWidth={2.25}
               aria-hidden="true"
             />
-            <span className="truncate">
+            <span>
               Tonight · {showToday.venue_name}
               {showToday.city ? `, ${formatCityState(showToday.city)}` : ""}
             </span>
