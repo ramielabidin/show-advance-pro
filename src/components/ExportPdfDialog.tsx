@@ -341,7 +341,7 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       const filename = `${show.date}-${venueSafe}-RunOfShow.pdf`;
       doc.save(filename);
       toast.success("PDF downloaded");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("PDF error:", err);
       toast.error("Failed to generate PDF");
     } finally {
