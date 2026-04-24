@@ -4,6 +4,7 @@ import { Upload, Download, AlertCircle, CheckCircle2, RefreshCw, HelpCircle, X }
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
+import { resolveShowTimezoneInBackground } from "@/lib/resolveShowTimezone";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -589,6 +590,17 @@ export default function BulkUploadDialog({ defaultTourId, externalOpen, onExtern
           if (contactRows.length > 0) {
             const { error: contactErr } = await supabase.from("show_contacts").insert(contactRows);
             if (contactErr) throw contactErr;
+          }
+
+          for (const r of toInsert) {
+            const showId = idByKey.get(`${r.data.venue_name.trim()}|${r.data.date.trim()}`);
+            if (!showId) continue;
+            resolveShowTimezoneInBackground({
+              showId,
+              venue_address: r.data.venue_address?.trim() || null,
+              city: r.data.city?.trim() || null,
+              venue_name: r.data.venue_name.trim(),
+            });
           }
         }
       }

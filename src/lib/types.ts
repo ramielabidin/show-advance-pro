@@ -85,6 +85,8 @@ export interface Show {
   actual_tickets_sold: string | null;
   actual_walkout: string | null;
   settlement_notes: string | null;
+  venue_timezone: string | null;
+  slack_daysheet_pushed_at: string | null;
   created_at: string;
   updated_at: string;
   set_list?: SetListEntry[] | null;

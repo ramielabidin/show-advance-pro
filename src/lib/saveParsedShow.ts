@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { isDuplicateContact } from "@/lib/contactRoles";
+import { resolveShowTimezoneInBackground } from "@/lib/resolveShowTimezone";
 
 export interface ParsedShowSchedule {
   time: string;
@@ -112,6 +113,12 @@ export async function saveParsedShow(
       }
     }
 
+    resolveShowTimezoneInBackground({
+      showId,
+      venue_address: (showFields as Record<string, unknown>).venue_address as string | null | undefined,
+      city: parsed.city,
+      venue_name: parsed.venue_name,
+    });
     return { showId, isNew: false };
   }
 
@@ -145,6 +152,13 @@ export async function saveParsedShow(
     );
     if (contactErr) throw contactErr;
   }
+
+  resolveShowTimezoneInBackground({
+    showId: newShow.id,
+    venue_address: (showFields as Record<string, unknown>).venue_address as string | null | undefined,
+    city: parsed.city,
+    venue_name: parsed.venue_name,
+  });
 
   return { showId: newShow.id, isNew: true };
 }
