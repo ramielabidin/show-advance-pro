@@ -619,6 +619,7 @@ export type Database = {
       }
       team_invites: {
         Row: {
+          access_role: Database["public"]["Enums"]["access_role"]
           created_at: string
           email: string
           expires_at: string
@@ -628,6 +629,7 @@ export type Database = {
           token: string
         }
         Insert: {
+          access_role?: Database["public"]["Enums"]["access_role"]
           created_at?: string
           email: string
           expires_at?: string
@@ -637,6 +639,7 @@ export type Database = {
           token?: string
         }
         Update: {
+          access_role?: Database["public"]["Enums"]["access_role"]
           created_at?: string
           email?: string
           expires_at?: string
@@ -657,6 +660,7 @@ export type Database = {
       }
       team_members: {
         Row: {
+          access_role: Database["public"]["Enums"]["access_role"]
           created_at: string
           id: string
           role: Database["public"]["Enums"]["team_role"]
@@ -664,6 +668,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          access_role?: Database["public"]["Enums"]["access_role"]
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["team_role"]
@@ -671,6 +676,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          access_role?: Database["public"]["Enums"]["access_role"]
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["team_role"]
@@ -823,6 +829,7 @@ export type Database = {
       user_team_ids: { Args: { _user_id: string }; Returns: string[] }
     }
     Enums: {
+      access_role: "admin" | "artist"
       team_role: "owner" | "member"
     }
     CompositeTypes: {
@@ -951,6 +958,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      access_role: ["admin", "artist"],
       team_role: ["owner", "member"],
     },
   },

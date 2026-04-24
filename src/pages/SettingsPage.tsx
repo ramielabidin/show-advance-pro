@@ -74,7 +74,7 @@ function initialsFor(source: string): string {
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
-  const { team, teamId, isOwner } = useTeam();
+  const { team, teamId, isOwner, isArtist } = useTeam();
   const { session } = useAuth();
   const [homeBaseCity, setHomeBaseCity] = useState("");
   const [cityPredictions, setCityPredictions] = useState<{ description: string; place_id: string }[]>([]);
@@ -83,6 +83,7 @@ export default function SettingsPage() {
   const cityInputRef = useRef<HTMLInputElement>(null);
   const cityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "artist">("admin");
   const [connectingSlack, setConnectingSlack] = useState(false);
 
   // Touring party state
@@ -153,6 +154,15 @@ export default function SettingsPage() {
     const fromTab = qs.get("tab");
     return isTabKey(fromTab) ? fromTab : "general";
   });
+
+  // Artists can't reach integrations/party/team tabs. Bounce back to general
+  // if the URL put them on a restricted tab (deep link, old bookmark).
+  useEffect(() => {
+    if (!isArtist) return;
+    if (tab === "integrations" || tab === "party" || tab === "team") {
+      setTab("general");
+    }
+  }, [isArtist, tab]);
 
   const handleTabChange = (v: string) => {
     if (!isTabKey(v)) return;
@@ -526,13 +536,28 @@ export default function SettingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("team_members")
-        .select("id, user_id, role, created_at")
+        .select("id, user_id, role, access_role, created_at")
         .eq("team_id", teamId!)
         .order("created_at");
       if (error) throw error;
       return data;
     },
     enabled: !!teamId,
+  });
+
+  const updateMemberRoleMutation = useMutation({
+    mutationFn: async ({ memberId, accessRole }: { memberId: string; accessRole: "admin" | "artist" }) => {
+      const { error } = await supabase
+        .from("team_members")
+        .update({ access_role: accessRole })
+        .eq("id", memberId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team-members", teamId] });
+      toast.success("Role updated");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to update role"),
   });
 
   const { data: emailMap = {} } = useQuery({
@@ -582,13 +607,14 @@ export default function SettingsPage() {
   });
 
   const inviteMutation = useMutation({
-    mutationFn: async (email: string) => {
+    mutationFn: async ({ email, accessRole }: { email: string; accessRole: "admin" | "artist" }) => {
       const { data: inserted, error } = await supabase
         .from("team_invites")
         .insert({
           team_id: teamId!,
           email: email.toLowerCase().trim(),
           invited_by: session!.user.id,
+          access_role: accessRole,
         })
         .select("id")
         .single();
@@ -613,6 +639,7 @@ export default function SettingsPage() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["team-invites", teamId] });
       setInviteEmail("");
+      setInviteRole("admin");
       if (result.sent) {
         toast.success("Invite sent");
       } else {
@@ -652,11 +679,17 @@ export default function SettingsPage() {
         <div className="border-b border-border overflow-x-auto">
           <TabsList className="h-auto bg-transparent p-0 gap-5 rounded-none flex-nowrap">
             <TabsTrigger value="general" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">General</TabsTrigger>
-            <TabsTrigger value="integrations" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">Integrations</TabsTrigger>
+            {!isArtist && (
+              <TabsTrigger value="integrations" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">Integrations</TabsTrigger>
+            )}
             <TabsTrigger value="documents" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">Documents</TabsTrigger>
-            <TabsTrigger value="party" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">Touring Party</TabsTrigger>
+            {!isArtist && (
+              <TabsTrigger value="party" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">Touring Party</TabsTrigger>
+            )}
             <TabsTrigger value="songs" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">Songs</TabsTrigger>
-            <TabsTrigger value="team" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">Team</TabsTrigger>
+            {!isArtist && (
+              <TabsTrigger value="team" className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100">Team</TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -1303,9 +1336,30 @@ export default function SettingsPage() {
                     <div className="text-xs font-mono text-muted-foreground truncate">{email}</div>
                   )}
                 </div>
-                <Chip tone={m.role === "owner" ? "blue" : "muted"}>
-                  {m.role === "owner" ? <><Crown className="h-2.5 w-2.5" />Owner</> : "Member"}
-                </Chip>
+                {m.role === "owner" ? (
+                  <Chip tone="blue">
+                    <Crown className="h-2.5 w-2.5" />Owner
+                  </Chip>
+                ) : isOwner ? (
+                  <Select
+                    value={m.access_role === "artist" ? "artist" : "admin"}
+                    onValueChange={(v) =>
+                      updateMemberRoleMutation.mutate({ memberId: m.id, accessRole: v as "admin" | "artist" })
+                    }
+                  >
+                    <SelectTrigger className="w-[110px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="artist">Artist</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Chip tone="muted">
+                    {m.access_role === "artist" ? "Artist" : "Admin"}
+                  </Chip>
+                )}
                 {isOwner && !isSelf && (
                   <Button
                     variant="ghost"
@@ -1333,7 +1387,10 @@ export default function SettingsPage() {
                     i < invites.length - 1 && "border-b border-dashed border-border/60",
                   )}
                 >
-                  <span className="text-sm text-muted-foreground truncate">{inv.email}</span>
+                  <span className="text-sm text-muted-foreground truncate flex-1 min-w-0">{inv.email}</span>
+                  <Chip tone="muted">
+                    {inv.access_role === "artist" ? "Artist" : "Admin"}
+                  </Chip>
                   {isOwner && (
                     <Button
                       variant="ghost"
@@ -1360,15 +1417,24 @@ export default function SettingsPage() {
               className="text-sm h-11 sm:h-9"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && inviteEmail.trim()) {
-                  inviteMutation.mutate(inviteEmail);
+                  inviteMutation.mutate({ email: inviteEmail, accessRole: inviteRole });
                 }
               }}
             />
+            <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as "admin" | "artist")}>
+              <SelectTrigger className="w-full sm:w-[140px] h-11 sm:h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="artist">Artist</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               size="sm"
               variant="outline"
               className="gap-1.5 shrink-0 h-11 sm:h-9"
-              onClick={() => inviteMutation.mutate(inviteEmail)}
+              onClick={() => inviteMutation.mutate({ email: inviteEmail, accessRole: inviteRole })}
               disabled={!inviteEmail.trim() || inviteMutation.isPending}
             >
               <UserPlus className="h-4 w-4" />

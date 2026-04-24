@@ -14,14 +14,14 @@ Always consult `ROADMAP.md` (at the repo root) before proposing significant feat
 
 ### Current phase
 
-We are **pre-launch, still hardening core functionality**. The app is a working single-tenant tool (one team, one artist, one set of crew) being turned into a SaaS product. Multi-tenancy, billing, and role-based access control are **planned but not yet built**.
+We are **pre-launch, still hardening core functionality**. The app is a working single-tenant tool (one team, one artist) being turned into a SaaS product. Multi-tenancy and billing are **planned but not yet built**; a minimal two-role RBAC (`admin` / `artist`) is live.
 
 What this means for day-to-day work:
 
 - **Prioritize core feature quality** — show advancing, day sheets, tour management, exports. Making these feel great is the current job.
-- **Don't build scaffolding for unshipped tiers.** Do not add free-tier gating, per-tier feature flags, artist switchers, or RBAC checks unless the task explicitly calls for them. Premature abstraction here is expensive to unwind.
-- **Do keep future tiers in mind when shaping the data model.** When adding new tables or columns, shape them so the planned changes (see ROADMAP Phase 2 — `account`, `artist`, `account_artist` tables, tier enforcement, RBAC) can slot in without a migration marathon. When in doubt, mirror the existing `team_id` + RLS pattern.
-- **Roles today are just `owner` / `member` on `team_members`.** The Admin / Crew / Artist / Guest model in ROADMAP.md is future state. Don't write code against roles that don't exist yet.
+- **Don't build scaffolding for unshipped tiers.** Do not add free-tier gating, per-tier feature flags, or artist switchers unless the task explicitly calls for them. Premature abstraction here is expensive to unwind.
+- **Do keep future tiers in mind when shaping the data model.** When adding new tables or columns, shape them so the planned changes (see ROADMAP Phase 2 — `account`, `artist`, `account_artist` tables, tier enforcement) can slot in without a migration marathon. When in doubt, mirror the existing `team_id` + RLS pattern.
+- **RBAC is two roles, on `team_members.access_role`: `admin` and `artist`.** Admins have full access. Artists are blocked from: deals / settle / revenue-simulator surfaces, Slack + email-forwarding settings, team + touring-party management, and outbound share actions (email day sheet, Slack push, mint/revoke guest link). Artists can still edit show data (schedules, contacts, notes, guest list) and can download PDF day sheets. Use `role` / `isArtist` from `useTeam()` to gate; new admin-only surfaces should read those rather than reimplementing the check. The existing `team_members.role` (`owner` / `member`) is a separate concept — it controls team ownership (deletion rights) and stays untouched. An `owner` always has `access_role = 'admin'` in practice.
 - **Free-tier show cap is planned, not live.** There is currently no 30-show enforcement. Don't add it ad hoc — it's a Phase 2 feature that needs the `account` table first.
 
 ### Key product principles (from ROADMAP)
@@ -179,7 +179,7 @@ const mutation = useMutation({
 ## Auth & Team Context
 
 - Auth state: `useAuth()` → `{ session, user, loading }`
-- Current team: `useTeam()` → `{ team, teamId, isOwner, loading }`
+- Current team: `useTeam()` → `{ team, teamId, isOwner, role, isArtist, loading }` — `role` is `"admin" | "artist"`, `isArtist` is a convenience boolean. Gate admin-only UI with `!isArtist` (or the equivalent `role === "admin"`).
 - Always include `team_id` in inserts — Supabase RLS enforces team isolation and will **silently reject rows without it** (no error thrown, just no insert). Missing `team_id` is the #1 source of "my insert succeeded but the row isn't there" bugs.
 - All tables have RLS enabled; the service role (edge functions only) bypasses it.
 - Team creation goes through the `create_team_with_owner` RPC — don't insert into `teams` directly.

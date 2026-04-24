@@ -15,10 +15,14 @@ interface Team {
   created_at: string;
 }
 
+export type AccessRole = "admin" | "artist";
+
 interface TeamContextType {
   team: Team | null;
   teamId: string | null;
   isOwner: boolean;
+  role: AccessRole;
+  isArtist: boolean;
   loading: boolean;
 }
 
@@ -26,6 +30,8 @@ const TeamContext = createContext<TeamContextType>({
   team: null,
   teamId: null,
   isOwner: false,
+  role: "admin",
+  isArtist: false,
   loading: true,
 });
 
@@ -116,7 +122,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("team_members")
-        .select("team_id, role, teams(id, name, team_name, created_by, created_at)")
+        .select("team_id, role, access_role, teams(id, name, team_name, created_by, created_at)")
         .eq("user_id", session!.user.id)
         .limit(1)
         .single();
@@ -129,6 +135,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const team = (membership as any)?.teams as Team | null;
   const teamId = team?.id ?? null;
   const isOwner = membership?.role === "owner";
+  const role: AccessRole = membership?.access_role === "artist" ? "artist" : "admin";
+  const isArtist = role === "artist";
 
   if (isLoading) {
     return (
@@ -143,7 +151,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <TeamContext.Provider value={{ team, teamId, isOwner, loading: isLoading }}>
+    <TeamContext.Provider value={{ team, teamId, isOwner, role, isArtist, loading: isLoading }}>
       {children}
     </TeamContext.Provider>
   );

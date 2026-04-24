@@ -18,7 +18,15 @@ const corsHeaders = {
 };
 
 const DEFAULT_APP_URL = "https://advancetouring.com";
-const DEFAULT_ROLE_LABEL = "Member — full access to shows, tours, and day sheets";
+
+// Map the DB access_role to the human label the email template renders.
+// Kept terse — this slot is a data-row value, not a marketing blurb.
+function roleLabelFor(accessRole: string | null | undefined): string {
+  if (accessRole === "artist") {
+    return "Artist — edit access, no deal or settlement data";
+  }
+  return "Admin — full access to shows, tours, and settings";
+}
 
 function json(body: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
@@ -104,7 +112,7 @@ serve(async (req) => {
 
     const { data: invite, error: inviteError } = await admin
       .from("team_invites")
-      .select("id, team_id, email, invited_by, created_at, token")
+      .select("id, team_id, email, invited_by, created_at, token, access_role")
       .eq("id", inviteId)
       .maybeSingle();
     if (inviteError) {
@@ -148,11 +156,13 @@ serve(async (req) => {
     // artist name when set — this is what the recipient is being invited to.
     const teamDisplayName = team.team_name?.trim() || team.name || "your team";
 
+    const roleLabel = roleLabelFor((invite as { access_role?: string }).access_role);
+
     const rendered = renderInviteEmail({
       inviterName,
       inviterEmail,
       teamName: teamDisplayName,
-      roleLabel: DEFAULT_ROLE_LABEL,
+      roleLabel,
       acceptUrl,
       inviteCode,
     });
@@ -165,7 +175,7 @@ serve(async (req) => {
         inviterName,
         inviterEmail,
         teamName: teamDisplayName,
-        roleLabel: DEFAULT_ROLE_LABEL,
+        roleLabel,
         acceptUrl,
         inviteCode,
       }),

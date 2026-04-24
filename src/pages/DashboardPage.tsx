@@ -111,7 +111,7 @@ export default function DashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedScope = parseScope(searchParams.get("scope"));
   const requestedTourId = searchParams.get("tourId");
-  const { team } = useTeam();
+  const { team, isArtist } = useTeam();
   const { session } = useAuth();
   const [revenueCollapsed, setRevenueCollapsed] = useState(false);
 
@@ -492,14 +492,17 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Progress + Revenue cards */}
+      {/* Progress + Revenue cards — artists never see the revenue card. */}
       <div key={`stats:${scopeKey}`}>
         {dashCards.kind === "pastTour" ? (
           <PastTourCard
             totalShows={dashCards.totalShows}
             totalEarned={dashCards.totalEarned}
             totalGuarantee={dashCards.totalGuarantee}
+            hideFinancials={isArtist}
           />
+        ) : isArtist ? (
+          <ProgressCard data={dashCards} />
         ) : revenueCollapsed ? (
           <div className="space-y-3">
             <ProgressCard data={dashCards} />
@@ -833,10 +836,12 @@ function PastTourCard({
   totalShows,
   totalEarned,
   totalGuarantee,
+  hideFinancials = false,
 }: {
   totalShows: number;
   totalEarned: number;
   totalGuarantee: number;
+  hideFinancials?: boolean;
 }) {
   return (
     <Card className="overflow-hidden shadow-none">
@@ -854,10 +859,14 @@ function PastTourCard({
         </div>
         <p className="text-sm text-foreground">
           {totalShows} shows
-          <span className="text-muted-foreground"> · </span>
-          {fmtMoney(totalEarned)} earned
-          <span className="text-muted-foreground"> · </span>
-          {fmtMoney(totalGuarantee)} guaranteed
+          {!hideFinancials && (
+            <>
+              <span className="text-muted-foreground"> · </span>
+              {fmtMoney(totalEarned)} earned
+              <span className="text-muted-foreground"> · </span>
+              {fmtMoney(totalGuarantee)} guaranteed
+            </>
+          )}
         </p>
       </CardContent>
     </Card>

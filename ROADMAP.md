@@ -50,10 +50,11 @@ These inform every decision downstream. When in doubt, refer back here.
 
 | Role | Capabilities |
 |---|---|
-| **Admin / Manager** | Full edit access. Billing, settings, user management, artist switching. |
-| **Crew** | Edit within their domain (FOH edits tech specs, TM edits schedule, etc). Cannot touch billing or delete tours. |
-| **Artist / Band member** | Read-only on all tour data. Can edit their own guest list. Can RSVP to day sheets. |
-| **Guest** | Magic-link view access to a single tour or single show. No login required. For promoters, venue contacts, day-of crew. |
+| **Admin** | Full access. Billing, settings, user management, integrations, all financial data, all outbound sharing (email / Slack / guest links). |
+| **Artist** | Edit access to tour data (shows, schedules, contacts, guest list). No access to deal / settlement / revenue data, no access to integrations or team management, cannot send outbound day sheets or mint guest links. Can still download PDF day sheets for personal use. |
+| **Guest** | Magic-link view access to a single show (day sheet or door list). No login required. For promoters, venue contacts, day-of crew. |
+
+Admin / Artist are seat-level roles stored as `role` on `team_members`. Guest is a magic-link concept (`guest_links` table), not a seat. A domain-scoped "Crew" role (e.g. FOH-only edits) was considered and deferred — small teams don't need that granularity, and we can add it later if paid customers ask.
 
 ---
 
@@ -104,7 +105,7 @@ These inform every decision downstream. When in doubt, refer back here.
   - User count limits per tier
   - Artist count limits per tier
   - Live usage counter in app UI so free-tier users can see where they stand
-- [ ] Role-based access control (Admin / Crew / Artist / Guest)
+- [x] Role-based access control (Admin / Artist) — shipped pre-multi-tenancy. `role` column on `team_members`, gates financial surfaces (deals, settle, revenue simulators), integrations, team/touring-party management, and outbound share actions (email day sheet, Slack push, mint guest link). Re-scope by `account` when Phase 2 lands.
 - [x] Magic-link guest access flow — shipped pre-multi-tenancy. `guest_links` table, `get_guest_show` RPC, `/guest/:token` route, day-sheet and door-list views. Re-gate by account/tier when Phase 2 lands.
 
 **Acceptance criteria:** A free-tier user hits the 30-show cap and sees a clear upgrade prompt. A Manager-tier user can switch between up to 5 artists cleanly. Billing works end-to-end including upgrades, downgrades, and cancellation.

@@ -13,6 +13,7 @@ import PageTitle from "@/components/PageTitle";
 import TourPicker from "@/components/TourPicker";
 import TourScopedHeader from "@/components/TourScopedHeader";
 import TourRevenueSimulator from "@/components/TourRevenueSimulator";
+import { useTeam } from "@/components/TeamProvider";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -43,6 +44,7 @@ export default function ShowsPage() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingRemoveFromTourId, setPendingRemoveFromTourId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { isArtist } = useTeam();
 
   const setView = (next: View) => {
     const params = new URLSearchParams(searchParams);
@@ -226,8 +228,8 @@ export default function ShowsPage() {
         </div>
       </div>
 
-      {/* Tour financials panel */}
-      {isTourScoped && filtered.length > 0 && (
+      {/* Tour financials panel — admin only */}
+      {!isArtist && isTourScoped && filtered.length > 0 && (
         <div className="mb-5">
           <TourRevenueSimulator shows={filtered} />
         </div>

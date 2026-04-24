@@ -84,6 +84,7 @@ function formatCurrency(raw: string): string {
 interface HeaderActionsProps {
   show: Show;
   showId: string;
+  isArtist: boolean;
   onOpenSettle: () => void;
   onOpenClearSettle: () => void;
   onOpenDelete: () => void;
@@ -93,6 +94,7 @@ interface HeaderActionsProps {
 function HeaderActions({
   show,
   showId,
+  isArtist,
   onOpenSettle,
   onOpenClearSettle,
   onOpenDelete,
@@ -103,8 +105,8 @@ function HeaderActions({
 
   return (
     <div className="flex items-center gap-1.5 shrink-0">
-      {/* Settle — primary action when unsettled, status+clear menu when settled */}
-      {isSettled ? (
+      {/* Settle — admin-only; the button exposes financial data. */}
+      {!isArtist && (isSettled ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -131,7 +133,7 @@ function HeaderActions({
           <CheckCircle2 className="h-3.5 w-3.5" />
           <span>Settle</span>
         </Button>
-      )}
+      ))}
 
       <ParseAdvanceForShowDialog
         showId={showId}
@@ -161,20 +163,28 @@ function HeaderActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
-          <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
+          {!isArtist && (
+            <>
+              <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
+              <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
+            </>
+          )}
           <ExportPdfDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
           <SetListDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Set list</DropdownMenuItem>} />
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault();
-              copyMagicLink();
-            }}
-            disabled={isCopyPending}
-          >
-            <Sparkles className="h-3.5 w-3.5 mr-2" /> Copy magic link
-          </DropdownMenuItem>
+          {!isArtist && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  copyMagicLink();
+                }}
+                disabled={isCopyPending}
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-2" /> Copy magic link
+              </DropdownMenuItem>
+            </>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
@@ -193,7 +203,7 @@ export default function ShowDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { teamId } = useTeam();
+  const { teamId, isArtist } = useTeam();
 
   const [viewTab, setViewTab] = useState<"show" | "deal" | "contacts">("show");
 
@@ -944,6 +954,7 @@ export default function ShowDetailPage() {
           <HeaderActions
             show={show as Show}
             showId={id!}
+            isArtist={isArtist}
             onOpenSettle={() => {
               setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
               setSettleOpen(true);
@@ -966,15 +977,17 @@ export default function ShowDetailPage() {
             >
               Show Info
             </TabsTrigger>
-            <TabsTrigger
-              value="deal"
-              className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
-            >
-              Deal Info
-              {!dealTabSeen && (
-                <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" aria-hidden />
-              )}
-            </TabsTrigger>
+            {!isArtist && (
+              <TabsTrigger
+                value="deal"
+                className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
+              >
+                Deal Info
+                {!dealTabSeen && (
+                  <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" aria-hidden />
+                )}
+              </TabsTrigger>
+            )}
             <TabsTrigger
               value="contacts"
               className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
@@ -1393,9 +1406,11 @@ export default function ShowDetailPage() {
               incomplete={!!show.artist_comps && !show.guest_list_details && inlineField !== "guest_list_details"}
             >
               {renderGuestList()}
-              <div className="pt-1">
-                <CopyGuestLinkButton showId={id!} linkType="guestlist" />
-              </div>
+              {!isArtist && (
+                <div className="pt-1">
+                  <CopyGuestLinkButton showId={id!} linkType="guestlist" />
+                </div>
+              )}
             </FieldGroup>
 
             <Separator />
@@ -1464,6 +1479,7 @@ export default function ShowDetailPage() {
         </TabsContent>
 
         <TabsContent value="deal">
+          {!isArtist && (
           <div className="space-y-6 sm:space-y-8">
             {/* Deal — stat tiles for the four primary numerics (click to inline-edit); backend deal + comps below */}
             <FieldGroup title="Deal" incomplete={!show.guarantee && !show.backend_deal && !show.ticket_price && !show.venue_capacity && !show.walkout_potential && !show.artist_comps}>
@@ -1715,6 +1731,7 @@ export default function ShowDetailPage() {
               </>
             )}
           </div>
+          )}
         </TabsContent>
       </Tabs>
 
