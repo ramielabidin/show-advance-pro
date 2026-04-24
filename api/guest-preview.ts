@@ -186,16 +186,6 @@ export default async function handler(
     previewPromise,
   ]);
 
-  // If we couldn't read index.html, redirect to the SPA path so the user still
-  // gets the app — they'll just see the default OG tags.
-  if (!indexHtml) {
-    res.status(302);
-    res.setHeader("Location", `/guest/${token}`);
-    res.setHeader("Cache-Control", "no-store");
-    res.send("");
-    return;
-  }
-
   let title = DEFAULT_TITLE;
   let description = DEFAULT_DESCRIPTION;
   let imageUrl: string | null = null;
@@ -228,6 +218,30 @@ export default async function handler(
   }
 
   const metaBlock = buildMeta({ title, description, url: publicUrl, imageUrl });
+
+  // If we couldn't read index.html, return a minimal shell rather than
+  // redirecting — Vercel would rewrite a /guest/:token redirect right back
+  // to this function and we'd loop. This path is rare; OG tags still render
+  // for crawlers, and humans see a friendly retry message.
+  if (!indexHtml) {
+    const fallback = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    ${metaBlock}
+  </head>
+  <body style="font-family: system-ui, -apple-system, sans-serif; padding: 48px 24px; max-width: 520px; margin: 0 auto; color: #2A2724; background: #FBF8F3;">
+    <p>This link is temporarily unavailable. Please try again in a moment.</p>
+  </body>
+</html>`;
+    res.status(503);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.send(fallback);
+    return;
+  }
+
   const html = injectMeta(indexHtml, metaBlock);
 
   res.status(200);
