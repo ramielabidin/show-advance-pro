@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { TrendingUp, X } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { formatDollar, parseDollar, parseBackendPct, parseBackendBasis, NBOR_EXPENSE_RATIO } from "@/components/RevenueSimulator";
 
 interface TourRevenueSimulatorProps {
+  tourId: string;
   shows: Array<{
     guarantee?: string | null;
     walkout_potential?: string | null;
@@ -14,8 +16,13 @@ interface TourRevenueSimulatorProps {
   }>;
 }
 
-export default function TourRevenueSimulator({ shows }: TourRevenueSimulatorProps) {
+const dismissKey = (tourId: string) => `tour-financials-dismissed-${tourId}`;
+
+export default function TourRevenueSimulator({ tourId, shows }: TourRevenueSimulatorProps) {
   const [pct, setPct] = useState(75);
+  const [dismissed, setDismissed] = useState(() =>
+    localStorage.getItem(dismissKey(tourId)) === "true"
+  );
 
   let dealShowCount = 0;
   let estimateShowCount = 0;
@@ -36,6 +43,22 @@ export default function TourRevenueSimulator({ shows }: TourRevenueSimulatorProp
     .filter((s) => s.walkout !== null || (s.ticketPrice != null && s.ticketPrice > 0 && s.capacity != null));
 
   if (financialShows.length === 0) return null;
+
+  if (dismissed) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          localStorage.removeItem(dismissKey(tourId));
+          setDismissed(false);
+        }}
+        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
+      >
+        <TrendingUp className="h-3.5 w-3.5" />
+        Show tour financials
+      </button>
+    );
+  }
 
   const totalGuarantee = financialShows.reduce((sum, s) => sum + s.guarantee, 0);
 
@@ -81,9 +104,22 @@ export default function TourRevenueSimulator({ shows }: TourRevenueSimulatorProp
 
   return (
     <div className="rounded-lg border bg-card p-4 space-y-4">
-      <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-        Tour Financials
-      </h3>
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Tour Financials
+        </h3>
+        <button
+          type="button"
+          onClick={() => {
+            localStorage.setItem(dismissKey(tourId), "true");
+            setDismissed(true);
+          }}
+          className="shrink-0 h-6 w-6 -mt-1 -mr-1 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
+          aria-label="Dismiss tour financials"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>

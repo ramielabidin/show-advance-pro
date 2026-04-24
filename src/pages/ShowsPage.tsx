@@ -227,9 +227,9 @@ export default function ShowsPage() {
       </div>
 
       {/* Tour financials panel */}
-      {isTourScoped && filtered.length > 0 && (
+      {isTourScoped && tour && filtered.length > 0 && (
         <div className="mb-5">
-          <TourRevenueSimulator shows={filtered} />
+          <TourRevenueSimulator tourId={tour.id} shows={filtered} />
         </div>
       )}
 
