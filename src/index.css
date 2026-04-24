@@ -24,6 +24,17 @@
   }
 }
 
+@keyframes mic-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px var(--pastel-red-fg));
+    opacity: 0.85;
+  }
+  50% {
+    filter: drop-shadow(0 0 6px var(--pastel-red-fg));
+    opacity: 1;
+  }
+}
+
 @layer base {
   :root {
     --background: 40 30% 97%;
@@ -202,6 +213,12 @@
     }
   }
 
+  /* Tonight-show mic icon: gentle pulsing glow using the "today" accent */
+  .mic-glow {
+    color: var(--pastel-red-fg);
+    animation: mic-glow 2.4s ease-in-out infinite;
+  }
+
   /* Override tailwindcss-animate defaults with our stronger curves */
   [data-state] {
     animation-timing-function: var(--ease-out);
@@ -223,6 +240,11 @@
     .card-pressable:hover {
       transform: none;
       box-shadow: none;
+    }
+
+    .mic-glow {
+      animation: none;
+      opacity: 1;
     }
 
     /* Neutralize Radix animate-in/out transform motion; keep opacity fade only */
