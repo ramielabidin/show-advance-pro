@@ -30,8 +30,8 @@ export default function AuthPage() {
         if (error) throw error;
         toast.success("Check your email for a confirmation link");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Authentication failed");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Authentication failed");
     } finally {
       setLoading(false);
     }
@@ -45,8 +45,8 @@ export default function AuthPage() {
         options: { redirectTo: window.location.origin },
       });
       if (error) throw error;
-    } catch (err: any) {
-      toast.error(err.message || "Google sign-in failed");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Google sign-in failed");
       setGoogleLoading(false);
     }
   };
