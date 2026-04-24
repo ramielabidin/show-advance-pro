@@ -283,12 +283,12 @@ export default function ShowDetailPage() {
 
   // ── Drive-time: previous show in the same tour ──
   const { data: previousShow } = useQuery({
-    queryKey: ["previous-show-in-tour", (show as any)?.tour_id, show?.date, show?.id],
+    queryKey: ["previous-show-in-tour", show?.tour_id, show?.date, show?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shows")
         .select("id, city, venue_name, venue_address, date")
-        .eq("tour_id", (show as any).tour_id)
+        .eq("tour_id", show!.tour_id!)
         .lt("date", show!.date)
         .order("date", { ascending: false })
         .limit(1)
@@ -296,7 +296,7 @@ export default function ShowDetailPage() {
       if (error) throw error;
       return data;
     },
-    enabled: !!show && !!(show as any).tour_id,
+    enabled: !!show && !!show.tour_id,
   });
 
   // Departure origin = previous show's city if ≤3 days ago (band still on road), else home base
@@ -342,8 +342,8 @@ export default function ShowDetailPage() {
 
   // Parse load-in time from schedule entries into minutes since midnight
   const loadInMinutes = useMemo(() => {
-    const entries = (show as any)?.schedule_entries ?? [];
-    const loadIn = entries.find((e: any) => isLoadInLabel(e.label));
+    const entries = show?.schedule_entries ?? [];
+    const loadIn = entries.find((e) => isLoadInLabel(e.label));
     if (!loadIn?.time) return null;
     const match = (loadIn.time as string).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
     if (!match) return null;
@@ -554,7 +554,7 @@ export default function ShowDetailPage() {
   const startInlineEdit = (key: string, opts?: { timeFormat?: boolean; structuredTime?: boolean }) => {
     inlineTimeFormat.current = !!opts?.timeFormat;
     setInlineField(key);
-    setInlineValue((show as any)[key] ?? "");
+    setInlineValue((show[key as keyof typeof show] as string | null) ?? "");
   };
 
   const cancelInline = () => {
@@ -662,7 +662,7 @@ export default function ShowDetailPage() {
     }
 
     // View mode
-    const value = (show as any)[key];
+    const value = show[key as keyof typeof show] as string | null;
     if (!value && opts?.alwaysShow) {
       return <EmptyFieldPrompt label={label} onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat, structuredTime: opts?.structuredTime })} />;
     }
@@ -760,16 +760,16 @@ export default function ShowDetailPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-1.5">
-            {(show as any).is_settled && (
+            {show.is_settled && (
               <Badge className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 bg-[hsl(var(--primary))] text-primary-foreground gap-1">
                 <CheckCircle2 className="h-2.5 w-2.5" />
                 Settled
               </Badge>
             )}
-            {(show as any).tours?.name && (
-              <Link to={`/shows?view=tour&tourId=${(show as any).tours.id}`}>
+            {show.tours?.name && (
+              <Link to={`/shows?view=tour&tourId=${show.tours.id}`}>
                 <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 hover:bg-secondary/80 transition-colors">
-                  {(show as any).tours.name}
+                  {show.tours.name}
                 </Badge>
               </Link>
             )}
@@ -845,7 +845,7 @@ export default function ShowDetailPage() {
             >
               {show.venue_name}
             </h1>
-            {(show as any).advanced_at && (
+            {show.advanced_at && (
               <button
                 type="button"
                 onClick={() => toggleAdvancedMutation.mutate(false)}
@@ -932,7 +932,7 @@ export default function ShowDetailPage() {
         {/* Status + actions — labeled buttons always */}
         <div className="pt-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
-            {!(show as any).advanced_at && (
+            {!show.advanced_at && (
               <button
                 type="button"
                 onClick={() => toggleAdvancedMutation.mutate(true)}
@@ -992,7 +992,7 @@ export default function ShowDetailPage() {
       </div>
 
       <TabsContent value="show">
-          {!(show as any).advance_imported_at && !showManualForm ? (
+          {!show.advance_imported_at && !showManualForm ? (
             <div className="space-y-6 sm:space-y-8">
               <div className="rounded-lg border border-border bg-card p-6 sm:p-8 text-center animate-fade-in">
                 <div className="inline-flex items-center justify-center rounded-full bg-muted p-3 mb-4">
@@ -1493,7 +1493,7 @@ export default function ShowDetailPage() {
                 return (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {tiles.map(({ key, label, icon, tone, currency }) => {
-                      const raw = (show as any)[key];
+                      const raw = show[key as keyof typeof show] as string | null;
                       if (!raw) {
                         return (
                           <button
@@ -1681,7 +1681,7 @@ export default function ShowDetailPage() {
             })()}
 
             {/* Settlement Results — shown when settled */}
-            {(show as any).is_settled && (
+            {show.is_settled && (
               <>
                 <Separator />
                 <FieldGroup title="Settlement Results">
@@ -1689,7 +1689,7 @@ export default function ShowDetailPage() {
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Actual Walkout</p>
                       <p className="text-lg font-semibold font-mono text-[hsl(var(--success))]">
-                        {(show as any).actual_walkout || "—"}
+                        {show.actual_walkout || "—"}
                       </p>
                       {show.walkout_potential && (
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -1697,11 +1697,11 @@ export default function ShowDetailPage() {
                         </p>
                       )}
                     </div>
-                    {(show as any).actual_tickets_sold && (
+                    {show.actual_tickets_sold && (
                       <div>
                         <p className="text-xs text-muted-foreground mb-0.5">Actual Tickets Sold</p>
                         <p className="text-lg font-semibold font-mono">
-                          {(show as any).actual_tickets_sold}
+                          {show.actual_tickets_sold}
                         </p>
                         {show.venue_capacity && (
                           <p className="text-xs text-muted-foreground mt-0.5">
@@ -1711,10 +1711,10 @@ export default function ShowDetailPage() {
                       </div>
                     )}
                   </div>
-                  {(show as any).settlement_notes && (
+                  {show.settlement_notes && (
                     <div className="mt-3">
                       <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
-                      <p className="text-sm whitespace-pre-wrap">{(show as any).settlement_notes}</p>
+                      <p className="text-sm whitespace-pre-wrap">{show.settlement_notes}</p>
                     </div>
                   )}
                 </FieldGroup>
