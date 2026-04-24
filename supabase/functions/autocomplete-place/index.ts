@@ -88,8 +88,12 @@ Deno.serve(async (req) => {
     url.searchParams.set("components", "country:us");
     url.searchParams.set("key", apiKey);
 
+    interface PlacesAutocompleteResponse {
+      status: string;
+      predictions?: Array<{ description: string; place_id: string }>;
+    }
     const res = await fetch(url.toString());
-    const data = await res.json();
+    const data = (await res.json()) as PlacesAutocompleteResponse;
 
     if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
       return new Response(
@@ -98,7 +102,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const predictions = (data.predictions ?? []).slice(0, 6).map((p: any) => ({
+    const predictions = (data.predictions ?? []).slice(0, 6).map((p) => ({
       description: p.description,
       place_id: p.place_id,
     }));
