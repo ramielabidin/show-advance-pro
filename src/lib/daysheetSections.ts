@@ -36,7 +36,7 @@ function v(f: unknown): boolean {
 
 /** Returns true if the section has at least one populated field in the show. */
 export function hasData(
-  show: Show & { schedule_entries?: any[]; contacts?: unknown[] },
+  show: Show & { contacts?: unknown[] },
   key: SectionKey
 ): boolean {
   switch (key) {
@@ -69,8 +69,6 @@ export function hasData(
  * Returns the ordered list of day sheet sections that have populated data
  * in the given show. Anything else is skipped from the export.
  */
-export function daysheetSectionsFor(
-  show: Show & { schedule_entries?: any[] }
-): SectionKey[] {
+export function daysheetSectionsFor(show: Show): SectionKey[] {
   return DAYSHEET_SECTION_KEYS.filter((k) => hasData(show, k));
 }
