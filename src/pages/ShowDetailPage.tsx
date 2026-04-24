@@ -49,7 +49,7 @@ import ExportPdfDialog from "@/components/ExportPdfDialog";
 import SetListDialog from "@/components/SetListDialog";
 import CopyGuestLinkButton from "@/components/CopyGuestLinkButton";
 import { useGuestLink } from "@/hooks/useGuestLink";
-import GuestListEditor, { GuestListView, parseGuestList, guestTotal, parseComps } from "@/components/GuestListEditor";
+import GuestListEditor, { GuestListView, parseGuestList, parseComps } from "@/components/GuestListEditor";
 import ScheduleEditor from "@/components/ScheduleEditor";
 import ContactsEditor, { type ContactRow } from "@/components/ContactsEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
@@ -406,7 +406,13 @@ export default function ShowDetailPage() {
 
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<Show>) => {
-      const { schedule_entries, show_contacts, show_party_members, tours, ...showUpdates } = updates as any;
+      const {
+        schedule_entries: _schedule_entries,
+        show_contacts: _show_contacts,
+        show_party_members: _show_party_members,
+        tours: _tours,
+        ...showUpdates
+      } = updates as any;
       if (showUpdates.tour_id === "" || showUpdates.tour_id === "none") showUpdates.tour_id = null;
       const { error } = await supabase.from("shows").update(showUpdates).eq("id", id!);
       if (error) throw error;
