@@ -7,7 +7,7 @@ import type { Show } from "@/lib/types";
 
 interface SlackPushDialogProps {
   showId: string;
-  show: Show & { schedule_entries?: any[] };
+  show: Show;
   trigger?: React.ReactNode;
 }
 
@@ -23,8 +23,8 @@ export default function SlackPushDialog({ showId, trigger }: SlackPushDialogProp
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       toast.success("Day sheet pushed to Slack!");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to push to Slack");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to push to Slack");
     } finally {
       setPushing(false);
     }
