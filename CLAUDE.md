@@ -69,6 +69,12 @@ See `.env.example`. Everything else lives in Supabase Edge Function secrets, not
 
 **Supabase types**: `src/integrations/supabase/types.ts` is **generated** from the live schema. Do not hand-edit — regenerate with the Supabase CLI (`supabase gen types typescript ...`) after migrations land.
 
+## Git workflow
+
+- Develop on short-lived feature branches; the harness names them by task (`claude/<slug>`). Never push directly to `main`.
+- When you push a feature branch, open a PR against `main` with a short summary and a test-plan checklist. The Claude Code desktop UI prompts for this on every new branch anyway — opening it proactively saves a click. Don't create one for experimental branches you don't intend to ship.
+- Don't merge your own PRs and don't force-push to `main` — the user reviews and merges.
+
 ## Project Structure
 
 ```
