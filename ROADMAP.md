@@ -1,6 +1,6 @@
 # Advance — Product Roadmap
 
-**Last updated:** April 17, 2026
+**Last updated:** April 24, 2026
 **Owner:** Founder
 **Status:** Pre-launch, transitioning from personal tool to SaaS product
 
@@ -105,7 +105,7 @@ These inform every decision downstream. When in doubt, refer back here.
   - Artist count limits per tier
   - Live usage counter in app UI so free-tier users can see where they stand
 - [ ] Role-based access control (Admin / Crew / Artist / Guest)
-- [ ] Magic-link guest access flow
+- [x] Magic-link guest access flow — shipped pre-multi-tenancy. `guest_links` table, `get_guest_show` RPC, `/guest/:token` route, day-sheet and door-list views. Re-gate by account/tier when Phase 2 lands.
 
 **Acceptance criteria:** A free-tier user hits the 30-show cap and sees a clear upgrade prompt. A Manager-tier user can switch between up to 5 artists cleanly. Billing works end-to-end including upgrades, downgrades, and cancellation.
 

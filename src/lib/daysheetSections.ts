@@ -36,12 +36,12 @@ function v(f: unknown): boolean {
 
 /** Returns true if the section has at least one populated field in the show. */
 export function hasData(
-  show: Show & { schedule_entries?: any[] },
+  show: Show & { schedule_entries?: any[]; contacts?: unknown[] },
   key: SectionKey
 ): boolean {
   switch (key) {
     case "contact":
-      return !!(show.show_contacts?.length);
+      return !!(show.show_contacts?.length || show.contacts?.length);
     case "venue":
       return v(show.venue_address) || v(show.city);
     case "schedule":
