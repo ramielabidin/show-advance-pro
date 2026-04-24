@@ -80,33 +80,44 @@ See `.env.example`. Everything else lives in Supabase Edge Function secrets, not
 ```
 src/
   pages/           # Route-level components (*Page.tsx)
+    GuestShowPage.tsx        # /guest/:token entry — resolves link_type, dispatches to guest view
+    show-detail/             # Sub-hooks extracted from ShowDetailPage (e.g. useGroupEditor)
   components/
     ui/            # shadcn primitives — don't edit these directly
+    guest/         # Public guest-link views — GuestLayout, DaysheetGuestView, DoorListGuestView, GuestGuestList
     *Provider.tsx  # Context providers (AuthProvider, TeamProvider, PendingEmailsProvider)
     *Dialog.tsx    # Modal workflows (self-contained with state + mutations)
-    *Editor.tsx    # Complex form sections (ScheduleEditor, GuestListEditor, RevenueSimulator, TourRevenueSimulator)
+    *Editor.tsx    # Complex form sections (ScheduleEditor, GuestListEditor, ContactsEditor, RevenueSimulator, TourRevenueSimulator)
     AppLayout.tsx  # Shell layout wrapping authenticated routes
+    CopyGuestLinkButton.tsx  # Mint / copy / revoke a guest magic link from a show
   hooks/           # Custom hooks (use-mobile, use-toast, usePullToRefresh)
   integrations/supabase/
     client.ts      # Supabase client (typed with Database type)
     types.ts       # Auto-generated DB types — regenerate, never hand-edit
   lib/
-    types.ts              # Domain types (Show, Tour, ScheduleEntry, etc.)
+    types.ts              # Domain types (Show, Tour, ScheduleEntry, ShowContact, etc.)
     utils.ts              # cn, normalizePhone, formatCityState
     timeFormat.ts         # normalizeTime — canonical time parser
     pdfExtract.ts         # extractTextFromPdf (uses pdfjs-dist)
     saveParsedShow.ts     # Canonical "save AI-parsed show" (insert or update by venue+date)
     daysheetSections.ts   # Shared section list + hasData() for PDF/Email/Slack exports
+    guestLinks.ts         # Guest-link helpers (buildGuestUrl, generateGuestLink, revokeGuestLink, fetchGuestShow, GuestShowPayload type)
+    contactRoles.ts       # roleLabel() + the role vocabulary for show_contacts
+    scheduleMatch.ts      # Shared tight-label matchers for schedule entries (load in, doors, etc.)
+    clipboard.ts          # Copy-to-clipboard helper used by CopyButton / CopyGuestLinkButton
   test/
     setup.ts, example.test.ts  # Vitest wiring — suite is sparse today (see Testing below)
 supabase/
   migrations/      # Numbered SQL migrations (`YYYYMMDDHHMMSS_short_snake.sql`)
   functions/       # Edge functions (auto-deployed on push to main — see below)
+    _shared/rate-limit.ts    # Shared rate-limit helper for abuse-prone functions
 scripts/
   check-supabase.js  # Sanity check for env config; wired to `npm run check:supabase`
 docs/
   design-system.md # Read before any UI change — see "UI & Design" below
 ROADMAP.md         # Source of truth for product direction / phases
+.claude/
+  skills/advance-design/  # Agent Skill — brand, tokens, UI kit. Read for any UI work (see "UI & Design")
 .github/workflows/
   deploy-supabase-functions.yml  # Auto-deploys all edge functions on push to main
 ```
@@ -127,6 +138,8 @@ When a task touches one of these areas, open the file before making changes — 
 - **`src/components/BulkUploadDialog.tsx`** (~800 lines) — CSV parsing, column mapping, upsert logic
 - **`src/pages/DashboardPage.tsx`** — tour-progress UI, URL-as-state filtering
 - **`src/components/ParseAdvanceForShowDialog.tsx`** — the AI parse → review → save flow (pairs with `saveParsedShow`)
+- **`src/components/ContactsEditor.tsx`** — multi-contact editor (day-of-show, promoter, production, etc.) — read before touching anything contact-related
+- **`src/pages/GuestShowPage.tsx`** + **`src/components/guest/*`** — the public guest-link surface. Read before adding any new guest-facing view
 - **`src/App.tsx`** — route table + auth gating (read when touching routing)
 
 ## Data Fetching
@@ -184,23 +197,65 @@ Shows have three independent state flags — each means something different:
 - **`advanced_at`** (timestamp | null): User has confirmed all show details with the venue. Toggled by "Mark as advanced" button. Drives the dot color on show cards and the Tour Progress bar.
 - **`is_settled`** (bool): Show has happened and financials are recorded. Unlocks `actual_walkout`, `actual_tickets_sold`, `settlement_notes` fields. Swaps walkout projections for actuals across the app.
 
+### Multi-contact per show (`show_contacts`)
+
+Each show can have any number of contacts stored in the `show_contacts` table — this replaced the legacy single-field `dos_contact_*` pattern. There is no longer a "day of show contact" column on `shows`; don't grep for `dos_contact_name` et al.
+
+- Roles (from `src/lib/contactRoles.ts`): `day_of_show`, `promoter`, `production`, `hospitality`, `custom`. `role_label` is free-text, used when `role === "custom"`.
+- At most one contact per show should have `role === "day_of_show"` — `ContactsEditor.tsx` enforces this in the UI.
+- Sort order convention: `day_of_show = 0` so it renders first; others default higher.
+- **Payload shape differs by surface:** the authenticated app reads `show.show_contacts` (joined table, see `Show` in `src/lib/types.ts`). The guest `get_guest_show` RPC returns the same data under `contacts` (flat array, deliberate rename to keep the curated payload simple). Any code that works with both surfaces must accept either — `hasData("contact")` in `daysheetSections.ts` is the reference pattern.
+- Format a contact's role for display with `roleLabel(contact)` — respects `role_label` when role is `"custom"`.
+
 ## Edge functions
 
 Located in `supabase/functions/`. Called via `supabase.functions.invoke("<name>", { body })`:
 
 - **`parse-advance`** — AI-parses pasted email / extracted PDF text into show fields + schedule
 - **`push-slack-daysheet`** — sends day sheet to connected Slack workspace
-- **`send-daysheet-email`** — sends the HTML band day sheet via SendGrid. One shared thread (all recipients in `to`), `reply_to` is the caller so replies land in the user's inbox. Requires Supabase secrets `SENDGRID_API_KEY` and `SENDGRID_FROM_EMAIL`. The HTML template lives alongside the function in `supabase/functions/send-daysheet-email/template.ts` and mirrors `DaysheetGuestView` — keep them in visual sync. The section list is duplicated at `supabase/functions/send-daysheet-email/sections.ts` (Deno can't import from `src/`); if you edit `src/lib/daysheetSections.ts`, mirror the change there
+- **`send-daysheet-email`** — sends the HTML band day sheet via SendGrid. One shared thread (all recipients in `to`), `reply_to` is the caller so replies land in the user's inbox. Requires Supabase secrets `SENDGRID_API_KEY` and `SENDGRID_FROM_EMAIL`. The HTML template lives alongside the function in `supabase/functions/send-daysheet-email/template.ts` and mirrors `DaysheetGuestView` — keep them in visual sync. The section list is duplicated at `supabase/functions/send-daysheet-email/sections.ts` (Deno can't import from `src/`); if you edit `src/lib/daysheetSections.ts`, mirror the change there. **Contact-field gotcha:** the authenticated app reads `show.show_contacts` while the guest `get_guest_show` RPC returns the same data under `contacts` — `hasData("contact")` already accepts either, but any new contact-aware section code must do the same
+- **`send-team-invite-email`** — sends the HTML team invite via SendGrid (Dispatch design variant). Gateway JWT verification is intentionally disabled (Slack-style webhook pattern); the function requires the explicit `success` flag in its response body. The template lives at `supabase/functions/send-team-invite-email/template.ts`
 - **`calculate-drive-time`** — Google Maps drive time between two points (used on `ShowDetailPage`)
 - **`lookup-venue-address`** — resolves a venue name + city into a full address
 - **`autocomplete-place`** — Google Places autocomplete (used for Home Base City)
 - **`slack-oauth-initiate`** — returns Slack OAuth authorization URL
 - **`slack-oauth-callback`** — completes the Slack OAuth handshake and stores workspace credentials
 - **`inbound-email`** — webhook for forwarded advance emails; parses and drops them into the review queue surfaced by `PendingEmailsProvider` / `PendingEmailsModal`
+- **`_shared/rate-limit.ts`** — shared rate-limit helper. Wrap abuse-prone edge functions (parse-advance, lookup-venue-address, autocomplete-place) with it; see existing usage for the pattern
 
 **Deployment**: all edge functions auto-deploy to `knwdjeicyisqsfiisaic` on push to `main` via `.github/workflows/deploy-supabase-functions.yml`. Manual redeploy is available via the Actions tab. Do **not** assume a function change is live just because it's merged — if the Action failed, the old version is still running.
 
 **Migrations**: new migrations should be named `YYYYMMDDHHMMSS_short_snake_name.sql` (see the most recent files under `supabase/migrations/`). Older entries use a timestamp + UUID suffix — that's legacy; don't copy it. Apply via `supabase db push` against the remote project; regenerate `src/integrations/supabase/types.ts` after.
+
+## Guest links & guest views
+
+"Guests are first-class" is a stated product principle — most people who interact with tour data (promoters, venue contacts, show-day crew, the artist on tour) will never log in. The guest-link system gives them scoped, read-mostly access to a single show via a tokenized URL.
+
+**Architecture:**
+
+- **`guest_links` table** — holds `token`, `show_id`, `link_type`, `expires_at`, `revoked_at`, `created_by`. Tokens are generated with `nanoid` (17 chars). Revocation is soft (timestamp).
+- **`link_type`** is a string enum, currently `"daysheet"` (full show day sheet) or `"doorlist"` (guest list only). Adding a new type requires updating the table's check constraint and dispatching in `GuestShowPage`.
+- **`get_guest_show(p_token text)`** RPC — the single read endpoint. `SECURITY DEFINER`, granted to `anon` and `authenticated`. Returns a curated `jsonb` payload: deal and financial fields are deliberately omitted server-side so they never reach the client, even by accident.
+- **Write surface** is intentionally narrow: guest-list edits via a separate RPC gated to `link_type="daysheet"` (see `20260420130000_restrict_guest_list_update_to_daysheet.sql`). No other writes are allowed from a guest token.
+
+**Files:**
+
+- `src/pages/GuestShowPage.tsx` — route entry at `/guest/:token`, resolves the token and dispatches to the right view based on `link_type`
+- `src/components/guest/GuestLayout.tsx` — shared chrome (header, theme toggle, footer) wrapping every guest view. Header and footer link to the marketing site (`advancetouring.com`) so curious guests can discover the product
+- `src/components/guest/DaysheetGuestView.tsx` — full day sheet for `link_type="daysheet"`. Renders sections in the same order as the authenticated app (uses `DAYSHEET_SECTION_KEYS` / `hasData`) but against the guest payload shape
+- `src/components/guest/DoorListGuestView.tsx` — guest-list-only for `link_type="doorlist"`
+- `src/components/guest/GuestGuestList.tsx` — the inline-editable guest list (the only write surface guests get; scoped server-side by link type)
+- `src/lib/guestLinks.ts` — helpers: `buildGuestUrl`, `generateGuestLink`, `revokeGuestLink`, `fetchGuestShow`, `getActiveGuestLink`. Also exports the `GuestShowPayload` and `GuestLinkType` types
+- `src/components/CopyGuestLinkButton.tsx` — the app-side UI for minting / copying / revoking a link on a show
+
+**When adding a new guest view / link type:**
+
+1. Add the new value to the `guest_links.link_type` check constraint (new migration).
+2. Extend `get_guest_show` to include any additional fields the new view needs, keeping financial data out.
+3. Widen `GuestShowPayload` and `GuestLinkType` in `src/lib/guestLinks.ts` to match.
+4. Dispatch from `GuestShowPage` on the new `link_type`.
+5. Wrap the new view in `<GuestLayout>` so it inherits the header/footer/theme toggle.
+6. If the view overlaps with the authenticated day sheet, route gating through `has(sectionKey)` from `daysheetSections.ts` to keep behavior consistent — remembering the `contacts` vs `show_contacts` shape difference (see Multi-contact above).
 
 ## Established patterns
 
@@ -254,6 +309,7 @@ Reuse, don't reimplement:
 - `normalizeTime(raw)` — free-text time → `"H:MM AM/PM"` (`src/lib/timeFormat.ts`)
 - `formatCurrency(raw)` — dollar string → display format (`ShowDetailPage.tsx`)
 - `parseDollar`, `parseBackendPct`, `parseBackendType`, `parseTieredDeal` — all exported from `RevenueSimulator.tsx`
+- `roleLabel(contact)` — display-format a `ShowContact`'s role, respecting `role_label` on `"custom"` (`src/lib/contactRoles.ts`)
 
 ## Error Handling
 

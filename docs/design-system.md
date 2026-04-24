@@ -810,7 +810,7 @@ These come up repeatedly in AI-generated code. Do not do them.
 | Decorative gradients, heavy drop shadows | Wrong aesthetic | Borders and negative space |
 | `window.addEventListener('scroll', ...)` for reveal animations | Poor perf, fires hundreds of times | `IntersectionObserver` |
 | `transition: all` | Triggers unnecessary layout; janky | Name the exact properties |
-| Strict TypeScript (`strict: true`, explicit return types on every fn) | The repo is deliberately lax (`strict: false`) | Match the surrounding code's level of typing |
+| Reaching for `any` as an escape hatch | `tsconfig.app.json` has `strict: true`, `noImplicitAny: true`, `noUnusedLocals`, `noUnusedParameters` — types are enforced | Type it properly. Prefix deliberately unused params with `_` to satisfy the lint rule |
 | Inventing new form libraries | Project uses React Hook Form + Zod + shadcn `<Form />` | Stick with the existing stack |
 
 ---
