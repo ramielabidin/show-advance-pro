@@ -166,16 +166,21 @@ export default async function handler(
         : "";
 
   const hostHeader = req.headers["host"];
+  const forwardedHost = req.headers["x-forwarded-host"];
+  // Prefer the public host the request actually arrived on. The raw
+  // VERCEL_URL subdomain can be behind Deployment Protection even when the
+  // custom domain is public — if we fetched /index.html via that URL we'd
+  // get a login page instead of our app's HTML.
   const host =
+    (typeof forwardedHost === "string" && forwardedHost) ||
+    (typeof hostHeader === "string" && hostHeader) ||
     process.env.VERCEL_URL ||
-    (typeof hostHeader === "string" ? hostHeader : "") ||
     "app.advancetouring.com";
 
-  // The browser-visible URL is /guest/:token (rewrite preserves it).
   const publicHost =
-    typeof hostHeader === "string" && hostHeader
-      ? hostHeader
-      : "app.advancetouring.com";
+    (typeof forwardedHost === "string" && forwardedHost) ||
+    (typeof hostHeader === "string" && hostHeader) ||
+    "app.advancetouring.com";
   const publicUrl = `https://${publicHost}/guest/${token}`;
 
   const indexHtmlPromise = fetchIndexHtml(host);
@@ -235,7 +240,8 @@ export default async function handler(
     <p>This link is temporarily unavailable. Please try again in a moment.</p>
   </body>
 </html>`;
-    res.status(503);
+    // 200 (not 5xx) so link-preview scrapers still parse the OG tags.
+    res.status(200);
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");
     res.send(fallback);
