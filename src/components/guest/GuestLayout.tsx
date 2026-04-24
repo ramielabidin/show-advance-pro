@@ -11,7 +11,14 @@ export default function GuestLayout({ children }: GuestLayoutProps) {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <header className="px-4 sm:px-8 pt-6 flex items-center justify-between">
-        <p className="font-display text-xl tracking-[-0.02em] text-foreground">Advance</p>
+        <a
+          href="https://advancetouring.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-display text-xl tracking-[-0.02em] text-foreground hover:text-muted-foreground transition-colors"
+        >
+          Advance
+        </a>
         <Button
           variant="ghost"
           size="icon"
@@ -27,9 +34,14 @@ export default function GuestLayout({ children }: GuestLayoutProps) {
         <div className="mx-auto w-full max-w-[880px] min-w-0">{children}</div>
       </main>
       <footer className="px-4 sm:px-8 pb-8">
-        <p className="mx-auto w-full max-w-[880px] text-[11px] uppercase tracking-widest text-muted-foreground/70 font-medium">
+        <a
+          href="https://advancetouring.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mx-auto block w-full max-w-[880px] text-[11px] uppercase tracking-widest text-muted-foreground/70 hover:text-muted-foreground font-medium transition-colors"
+        >
           Powered by Advance
-        </p>
+        </a>
       </footer>
     </div>
   );
