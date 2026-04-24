@@ -97,7 +97,7 @@ export default function SetListPdfDialog({ show, entries, trigger }: Props) {
       }
 
       // Advance from the bottom of the header block to the first song
-      let y = lastVenueBaseline + (cityStr ? 14 : 0) + 22;
+      const y = lastVenueBaseline + (cityStr ? 14 : 0) + 22;
 
       // ════════════════════════════════════════════════════════════════════
       // SET LIST — unboxed, numbered list with auto-sized rows

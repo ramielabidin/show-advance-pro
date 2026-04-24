@@ -29,7 +29,6 @@ import { isLoadInLabel, isDoorsLabel } from "@/lib/scheduleMatch";
 import CreateShowDialog from "@/components/CreateShowDialog";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
 import TourPicker from "@/components/TourPicker";
-import { useTeam } from "@/components/TeamProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { parseDollar } from "@/components/RevenueSimulator";
 import SectionLabel from "@/components/SectionLabel";
@@ -111,7 +110,6 @@ export default function DashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedScope = parseScope(searchParams.get("scope"));
   const requestedTourId = searchParams.get("tourId");
-  const { team } = useTeam();
   const { session } = useAuth();
   const [revenueCollapsed, setRevenueCollapsed] = useState(false);
 
