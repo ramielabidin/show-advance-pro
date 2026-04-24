@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
@@ -51,8 +51,7 @@ function nanoid(size = 17): string {
  * will land on a domain without the SPA routes and redirect to auth.
  */
 async function ensureDaySheetGuestUrl(
-  // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: SupabaseClient,
   showId: string,
   userId: string,
   baseUrl: string
@@ -101,13 +100,24 @@ function sanitizeAppUrl(raw: unknown): string | null {
 
 type Block = Record<string, unknown>;
 
+interface ScheduleEntryForSlack {
+  label?: string | null;
+  time?: string | null;
+}
+interface ShowForSlack {
+  venue_name?: string | null;
+  date: string;
+  venue_address?: string | null;
+  schedule_entries?: ScheduleEntryForSlack[];
+}
+
 /**
  * Render the band day sheet as a minimal Slack Block Kit "show card":
  * venue header, date + address, Load In / Sound Check fields, and a
  * primary button linking to the guest day sheet. Everything else lives
  * behind the link.
  */
-function buildDaySheetBlocks(show: any, guestUrl: string | null): Block[] {
+function buildDaySheetBlocks(show: ShowForSlack, guestUrl: string | null): Block[] {
   const blocks: Block[] = [];
 
   const venue = val(show.venue_name) ?? "Show";
@@ -128,9 +138,11 @@ function buildDaySheetBlocks(show: any, guestUrl: string | null): Block[] {
     text: { type: "mrkdwn", text: parts.join("\n\n") },
   });
 
-  const entries = Array.isArray(show.schedule_entries) ? show.schedule_entries : [];
+  const entries: ScheduleEntryForSlack[] = Array.isArray(show.schedule_entries)
+    ? show.schedule_entries
+    : [];
   const findTime = (re: RegExp): string => {
-    const hit = entries.find((e: any) => e?.label && re.test(String(e.label)));
+    const hit = entries.find((e) => e?.label && re.test(String(e.label)));
     return val(hit?.time) ?? "—";
   };
   blocks.push({
