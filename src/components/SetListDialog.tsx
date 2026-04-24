@@ -77,7 +77,7 @@ export default function SetListDialog({ show, trigger }: Props) {
   const { data: songs = [], isLoading: songsLoading } = useQuery({
     queryKey: ["songs"],
     queryFn: async (): Promise<Song[]> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("songs")
         .select("*")
         .order("title");
@@ -101,7 +101,7 @@ export default function SetListDialog({ show, trigger }: Props) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("shows")
         .update({ set_list: entries })
         .eq("id", show.id);
