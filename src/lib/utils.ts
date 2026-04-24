@@ -21,11 +21,49 @@ export function normalizePhone(raw: string): string {
   return raw.trim();
 }
 
+/** Map of US state / territory names → 2-letter postal codes.
+ *  Keys are lowercase to allow case-insensitive lookup. */
+const US_STATE_ABBR: Record<string, string> = {
+  alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR",
+  california: "CA", colorado: "CO", connecticut: "CT", delaware: "DE",
+  florida: "FL", georgia: "GA", hawaii: "HI", idaho: "ID",
+  illinois: "IL", indiana: "IN", iowa: "IA", kansas: "KS",
+  kentucky: "KY", louisiana: "LA", maine: "ME", maryland: "MD",
+  massachusetts: "MA", michigan: "MI", minnesota: "MN",
+  mississippi: "MS", missouri: "MO", montana: "MT", nebraska: "NE",
+  nevada: "NV", "new hampshire": "NH", "new jersey": "NJ",
+  "new mexico": "NM", "new york": "NY", "north carolina": "NC",
+  "north dakota": "ND", ohio: "OH", oklahoma: "OK", oregon: "OR",
+  pennsylvania: "PA", "rhode island": "RI", "south carolina": "SC",
+  "south dakota": "SD", tennessee: "TN", texas: "TX", utah: "UT",
+  vermont: "VT", virginia: "VA", washington: "WA",
+  "west virginia": "WV", wisconsin: "WI", wyoming: "WY",
+  "district of columbia": "DC", "puerto rico": "PR",
+};
+
 /** Formats a stored "City ST" string as "City, ST" for display.
- *  Also strips trailing asterisks that users sometimes append as a
- *  "no address yet" notation (e.g. "Albany NY**" → "Albany, NY"). */
+ *  - Strips trailing asterisks ("Albany NY**" → "Albany, NY")
+ *  - Normalizes full US state names ("Los Angeles, California" → "Los Angeles, CA")
+ *  - Leaves non-US locations untouched ("Toronto, Ontario" → "Toronto, Ontario") */
 export function formatCityState(city: string | null | undefined): string {
   if (!city) return "";
   const clean = city.replace(/\*+$/, "").trim();
-  return clean.replace(/^(.+?),?\s([A-Z]{2})$/, "$1, $2");
+
+  // "City ST" — no comma, 2-letter code at end
+  const noComma = clean.match(/^(.+?)\s+([A-Z]{2})$/);
+  if (noComma) return `${noComma[1]}, ${noComma[2]}`;
+
+  const lastComma = clean.lastIndexOf(",");
+  if (lastComma === -1) return clean;
+
+  const cityPart = clean.slice(0, lastComma).trim();
+  const statePart = clean.slice(lastComma + 1).trim();
+  if (!cityPart || !statePart) return clean;
+
+  if (/^[A-Z]{2}$/.test(statePart)) return `${cityPart}, ${statePart}`;
+
+  const abbr = US_STATE_ABBR[statePart.toLowerCase()];
+  if (abbr) return `${cityPart}, ${abbr}`;
+
+  return clean;
 }
