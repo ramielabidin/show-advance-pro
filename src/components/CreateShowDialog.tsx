@@ -163,9 +163,9 @@ export default function CreateShowDialog({ defaultTourId, triggerClassName, icon
       toast.success(isNew ? "New show created — tap to review" : "Existing show updated — tap to review", {
         action: { label: "View", onClick: () => navigate(`/shows/${showId}`) },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Parse error:", err);
-      toast.error(err.message || "Failed to parse");
+      toast.error(err instanceof Error ? err.message : "Failed to parse");
     } finally {
       setParsing(false);
     }
