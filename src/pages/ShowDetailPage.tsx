@@ -49,7 +49,7 @@ import ExportPdfDialog from "@/components/ExportPdfDialog";
 import SetListDialog from "@/components/SetListDialog";
 import CopyGuestLinkButton from "@/components/CopyGuestLinkButton";
 import { useGuestLink } from "@/hooks/useGuestLink";
-import GuestListEditor, { GuestListView, parseGuestList, parseComps } from "@/components/GuestListEditor";
+import GuestListEditor, { parseComps, parseGuestList, serializeGuestList } from "@/components/GuestListEditor";
 import ScheduleEditor from "@/components/ScheduleEditor";
 import ContactsEditor, { type ContactRow } from "@/components/ContactsEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
@@ -221,6 +221,8 @@ export default function ShowDetailPage() {
 
   const [lookingUpAddress, setLookingUpAddress] = useState(false);
   const [scheduleKey, setScheduleKey] = useState(0);
+  const [guestDraft, setGuestDraft] = useState<string>("");
+  const [guestEditorKey, setGuestEditorKey] = useState(0);
   const [suggestionDismissed, setSuggestionDismissed] = useState(() =>
     id ? localStorage.getItem(`departure-suggestion-dismissed-${id}`) === "true" : false
   );
@@ -264,6 +266,11 @@ export default function ShowDetailPage() {
       return data;
     },
   });
+
+  useEffect(() => {
+    setGuestDraft(show?.guest_list_details ?? "");
+    setGuestEditorKey((k) => k + 1);
+  }, [show?.guest_list_details]);
 
   // ── Drive-time: app settings (for home base city) ──
   const { data: appSettings } = useQuery({
@@ -682,43 +689,50 @@ export default function ShowDetailPage() {
 
   // Guest list rendering
   const renderGuestList = () => {
-    const isInlineGuest = inlineField === "guest_list_details";
-
-    if (isInlineGuest) {
-      return (
-        <div ref={inlineRef} className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Guest List</Label>
-          <GuestListEditor
-            value={inlineValue}
-            capacity={show.venue_capacity}
-            compsAllotment={show.artist_comps}
-            onChange={(val) => setInlineValue(val)}
-            isInline
-          />
-          <InlineActions onSave={saveInline} onCancel={cancelInline} />
-        </div>
-      );
-    }
-
-    const entries = parseGuestList(show.guest_list_details);
-    if (entries.length > 0) {
-      return (
-        <GuestListView
-          value={show.guest_list_details}
-          capacity={show.venue_capacity}
-          compsAllotment={show.artist_comps}
-          onEdit={() => startInlineEdit("guest_list_details")}
-        />
-      );
-    }
-
     const comps = parseComps(show.artist_comps);
+    const savedValue = show.guest_list_details ?? "";
+    const draftNormalized = serializeGuestList(parseGuestList(guestDraft));
+    const savedNormalized = serializeGuestList(parseGuestList(savedValue));
+    const isDirty = draftNormalized !== savedNormalized;
+    const handleGuestSave = () => {
+      updateMutation.mutate({ guest_list_details: draftNormalized === "[]" ? null : draftNormalized });
+    };
+    const handleGuestCancel = () => {
+      setGuestDraft(savedValue);
+      setGuestEditorKey((k) => k + 1);
+    };
+
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {comps !== null && (
           <p className="text-xs text-muted-foreground">{comps} comps available</p>
         )}
-        <EmptyFieldPrompt label="guest list" onClick={() => startInlineEdit("guest_list_details")} />
+        <GuestListEditor
+          key={guestEditorKey}
+          value={guestDraft}
+          capacity={show.venue_capacity}
+          compsAllotment={show.artist_comps}
+          onChange={setGuestDraft}
+        />
+        <div className="flex items-center gap-1.5 pt-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleGuestCancel}
+            disabled={!isDirty || updateMutation.isPending}
+            className="h-7 text-xs"
+          >
+            <X className="h-3 w-3 mr-1" /> Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleGuestSave}
+            disabled={!isDirty || updateMutation.isPending}
+            className="h-7 text-xs"
+          >
+            <Save className="h-3 w-3 mr-1" /> Save
+          </Button>
+        </div>
       </div>
     );
   };
@@ -1396,7 +1410,7 @@ export default function ShowDetailPage() {
               title="Guest List"
               collapsible
               defaultOpen={!!(show.guest_list_details || show.artist_comps)}
-              incomplete={!!show.artist_comps && !show.guest_list_details && inlineField !== "guest_list_details"}
+              incomplete={!!show.artist_comps && !show.guest_list_details}
             >
               {renderGuestList()}
               <div className="pt-1">

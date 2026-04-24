@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useLayoutEffect, KeyboardEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export interface GuestEntry {
   name: string;
@@ -112,65 +112,140 @@ interface GuestListEditorProps {
   isInline?: boolean;
 }
 
-export default function GuestListEditor({ value, compsAllotment, onChange, isInline = false }: GuestListEditorProps) {
+export default function GuestListEditor({ value, compsAllotment, onChange }: GuestListEditorProps) {
   const [entries, setEntries] = useState<GuestEntry[]>(() => {
     const parsed = parseGuestList(value);
     return parsed.length > 0 ? parsed : [{ name: "", plusOnes: 0 }];
   });
 
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const pendingFocusIdx = useRef<number | null>(null);
+
   useEffect(() => {
     onChange(serializeGuestList(entries));
   }, [entries]);
+
+  useLayoutEffect(() => {
+    if (pendingFocusIdx.current !== null) {
+      const idx = pendingFocusIdx.current;
+      pendingFocusIdx.current = null;
+      inputRefs.current[idx]?.focus();
+    }
+  });
 
   const update = (idx: number, patch: Partial<GuestEntry>) => {
     setEntries((prev) => prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)));
   };
 
-  const remove = (idx: number) => {
-    setEntries((prev) => prev.filter((_, i) => i !== idx));
+  const appendBlankRow = () => {
+    setEntries((prev) => {
+      pendingFocusIdx.current = prev.length;
+      return [...prev, { name: "", plusOnes: 0 }];
+    });
   };
 
-  const addRow = () => {
-    setEntries((prev) => [...prev, { name: "", plusOnes: 0 }]);
+  const removeWithUndo = (idx: number) => {
+    const entry = entries[idx];
+    if (!entry) return;
+    setEntries((prev) => prev.filter((_, i) => i !== idx));
+    toast("Guest removed", {
+      duration: 4000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setEntries((prev) => {
+            const next = [...prev];
+            next.splice(Math.min(idx, next.length), 0, entry);
+            return next;
+          });
+        },
+      },
+    });
+  };
+
+  const handleNameKeyDown = (idx: number, e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const current = entries[idx];
+    if (!current?.name.trim()) return;
+    appendBlankRow();
+  };
+
+  const handlePlusGuestsChange = (idx: number, raw: string) => {
+    if (raw === "") {
+      update(idx, { plusOnes: 0 });
+      return;
+    }
+    const parsed = parseInt(raw, 10);
+    if (isNaN(parsed)) return;
+    update(idx, { plusOnes: Math.max(0, Math.min(9, parsed)) });
   };
 
   const total = guestTotal(entries.filter((e) => e.name.trim()));
   const cap = parseComps(compsAllotment);
   const atCapacity = cap !== null && total >= cap;
+  const hasBlankRow = entries.length > 0 && !entries[entries.length - 1].name.trim();
 
   return (
     <div className="space-y-2">
       {entries.map((entry, i) => (
         <div key={i} className="flex items-center gap-2">
           <Input
+            ref={(el) => {
+              inputRefs.current[i] = el;
+            }}
             value={entry.name}
             onChange={(e) => update(i, { name: e.target.value })}
+            onKeyDown={(e) => handleNameKeyDown(i, e)}
             placeholder="Guest name"
             className="text-sm h-11 sm:h-9 flex-1"
-            autoFocus={i === entries.length - 1 && isInline}
           />
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-xs text-muted-foreground">+1</span>
-            <Switch
-              checked={entry.plusOnes > 0}
-              onCheckedChange={(checked) => update(i, { plusOnes: checked ? 1 : 0 })}
-              className="scale-75"
+          <div className="flex items-center shrink-0">
+            <span
+              className={cn(
+                "text-xs pr-0.5",
+                entry.plusOnes > 0 ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              +
+            </span>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={9}
+              value={entry.plusOnes === 0 ? "" : String(entry.plusOnes)}
+              onChange={(e) => handlePlusGuestsChange(i, e.target.value)}
+              placeholder="0"
+              aria-label="Additional guests"
+              className="text-sm h-11 sm:h-9 w-11 px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-            onClick={() => remove(i)}
+            onClick={() => removeWithUndo(i)}
+            aria-label="Remove guest"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
       ))}
-      <div className="flex items-center justify-between pt-1">
-        <Button variant="ghost" size="sm" onClick={addRow} className="h-7 text-xs gap-1" disabled={atCapacity}>
-          <Plus className="h-3 w-3" /> Add Guest
-        </Button>
+      <div className="flex items-center justify-between pt-1 min-h-7">
+        {!hasBlankRow ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={appendBlankRow}
+            className="h-7 text-xs gap-1"
+            disabled={atCapacity}
+          >
+            <Plus className="h-3 w-3" /> Add Guest
+          </Button>
+        ) : (
+          <span />
+        )}
         <GuestCount total={total} compsAllotment={compsAllotment} />
       </div>
     </div>
