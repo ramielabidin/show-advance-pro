@@ -283,12 +283,12 @@ export default function ShowDetailPage() {
 
   // ── Drive-time: previous show in the same tour ──
   const { data: previousShow } = useQuery({
-    queryKey: ["previous-show-in-tour", (show as any)?.tour_id, show?.date, show?.id],
+    queryKey: ["previous-show-in-tour", show?.tour_id, show?.date, show?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shows")
         .select("id, city, venue_name, venue_address, date")
-        .eq("tour_id", (show as any).tour_id)
+        .eq("tour_id", show!.tour_id!)
         .lt("date", show!.date)
         .order("date", { ascending: false })
         .limit(1)
@@ -296,7 +296,7 @@ export default function ShowDetailPage() {
       if (error) throw error;
       return data;
     },
-    enabled: !!show && !!(show as any).tour_id,
+    enabled: !!show && !!show.tour_id,
   });
 
   // Departure origin = previous show's city if ≤3 days ago (band still on road), else home base
@@ -328,12 +328,11 @@ export default function ShowDetailPage() {
         body: { origin: departureOrigin!.query, destination: destinationQuery! },
       });
       if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      return data as {
-        duration_seconds: number;
-        duration_text: string;
-        distance_text?: string;
-      };
+      const result = data as
+        | { duration_seconds: number; duration_text: string; distance_text?: string }
+        | { error: string };
+      if ("error" in result) throw new Error(result.error);
+      return result;
     },
     enabled: !!departureOrigin && !!destinationQuery,
     staleTime: 1000 * 60 * 60, // 1 hour
@@ -342,8 +341,8 @@ export default function ShowDetailPage() {
 
   // Parse load-in time from schedule entries into minutes since midnight
   const loadInMinutes = useMemo(() => {
-    const entries = (show as any)?.schedule_entries ?? [];
-    const loadIn = entries.find((e: any) => isLoadInLabel(e.label));
+    const entries = show?.schedule_entries ?? [];
+    const loadIn = entries.find((e) => isLoadInLabel(e.label));
     if (!loadIn?.time) return null;
     const match = (loadIn.time as string).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
     if (!match) return null;
@@ -405,14 +404,14 @@ export default function ShowDetailPage() {
   }, [id, show, queryClient]);
 
   const updateMutation = useMutation({
-    mutationFn: async (updates: Partial<Show>) => {
+    mutationFn: async (updates: Partial<Show> & { tours?: unknown }) => {
       const {
         schedule_entries: _schedule_entries,
         show_contacts: _show_contacts,
         show_party_members: _show_party_members,
         tours: _tours,
         ...showUpdates
-      } = updates as any;
+      } = updates;
       if (showUpdates.tour_id === "" || showUpdates.tour_id === "none") showUpdates.tour_id = null;
       const { error } = await supabase.from("shows").update(showUpdates).eq("id", id!);
       if (error) throw error;
@@ -448,7 +447,7 @@ export default function ShowDetailPage() {
         actual_tickets_sold: values.actual_tickets_sold || null,
         actual_walkout: values.actual_walkout || null,
         settlement_notes: values.settlement_notes || null,
-      } as any).eq("id", id!);
+      }).eq("id", id!);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -465,7 +464,7 @@ export default function ShowDetailPage() {
     mutationFn: async (nextAdvanced: boolean) => {
       const { error } = await supabase.from("shows").update({
         advanced_at: nextAdvanced ? new Date().toISOString() : null,
-      } as any).eq("id", id!);
+      }).eq("id", id!);
       if (error) throw error;
     },
     onSuccess: (_data, nextAdvanced) => {
@@ -484,7 +483,7 @@ export default function ShowDetailPage() {
         actual_tickets_sold: null,
         actual_walkout: null,
         settlement_notes: null,
-      } as any).eq("id", id!);
+      }).eq("id", id!);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -554,7 +553,7 @@ export default function ShowDetailPage() {
   const startInlineEdit = (key: string, opts?: { timeFormat?: boolean; structuredTime?: boolean }) => {
     inlineTimeFormat.current = !!opts?.timeFormat;
     setInlineField(key);
-    setInlineValue((show as any)[key] ?? "");
+    setInlineValue((show[key as keyof typeof show] as string | null) ?? "");
   };
 
   const cancelInline = () => {
@@ -565,7 +564,7 @@ export default function ShowDetailPage() {
   const saveInline = () => {
     if (!inlineField) return;
     const val = inlineTimeFormat.current ? normalizeTime(inlineValue) : inlineValue;
-    updateMutation.mutate({ [inlineField]: val || null } as any);
+    updateMutation.mutate({ [inlineField]: val || null } as Partial<Show>);
   };
 
   // --- Backend deal structured inline edit ---
@@ -585,7 +584,7 @@ export default function ShowDetailPage() {
   const saveBackendDeal = () => {
     const pctNum = parseFloat(backendDealForm.pct);
     if (!backendDealForm.pct || isNaN(pctNum)) {
-      updateMutation.mutate({ backend_deal: null } as any);
+      updateMutation.mutate({ backend_deal: null });
       return;
     }
     const pctStr = pctNum % 1 === 0 ? String(Math.round(pctNum)) : String(pctNum);
@@ -598,7 +597,7 @@ export default function ShowDetailPage() {
       const t2Str = tier2Num % 1 === 0 ? String(Math.round(tier2Num)) : String(tier2Num);
       deal += `, then ${t2Str}% above ${thresholdNum} tickets`;
     }
-    updateMutation.mutate({ backend_deal: deal } as any);
+    updateMutation.mutate({ backend_deal: deal });
   };
 
   const scheduleEntries = show.schedule_entries?.sort((a, b) => a.sort_order - b.sort_order) ?? [];
@@ -624,7 +623,7 @@ export default function ShowDetailPage() {
         let val = inlineTimeFormat.current ? normalizeTime(inlineValue) : inlineValue;
         if (opts?.currency && val) val = formatCurrency(val);
         if (opts?.phoneFormat && val) val = normalizePhone(val);
-        updateMutation.mutate({ [inlineField]: val || null } as any);
+        updateMutation.mutate({ [inlineField]: val || null } as Partial<Show>);
       };
 
       // Structured time picker (departure, changeover)
@@ -662,7 +661,7 @@ export default function ShowDetailPage() {
     }
 
     // View mode
-    const value = (show as any)[key];
+    const value = show[key as keyof typeof show] as string | null;
     if (!value && opts?.alwaysShow) {
       return <EmptyFieldPrompt label={label} onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat, structuredTime: opts?.structuredTime })} />;
     }
@@ -760,16 +759,16 @@ export default function ShowDetailPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-1.5">
-            {(show as any).is_settled && (
+            {show.is_settled && (
               <Badge className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 bg-[hsl(var(--primary))] text-primary-foreground gap-1">
                 <CheckCircle2 className="h-2.5 w-2.5" />
                 Settled
               </Badge>
             )}
-            {(show as any).tours?.name && (
-              <Link to={`/shows?view=tour&tourId=${(show as any).tours.id}`}>
+            {show.tours?.name && (
+              <Link to={`/shows?view=tour&tourId=${show.tours.id}`}>
                 <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 hover:bg-secondary/80 transition-colors">
-                  {(show as any).tours.name}
+                  {show.tours.name}
                 </Badge>
               </Link>
             )}
@@ -786,7 +785,7 @@ export default function ShowDetailPage() {
               onChange={(e) => setInlineValue(e.target.value)}
               onBlur={() => {
                 if (inlineValue && inlineValue !== show.date) {
-                  updateMutation.mutate({ date: inlineValue } as any);
+                  updateMutation.mutate({ date: inlineValue });
                 } else {
                   setInlineField(null);
                 }
@@ -822,7 +821,7 @@ export default function ShowDetailPage() {
               onChange={(e) => setInlineValue(e.target.value)}
               onBlur={() => {
                 if (inlineValue.trim() && inlineValue !== show.venue_name) {
-                  updateMutation.mutate({ venue_name: inlineValue.trim() } as any);
+                  updateMutation.mutate({ venue_name: inlineValue.trim() });
                 } else {
                   setInlineField(null);
                 }
@@ -845,7 +844,7 @@ export default function ShowDetailPage() {
             >
               {show.venue_name}
             </h1>
-            {(show as any).advanced_at && (
+            {show.advanced_at && (
               <button
                 type="button"
                 onClick={() => toggleAdvancedMutation.mutate(false)}
@@ -900,8 +899,9 @@ export default function ShowDetailPage() {
                     if (updateError) throw updateError;
                     queryClient.invalidateQueries({ queryKey: ["show", id] });
                     toast.success("Address found and saved");
-                  } catch (err: any) {
-                    toast.error(err.message || "Could not find address");
+                  } catch (err: unknown) {
+                    const msg = err instanceof Error ? err.message : "Could not find address";
+                    toast.error(msg);
                   } finally {
                     setLookingUpAddress(false);
                   }
@@ -932,7 +932,7 @@ export default function ShowDetailPage() {
         {/* Status + actions — labeled buttons always */}
         <div className="pt-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
-            {!(show as any).advanced_at && (
+            {!show.advanced_at && (
               <button
                 type="button"
                 onClick={() => toggleAdvancedMutation.mutate(true)}
@@ -992,7 +992,7 @@ export default function ShowDetailPage() {
       </div>
 
       <TabsContent value="show">
-          {!(show as any).advance_imported_at && !showManualForm ? (
+          {!show.advance_imported_at && !showManualForm ? (
             <div className="space-y-6 sm:space-y-8">
               <div className="rounded-lg border border-border bg-card p-6 sm:p-8 text-center animate-fade-in">
                 <div className="inline-flex items-center justify-center rounded-full bg-muted p-3 mb-4">
@@ -1133,7 +1133,7 @@ export default function ShowDetailPage() {
                         variant="outline"
                         size="sm"
                         className="h-8 text-xs gap-1.5"
-                        onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture } as any)}
+                        onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture })}
                         disabled={updateMutation.isPending}
                       >
                         <Clock className="h-3 w-3" />
@@ -1493,7 +1493,7 @@ export default function ShowDetailPage() {
                 return (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {tiles.map(({ key, label, icon, tone, currency }) => {
-                      const raw = (show as any)[key];
+                      const raw = show[key as keyof typeof show] as string | null;
                       if (!raw) {
                         return (
                           <button
@@ -1681,7 +1681,7 @@ export default function ShowDetailPage() {
             })()}
 
             {/* Settlement Results — shown when settled */}
-            {(show as any).is_settled && (
+            {show.is_settled && (
               <>
                 <Separator />
                 <FieldGroup title="Settlement Results">
@@ -1689,7 +1689,7 @@ export default function ShowDetailPage() {
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Actual Walkout</p>
                       <p className="text-lg font-semibold font-mono text-[hsl(var(--success))]">
-                        {(show as any).actual_walkout || "—"}
+                        {show.actual_walkout || "—"}
                       </p>
                       {show.walkout_potential && (
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -1697,11 +1697,11 @@ export default function ShowDetailPage() {
                         </p>
                       )}
                     </div>
-                    {(show as any).actual_tickets_sold && (
+                    {show.actual_tickets_sold && (
                       <div>
                         <p className="text-xs text-muted-foreground mb-0.5">Actual Tickets Sold</p>
                         <p className="text-lg font-semibold font-mono">
-                          {(show as any).actual_tickets_sold}
+                          {show.actual_tickets_sold}
                         </p>
                         {show.venue_capacity && (
                           <p className="text-xs text-muted-foreground mt-0.5">
@@ -1711,10 +1711,10 @@ export default function ShowDetailPage() {
                       </div>
                     )}
                   </div>
-                  {(show as any).settlement_notes && (
+                  {show.settlement_notes && (
                     <div className="mt-3">
                       <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
-                      <p className="text-sm whitespace-pre-wrap">{(show as any).settlement_notes}</p>
+                      <p className="text-sm whitespace-pre-wrap">{show.settlement_notes}</p>
                     </div>
                   )}
                 </FieldGroup>
