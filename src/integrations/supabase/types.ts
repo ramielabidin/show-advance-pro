@@ -621,23 +621,29 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          expires_at: string
           id: string
           invited_by: string
           team_id: string
+          token: string
         }
         Insert: {
           created_at?: string
           email: string
+          expires_at?: string
           id?: string
           invited_by: string
           team_id: string
+          token?: string
         }
         Update: {
           created_at?: string
           email?: string
+          expires_at?: string
           id?: string
           invited_by?: string
           team_id?: string
+          token?: string
         }
         Relationships: [
           {

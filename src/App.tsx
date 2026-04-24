@@ -14,6 +14,7 @@ import DashboardPage from "@/pages/DashboardPage";
 import ShowsPage from "@/pages/ShowsPage";
 import ShowDetailPage from "@/pages/ShowDetailPage";
 import GuestShowPage from "@/pages/GuestShowPage";
+import InvitePage from "@/pages/InvitePage";
 
 import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
@@ -90,6 +91,7 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<AuthRoute />} />
               <Route path="/guest/:token" element={<GuestShowPage />} />
+              <Route path="/invite/:token" element={<InvitePage />} />
               <Route path="/*" element={<ProtectedRoutes />} />
             </Routes>
           </BrowserRouter>
