@@ -426,9 +426,10 @@ export default function DashboardPage() {
             to={`/shows/${showToday.id}`}
             className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground [transition:color_150ms_var(--ease-out)] truncate max-w-full"
           >
-            <span
-              className="h-1.5 w-1.5 rounded-full shrink-0"
-              style={{ backgroundColor: "var(--pastel-red-fg)" }}
+            <Mic
+              className="mic-glow h-3.5 w-3.5 shrink-0"
+              strokeWidth={2.25}
+              aria-hidden="true"
             />
             <span className="truncate">
               Tonight · {showToday.venue_name}
@@ -524,22 +525,13 @@ export default function DashboardPage() {
       {featured && (
         <div key={`featured:${scopeKey}`}>
           <SectionLabel>
-            {featured.mode === "next" && featured.show.date === todayStr ? (
-              <>
-                Tonight
-                <Mic
-                  className="mic-glow h-3 w-3 ml-0.5"
-                  strokeWidth={2.25}
-                  aria-hidden="true"
-                />
-              </>
-            ) : featured.mode === "final" ? (
-              "Final Show"
-            ) : scope === "standalone" ? (
-              "Next Standalone"
-            ) : (
-              "Next Show"
-            )}
+            {featured.mode === "next" && featured.show.date === todayStr
+              ? "Tonight"
+              : featured.mode === "final"
+                ? "Final Show"
+                : scope === "standalone"
+                  ? "Next Standalone"
+                  : "Next Show"}
           </SectionLabel>
           <FeaturedShowCard
             show={featured.show}
