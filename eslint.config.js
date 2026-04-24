@@ -23,4 +23,14 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
+  {
+    // Vercel serverless / edge functions — Node + Web globals, no React refresh.
+    files: ["api/**/*.{ts,tsx}"],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+    },
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
 );
