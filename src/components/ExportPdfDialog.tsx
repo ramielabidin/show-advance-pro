@@ -6,6 +6,7 @@ import { format, parseISO } from "date-fns";
 import jsPDF from "jspdf";
 import type { Show, ScheduleEntry } from "@/lib/types";
 import { formatCityState } from "@/lib/utils";
+import { shareOrDownloadPdf } from "@/lib/sharePdf";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ const T = {
 export default function ExportPdfDialog({ show, trigger }: Props) {
   const [generating, setGenerating] = useState(false);
 
-  const generatePdf = () => {
+  const generatePdf = async () => {
     setGenerating(true);
 
     try {
@@ -339,8 +340,8 @@ export default function ExportPdfDialog({ show, trigger }: Props) {
       // ────────────────────────────────────────────────────────────────────
       const venueSafe = show.venue_name.replace(/[^a-zA-Z0-9]/g, "");
       const filename = `${show.date}-${venueSafe}-RunOfShow.pdf`;
-      doc.save(filename);
-      toast.success("PDF downloaded");
+      const result = await shareOrDownloadPdf(doc, filename, `${show.venue_name} — Run of Show`);
+      toast.success(result === "shared" ? "Run of Show ready to share" : "PDF downloaded");
     } catch (err: unknown) {
       console.error("PDF error:", err);
       toast.error("Failed to generate PDF");

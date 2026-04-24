@@ -6,23 +6,19 @@ import { format, parseISO } from "date-fns";
 import jsPDF from "jspdf";
 import type { Show, SetListEntry } from "@/lib/types";
 import { formatCityState } from "@/lib/utils";
+import { shareOrDownloadPdf } from "@/lib/sharePdf";
 
 // ─── Design tokens ──────────────────────────────────────────────────────────
 //
-// Mirrors ExportPdfDialog so set list prints read as a companion artifact
-// taped next to the run-of-show poster. Any token change here should also
-// happen in ExportPdfDialog.
+// Set lists get printed and taped to the wall — pure black-and-white so it
+// reads cleanly on any home/office printer and doesn't waste color/grayscale
+// toner on a warm background. The Run-of-Show poster keeps its warm palette
+// (see ExportPdfDialog) since it's a hero artifact, not a printable utility.
 
 const T = {
-  canvas:      [250, 248, 245] as [number, number, number],
-  card:        [253, 253, 252] as [number, number, number],
-  ink:         [34,  31,  28]  as [number, number, number],
-  muted:       [138, 128, 117] as [number, number, number],
-  mutedSoft:   [164, 158, 152] as [number, number, number],
-  border:      [234, 230, 225] as [number, number, number],
-  borderSoft:  [240, 236, 231] as [number, number, number],
-  accent:      [52,  101, 56]  as [number, number, number],
-  accentSoft:  [237, 243, 236] as [number, number, number],
+  ink:       [0,   0,   0]   as [number, number, number],
+  muted:     [80,  80,  80]  as [number, number, number],
+  mutedSoft: [120, 120, 120] as [number, number, number],
 } as const;
 
 interface Props {
@@ -39,7 +35,7 @@ function titleOf(e: SetListEntry): string {
 export default function SetListPdfDialog({ show, entries, trigger }: Props) {
   const [generating, setGenerating] = useState(false);
 
-  const generatePdf = () => {
+  const generatePdf = async () => {
     if (entries.length === 0) {
       toast.error("Add at least one song before exporting.");
       return;
@@ -57,15 +53,12 @@ export default function SetListPdfDialog({ show, entries, trigger }: Props) {
       const MB = 56;
       const CW = PW - ML - MR;
 
-      doc.setFillColor(...T.canvas);
-      doc.rect(0, 0, PW, PH, "F");
+      // No page fill — leave the page natively white. Skipping the fill means
+      // printers that interpret near-white as a tint won't waste toner on the
+      // background.
 
       // ════════════════════════════════════════════════════════════════════
       // HEADER — venue left, date + city stacked right, baseline-anchored
-      //
-      // Date/city share the last line of the venue block. If the venue name
-      // is long enough to wrap, the right-side metadata still aligns to the
-      // last venue line's baseline.
       // ════════════════════════════════════════════════════════════════════
 
       const cityStr = formatCityState(show.city);
@@ -83,7 +76,6 @@ export default function SetListPdfDialog({ show, entries, trigger }: Props) {
       doc.text(venueLines, ML, firstBaselineY);
       const lastVenueBaseline = firstBaselineY + (venueLines.length - 1) * VENUE_FS;
 
-      // Right-aligned date at the venue's last baseline
       const rightX = ML + CW;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
@@ -96,15 +88,10 @@ export default function SetListPdfDialog({ show, entries, trigger }: Props) {
         doc.text(cityStr, rightX, lastVenueBaseline + 14, { align: "right" });
       }
 
-      // Advance from the bottom of the header block to the first song
       const y = lastVenueBaseline + (cityStr ? 14 : 0) + 22;
 
       // ════════════════════════════════════════════════════════════════════
       // SET LIST — unboxed, numbered list with auto-sized rows
-      //
-      // No card border, fill, or dividers — the numbers provide all the
-      // visual structure needed, and the output stays legible when printed
-      // in black and white.
       //
       // Fit strategy (one-page guarantee is the hard constraint):
       //   1. Try single-column with a readable 14pt floor.
@@ -194,8 +181,8 @@ export default function SetListPdfDialog({ show, entries, trigger }: Props) {
 
       const venueSafe = show.venue_name.replace(/[^a-zA-Z0-9]/g, "");
       const filename = `${show.date}-${venueSafe}-SetList.pdf`;
-      doc.save(filename);
-      toast.success("Set list PDF downloaded");
+      const result = await shareOrDownloadPdf(doc, filename, `${show.venue_name} — Set List`);
+      toast.success(result === "shared" ? "Set list ready to share" : "Set list PDF downloaded");
     } catch (err: unknown) {
       console.error("Set list PDF error:", err);
       toast.error("Failed to generate PDF");
