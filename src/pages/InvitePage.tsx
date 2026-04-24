@@ -79,7 +79,7 @@ function DataBlock({
 function SignOff({ token, children }: { token: string; children: React.ReactNode }) {
   return (
     <div className="mt-14 font-mono text-[11px] leading-[1.7] text-muted-foreground">
-      — Advance · advance.fm/invite/{token.slice(0, 6)}
+      — Advance · advancetouring.com/invite/{token.slice(0, 6)}
       <br />
       {children}
     </div>
@@ -139,6 +139,20 @@ export default function InvitePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const ssoReturn = searchParams.get("sso") === "1";
+
+  // Force light mode on this page — it's a visual continuation of the
+  // warm-light Dispatch invite email, and the app's dark-mode default
+  // would break that continuity. We mutate the root class directly rather
+  // than touching next-themes' stored preference so the user's normal
+  // theme choice is restored when they leave the page.
+  useEffect(() => {
+    const root = document.documentElement;
+    const hadDark = root.classList.contains("dark");
+    root.classList.remove("dark");
+    return () => {
+      if (hadDark) root.classList.add("dark");
+    };
+  }, []);
 
   const { data: resolution, isLoading } = useQuery<InviteResolution>({
     queryKey: ["resolve-team-invite", token],
@@ -352,8 +366,9 @@ function NewUserAcceptForm({
       </h1>
       <DashRule />
       <p className="m-0 max-w-[460px] text-base leading-[1.6] text-foreground/80">
-        <strong className="font-semibold">{resolution.inviter.name}</strong> added you to a tour
-        they're running on Advance. Pick a name and password and you'll show up on their crew.
+        <strong className="font-semibold">{resolution.inviter.name}</strong> invited you to join{" "}
+        <strong className="font-semibold">{resolution.team.displayName}</strong> on Advance. Pick a
+        name and password and you'll show up on their crew.
       </p>
 
       <DataBlock
@@ -598,8 +613,9 @@ function ExistingUserConfirm({
       </h1>
       <DashRule />
       <p className="m-0 max-w-[460px] text-base leading-[1.6] text-foreground/80">
-        <strong className="font-semibold">{resolution.inviter.name}</strong> added you to a tour
-        they're running. One click and you'll show up on their crew — no new account needed.
+        <strong className="font-semibold">{resolution.inviter.name}</strong> invited you to join{" "}
+        <strong className="font-semibold">{resolution.team.displayName}</strong>. One click and
+        you'll show up on their crew — no new account needed.
       </p>
 
       <DataBlock
