@@ -115,9 +115,24 @@ serve(async (req) => {
     const { invite, error: inviteError, status: inviteStatus } = await loadInvite(admin, token);
     if (!invite) return json({ error: inviteError }, inviteStatus);
 
+    // Supabase JS always sends an Authorization header — either a real
+    // user JWT or the anon key — so header presence alone can't
+    // distinguish signup from existing-user accept. Try to resolve the
+    // JWT to an actual user; only route to the signup path if that
+    // fails.
     const authHeader = req.headers.get("authorization");
+    let user: { id: string; email: string | null } | null = null;
+    if (authHeader) {
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: userData } = await userClient.auth.getUser();
+      user = userData?.user
+        ? { id: userData.user.id, email: userData.user.email ?? null }
+        : null;
+    }
 
-    if (!authHeader) {
+    if (!user) {
       // ── New-user signup path ──
       const name = typeof body.name === "string" ? body.name.trim() : "";
       const password = typeof body.password === "string" ? body.password : "";
@@ -156,12 +171,6 @@ serve(async (req) => {
     }
 
     // ── Existing user path ──
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userError } = await userClient.auth.getUser();
-    if (userError || !userData?.user) return json({ error: "Unauthorized" }, 401);
-    const user = userData.user;
 
     const invitedEmail = invite.email.toLowerCase();
     const userEmail = (user.email ?? "").toLowerCase();
