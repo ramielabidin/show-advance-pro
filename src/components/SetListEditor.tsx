@@ -250,17 +250,19 @@ export default function SetListEditor({ show }: Props) {
   const toggleSong = (song: Song) => {
     if (!selectedSongIds.has(song.id)) {
       setEntries((prev) => [...prev, { kind: "song", song_id: song.id, title: song.title }]);
-      return;
-    }
-    setEntries((prev) => {
-      for (let i = prev.length - 1; i >= 0; i--) {
-        const e = prev[i];
-        if (e.kind === "song" && e.song_id === song.id) {
-          return prev.filter((_, idx) => idx !== i);
+    } else {
+      setEntries((prev) => {
+        for (let i = prev.length - 1; i >= 0; i--) {
+          const e = prev[i];
+          if (e.kind === "song" && e.song_id === song.id) {
+            return prev.filter((_, idx) => idx !== i);
+          }
         }
-      }
-      return prev;
-    });
+        return prev;
+      });
+    }
+    // Typeahead: clear after each pick so the user can keep typing the next song.
+    setSearch("");
   };
 
   const commitCustom = () => {
@@ -348,25 +350,27 @@ export default function SetListEditor({ show }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-2 md:gap-6">
-        {/* ── Catalog ─────────────────────────────────────────────── */}
-        <section className="space-y-2 order-2 md:order-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
-              Catalog · {search.trim() ? `${filteredSongs.length} of ${songs.length}` : songs.length}
-            </span>
-          </div>
+      {/* ── Add row ──────────────────────────────────────────────
+          Search is pinned at the top. The matching-songs panel only
+          appears while there's a query, so an empty editor stays quiet
+          and Tonight's Set isn't pushed off-screen by a full catalog. */}
+      <section className="space-y-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={
+              songs.length === 0
+                ? "Add songs in Settings → Song catalog"
+                : `Search your ${songs.length}-song catalog`
+            }
+            className="h-9 pl-8"
+            disabled={songs.length === 0 && !songsLoading}
+          />
+        </div>
 
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search catalog"
-              className="h-9 pl-8"
-            />
-          </div>
-
+        {search.trim() && (
           <div className="rounded-lg border bg-card overflow-hidden">
             {songsLoading ? (
               <div className="p-3 space-y-2">
@@ -375,17 +379,17 @@ export default function SetListEditor({ show }: Props) {
                 ))}
               </div>
             ) : songs.length === 0 ? (
-              <div className="text-center py-8 px-4 text-muted-foreground">
-                <Music className="h-7 w-7 mx-auto mb-2 opacity-40" />
+              <div className="text-center py-6 px-4 text-muted-foreground">
+                <Music className="h-6 w-6 mx-auto mb-2 opacity-40" />
                 <p className="text-sm">Your catalog is empty.</p>
                 <p className="text-xs mt-1">Add songs in Settings → Song catalog.</p>
               </div>
             ) : filteredSongs.length === 0 ? (
-              <div className="text-center py-8 px-4 text-sm text-muted-foreground">
+              <div className="text-center py-6 px-4 text-sm text-muted-foreground">
                 No songs match "{search}".
               </div>
             ) : (
-              filteredSongs.map((s, i) => {
+              filteredSongs.slice(0, 8).map((s, i, arr) => {
                 const checked = selectedSongIds.has(s.id);
                 return (
                   <button
@@ -395,7 +399,7 @@ export default function SetListEditor({ show }: Props) {
                     aria-pressed={checked}
                     className={cn(
                       "flex items-center justify-between w-full text-left px-3 py-2 hover:bg-muted/60 [transition:background-color_150ms_var(--ease-out)]",
-                      i < filteredSongs.length - 1 && "border-b border-border/60",
+                      i < arr.length - 1 && "border-b border-border/60",
                     )}
                   >
                     <span className="text-sm text-foreground truncate">{s.title}</span>
@@ -408,141 +412,138 @@ export default function SetListEditor({ show }: Props) {
                 );
               })
             )}
+            {filteredSongs.length > 8 && (
+              <div className="px-3 py-2 text-[11px] text-muted-foreground border-t border-border/60 bg-muted/30">
+                Showing 8 of {filteredSongs.length} — keep typing to narrow down.
+              </div>
+            )}
           </div>
-        </section>
+        )}
 
-        {/* ── Tonight's Set ───────────────────────────────────────── */}
-        <section className="space-y-2 order-1 md:order-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
-              Tonight's set · {entries.length}
-            </span>
-          </div>
-
-          {/* Randomize controls */}
-          <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-2 py-2">
-            <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs" onClick={shuffleSelected}>
-              <Shuffle className="h-3.5 w-3.5" />
-              Shuffle
+        {/* Add custom / note — always visible below the search */}
+        {addingCustom ? (
+          <div className="flex items-center gap-2">
+            <Input
+              autoFocus
+              value={customDraft}
+              onChange={(e) => setCustomDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitCustom();
+                else if (e.key === "Escape") {
+                  setCustomDraft("");
+                  setAddingCustom(false);
+                }
+              }}
+              placeholder="Song not in catalog"
+              className="h-9"
+            />
+            <Button size="sm" variant="outline" onClick={commitCustom} disabled={!customDraft.trim()}>
+              Add
             </Button>
-            <div className="h-5 w-px bg-border" />
-            <div className="flex items-center gap-1.5">
-              <Input
-                type="number"
-                min={1}
-                value={randomCount}
-                onChange={(e) => setRandomCount(Math.max(1, Number(e.target.value) || 1))}
-                className="h-8 w-14 text-xs"
-              />
-              <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs" onClick={randomFromCatalog}>
-                <Dices className="h-3.5 w-3.5" />
-                Random from catalog
-              </Button>
+          </div>
+        ) : addingNote ? (
+          <div className="flex items-center gap-2">
+            <Input
+              autoFocus
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitNote();
+                else if (e.key === "Escape") {
+                  setNoteDraft("");
+                  setAddingNote(false);
+                }
+              }}
+              placeholder="e.g. tuning break, talk"
+              className="h-9"
+            />
+            <Button size="sm" variant="outline" onClick={commitNote} disabled={!noteDraft.trim()}>
+              Add
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 gap-1.5 text-xs text-muted-foreground"
+              onClick={() => {
+                setAddingCustom(true);
+                setAddingNote(false);
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Custom song
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 gap-1.5 text-xs text-muted-foreground"
+              onClick={() => {
+                setAddingNote(true);
+                setAddingCustom(false);
+              }}
+            >
+              <StickyNote className="h-3.5 w-3.5" />
+              Note
+            </Button>
+          </div>
+        )}
+      </section>
+
+      {/* ── Tonight's Set ─────────────────────────────────────── */}
+      <section className="space-y-2">
+        {/* Randomize controls */}
+        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-2 py-2">
+          <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs" onClick={shuffleSelected}>
+            <Shuffle className="h-3.5 w-3.5" />
+            Shuffle
+          </Button>
+          <div className="h-5 w-px bg-border" />
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="number"
+              min={1}
+              value={randomCount}
+              onChange={(e) => setRandomCount(Math.max(1, Number(e.target.value) || 1))}
+              className="h-8 w-14 text-xs"
+            />
+            <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs" onClick={randomFromCatalog}>
+              <Dices className="h-3.5 w-3.5" />
+              Random from catalog
+            </Button>
+          </div>
+        </div>
+
+        {/* Set list entries — drag to reorder */}
+        <div className="rounded-lg border bg-card overflow-hidden group">
+          {entries.length === 0 ? (
+            <div className="text-center py-8 px-4 text-muted-foreground">
+              <ListMusic className="h-7 w-7 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">Nothing picked yet.</p>
+              <p className="text-xs mt-1">Search your catalog above or add a custom song.</p>
             </div>
-          </div>
-
-          {/* Set list entries — drag to reorder */}
-          <div className="rounded-lg border bg-card overflow-hidden group">
-            {entries.length === 0 ? (
-              <div className="text-center py-8 px-4 text-muted-foreground">
-                <ListMusic className="h-7 w-7 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">Nothing picked yet.</p>
-                <p className="text-xs mt-1">Pick from your catalog or add a custom song.</p>
-              </div>
-            ) : (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-                  {entries.map((e, i) => (
-                    <SortableRow
-                      key={ids[i]}
-                      id={ids[i]}
-                      entry={e}
-                      number={e.kind !== "note" ? visibleNumber(i) : null}
-                      index={i}
-                      total={entries.length}
-                      onRemove={() => removeAt(i)}
-                      onMoveUp={() => moveUp(i)}
-                      onMoveDown={() => moveDown(i)}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
-            )}
-          </div>
-
-          {/* Add custom / note */}
-          <div className="space-y-2">
-            {addingCustom ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  autoFocus
-                  value={customDraft}
-                  onChange={(e) => setCustomDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitCustom();
-                    else if (e.key === "Escape") {
-                      setCustomDraft("");
-                      setAddingCustom(false);
-                    }
-                  }}
-                  placeholder="Song not in catalog"
-                  className="h-9"
-                />
-                <Button size="sm" variant="outline" onClick={commitCustom} disabled={!customDraft.trim()}>
-                  Add
-                </Button>
-              </div>
-            ) : addingNote ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  autoFocus
-                  value={noteDraft}
-                  onChange={(e) => setNoteDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitNote();
-                    else if (e.key === "Escape") {
-                      setNoteDraft("");
-                      setAddingNote(false);
-                    }
-                  }}
-                  placeholder="e.g. tuning break, talk"
-                  className="h-9"
-                />
-                <Button size="sm" variant="outline" onClick={commitNote} disabled={!noteDraft.trim()}>
-                  Add
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 gap-1.5 text-xs text-muted-foreground"
-                  onClick={() => {
-                    setAddingCustom(true);
-                    setAddingNote(false);
-                  }}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Custom song
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 gap-1.5 text-xs text-muted-foreground"
-                  onClick={() => {
-                    setAddingNote(true);
-                    setAddingCustom(false);
-                  }}
-                >
-                  <StickyNote className="h-3.5 w-3.5" />
-                  Note
-                </Button>
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
+          ) : (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+                {entries.map((e, i) => (
+                  <SortableRow
+                    key={ids[i]}
+                    id={ids[i]}
+                    entry={e}
+                    number={e.kind !== "note" ? visibleNumber(i) : null}
+                    index={i}
+                    total={entries.length}
+                    onRemove={() => removeAt(i)}
+                    onMoveUp={() => moveUp(i)}
+                    onMoveDown={() => moveDown(i)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
