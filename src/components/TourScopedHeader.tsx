@@ -155,7 +155,7 @@ export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: Tou
               className="font-display text-3xl md:text-4xl tracking-[-0.02em] h-12 sm:h-14"
             />
           ) : (
-            <h1 className="font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground truncate">
+            <h1 className="font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground break-words">
               {tour.name}
             </h1>
           )}
@@ -195,10 +195,6 @@ export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: Tou
             </>
           ) : (
             <>
-              <Button variant="outline" size="sm" onClick={startEdit} className="h-11 sm:h-9 gap-1.5">
-                <Edit className="h-4 w-4" />
-                <span className="hidden sm:inline">Edit tour</span>
-              </Button>
               <CreateShowDialog defaultTourId={tour.id} />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -207,6 +203,10 @@ export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: Tou
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={startEdit}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit tour
+                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setLinkingOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Link existing show
