@@ -493,24 +493,36 @@ export default function SetListEditor({ show }: Props) {
 
       {/* ── Tonight's Set ─────────────────────────────────────── */}
       <section className="space-y-2">
-        {/* Randomize controls */}
-        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-2 py-2">
-          <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs" onClick={shuffleSelected}>
+        {/* Set actions — ghost buttons matching the Custom song / Note row
+            above. Number input sits left of Random so it reads as a
+            quantity (e.g. "10 Random"). */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 gap-1.5 text-xs text-muted-foreground"
+            onClick={shuffleSelected}
+          >
             <Shuffle className="h-3.5 w-3.5" />
             Shuffle
           </Button>
-          <div className="h-5 w-px bg-border" />
           <div className="flex items-center gap-1.5">
             <Input
               type="number"
               min={1}
               value={randomCount}
               onChange={(e) => setRandomCount(Math.max(1, Number(e.target.value) || 1))}
-              className="h-8 w-14 text-xs"
+              className="h-8 w-12 px-1.5 text-xs text-center"
+              aria-label="How many random songs"
             />
-            <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs" onClick={randomFromCatalog}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 gap-1.5 text-xs text-muted-foreground"
+              onClick={randomFromCatalog}
+            >
               <Dices className="h-3.5 w-3.5" />
-              Random from catalog
+              Random
             </Button>
           </div>
         </div>
