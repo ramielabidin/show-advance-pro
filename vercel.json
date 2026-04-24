@@ -1,6 +1,7 @@
 {
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/guest/:token", "destination": "/api/guest-preview?token=:token" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
