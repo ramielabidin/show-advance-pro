@@ -46,7 +46,7 @@ import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
 import ShowAttachments from "@/components/ShowAttachments";
 import ExportPdfDialog from "@/components/ExportPdfDialog";
-import SetListDialog from "@/components/SetListDialog";
+import SetListEditor from "@/components/SetListEditor";
 import CopyGuestLinkButton from "@/components/CopyGuestLinkButton";
 import { useGuestLink } from "@/hooks/useGuestLink";
 import GuestListEditor, { GuestListView, parseGuestList, parseComps } from "@/components/GuestListEditor";
@@ -164,7 +164,6 @@ function HeaderActions({
           <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
           <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
           <ExportPdfDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
-          <SetListDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Set list</DropdownMenuItem>} />
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onSelect={(e) => {
@@ -195,7 +194,7 @@ export default function ShowDetailPage() {
   const queryClient = useQueryClient();
   const { teamId } = useTeam();
 
-  const [viewTab, setViewTab] = useState<"show" | "deal" | "contacts">("show");
+  const [viewTab, setViewTab] = useState<"show" | "deal" | "contacts" | "set-list">("show");
 
   // When we arrive here from the inbound-email "Review Now" flow, the
   // forwarded email body is handed off via location state. Consume it once,
@@ -743,7 +742,7 @@ export default function ShowDetailPage() {
       <Tabs
         value={viewTab}
         onValueChange={(v) => {
-          const next = v as "show" | "deal" | "contacts";
+          const next = v as "show" | "deal" | "contacts" | "set-list";
           setViewTab(next);
           if (next === "deal" && id && !dealTabSeen) {
             localStorage.setItem(`deal-tab-seen-${id}`, "true");
@@ -986,6 +985,17 @@ export default function ShowDetailPage() {
               className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
             >
               Contacts
+            </TabsTrigger>
+            <TabsTrigger
+              value="set-list"
+              className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
+            >
+              Set List
+              {Array.isArray(show.set_list) && show.set_list.length > 0 && (
+                <span className="ml-1.5 text-[10px] font-mono text-muted-foreground">
+                  {show.set_list.length}
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -1465,6 +1475,14 @@ export default function ShowDetailPage() {
                   }
                 }}
               />
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="set-list">
+          <div className="space-y-6 sm:space-y-8">
+            <Card className="p-5 sm:p-6">
+              <SetListEditor show={show as Show} />
             </Card>
           </div>
         </TabsContent>
