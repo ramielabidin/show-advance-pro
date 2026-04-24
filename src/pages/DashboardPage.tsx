@@ -17,6 +17,7 @@ import {
   DollarSign,
   CheckCircle2,
   Info,
+  Mic,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -523,11 +524,22 @@ export default function DashboardPage() {
       {featured && (
         <div key={`featured:${scopeKey}`}>
           <SectionLabel>
-            {featured.mode === "final"
-              ? "Final Show"
-              : scope === "standalone"
-                ? "Next Standalone"
-                : "Next Show"}
+            {featured.mode === "next" && featured.show.date === todayStr ? (
+              <>
+                Tonight
+                <Mic
+                  className="mic-glow h-3 w-3 ml-0.5"
+                  strokeWidth={2.25}
+                  aria-hidden="true"
+                />
+              </>
+            ) : featured.mode === "final" ? (
+              "Final Show"
+            ) : scope === "standalone" ? (
+              "Next Standalone"
+            ) : (
+              "Next Show"
+            )}
           </SectionLabel>
           <FeaturedShowCard
             show={featured.show}
