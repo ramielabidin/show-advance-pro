@@ -60,8 +60,8 @@ function CreateTeamScreen({ userId }: { userId: string }) {
 
       queryClient.invalidateQueries({ queryKey: ["user-teams"] });
       toast.success("Artist profile created!");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create artist profile");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to create artist profile");
     } finally {
       setLoading(false);
     }
@@ -126,7 +126,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     enabled: !!session,
   });
 
-  const team = (membership as any)?.teams as Team | null;
+  const team = (membership?.teams ?? null) as Team | null;
   const teamId = team?.id ?? null;
   const isOwner = membership?.role === "owner";
 

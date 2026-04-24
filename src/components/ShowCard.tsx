@@ -58,7 +58,7 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
                 New
               </span>
             )}
-            {(show as any).is_settled && (
+            {show.is_settled && (
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0"
                 style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}

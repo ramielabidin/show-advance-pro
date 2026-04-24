@@ -74,7 +74,13 @@ serve(async (req) => {
 
   // Exchange code for access token
   const redirectUri = `${supabaseUrl}/functions/v1/slack-oauth-callback`;
-  let tokenData: any;
+  interface SlackOAuthResponse {
+    ok: boolean;
+    error?: string;
+    incoming_webhook?: { url?: string; channel?: string | null };
+    team?: { name?: string | null };
+  }
+  let tokenData: SlackOAuthResponse;
   try {
     const tokenRes = await fetch("https://slack.com/api/oauth.v2.access", {
       method: "POST",
@@ -86,7 +92,7 @@ serve(async (req) => {
         redirect_uri: redirectUri,
       }),
     });
-    tokenData = await tokenRes.json();
+    tokenData = (await tokenRes.json()) as SlackOAuthResponse;
   } catch (err) {
     console.error("Token exchange network error:", err);
     return Response.redirect(`${appUrl}/settings?slack=error`, 302);

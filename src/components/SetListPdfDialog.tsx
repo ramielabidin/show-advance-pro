@@ -196,7 +196,7 @@ export default function SetListPdfDialog({ show, entries, trigger }: Props) {
       const filename = `${show.date}-${venueSafe}-SetList.pdf`;
       doc.save(filename);
       toast.success("Set list PDF downloaded");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Set list PDF error:", err);
       toast.error("Failed to generate PDF");
     } finally {
