@@ -17,7 +17,6 @@ import {
   DollarSign,
   CheckCircle2,
   Info,
-  Mic,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -419,22 +418,6 @@ export default function DashboardPage() {
         <h1 className="font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
           {headerLine}
         </h1>
-        {showToday && (
-          <Link
-            to={`/shows/${showToday.id}`}
-            className="mt-2 flex items-start gap-2 text-sm text-muted-foreground hover:text-foreground [transition:color_150ms_var(--ease-out)]"
-          >
-            <Mic
-              className="mic-glow h-3.5 w-3.5 shrink-0 mt-0.5"
-              strokeWidth={2.25}
-              aria-hidden="true"
-            />
-            <span>
-              Tonight · {showToday.venue_name}
-              {showToday.city ? `, ${formatCityState(showToday.city)}` : ""}
-            </span>
-          </Link>
-        )}
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <BulkUploadDialog triggerClassName="h-9" iconOnlyMobile />
@@ -958,7 +941,7 @@ function FeaturedShowCard({
                 <span className="inline-flex items-center mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
                   {format(date, "MMM d, yyyy")}
                 </span>
-              ) : (
+              ) : daysAway > 0 ? (
                 <span
                   className={cn(
                     "inline-flex items-center mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full",
@@ -972,7 +955,7 @@ function FeaturedShowCard({
                 >
                   {daysLabel}
                 </span>
-              )}
+              ) : null}
             </div>
 
             {/* Advance status dot */}
