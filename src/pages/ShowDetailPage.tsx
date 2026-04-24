@@ -328,12 +328,11 @@ export default function ShowDetailPage() {
         body: { origin: departureOrigin!.query, destination: destinationQuery! },
       });
       if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      return data as {
-        duration_seconds: number;
-        duration_text: string;
-        distance_text?: string;
-      };
+      const result = data as
+        | { duration_seconds: number; duration_text: string; distance_text?: string }
+        | { error: string };
+      if ("error" in result) throw new Error(result.error);
+      return result;
     },
     enabled: !!departureOrigin && !!destinationQuery,
     staleTime: 1000 * 60 * 60, // 1 hour
@@ -900,8 +899,9 @@ export default function ShowDetailPage() {
                     if (updateError) throw updateError;
                     queryClient.invalidateQueries({ queryKey: ["show", id] });
                     toast.success("Address found and saved");
-                  } catch (err: any) {
-                    toast.error(err.message || "Could not find address");
+                  } catch (err: unknown) {
+                    const msg = err instanceof Error ? err.message : "Could not find address";
+                    toast.error(msg);
                   } finally {
                     setLookingUpAddress(false);
                   }
