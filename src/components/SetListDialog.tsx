@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Plus,
+  Check,
   X,
   ChevronUp,
   ChevronDown,
@@ -27,6 +28,7 @@ import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import type { Show, Song, SetListEntry } from "@/lib/types";
 import { cn, formatCityState } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import SetListPdfDialog from "@/components/SetListPdfDialog";
 
 interface Props {
@@ -57,6 +59,7 @@ export default function SetListDialog({ show, trigger }: Props) {
   const [randomCount, setRandomCount] = useState(10);
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   // Seed local state from show on open; reset on close.
   useEffect(() => {
@@ -90,6 +93,12 @@ export default function SetListDialog({ show, trigger }: Props) {
     return songs.filter((s) => s.title.toLowerCase().includes(q));
   }, [songs, search]);
 
+  const selectedSongIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const e of entries) if (e.kind === "song") s.add(e.song_id);
+    return s;
+  }, [entries]);
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const { error } = await (supabase as any)
@@ -107,8 +116,20 @@ export default function SetListDialog({ show, trigger }: Props) {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const addSong = (song: Song) => {
-    setEntries((prev) => [...prev, { kind: "song", song_id: song.id, title: song.title }]);
+  const toggleSong = (song: Song) => {
+    if (!selectedSongIds.has(song.id)) {
+      setEntries((prev) => [...prev, { kind: "song", song_id: song.id, title: song.title }]);
+      return;
+    }
+    setEntries((prev) => {
+      for (let i = prev.length - 1; i >= 0; i--) {
+        const e = prev[i];
+        if (e.kind === "song" && e.song_id === song.id) {
+          return prev.filter((_, idx) => idx !== i);
+        }
+      }
+      return prev;
+    });
   };
 
   const commitCustom = () => {
@@ -159,6 +180,14 @@ export default function SetListDialog({ show, trigger }: Props) {
   const randomFromCatalog = () => {
     if (songs.length === 0) {
       toast.error("Catalog is empty — add songs in Settings first.");
+      return;
+    }
+    if (
+      entries.length > 0 &&
+      !window.confirm(
+        `Replace your current ${entries.length}-item set with a random pick?`,
+      )
+    ) {
       return;
     }
     const wanted = Math.max(1, Math.floor(randomCount));
@@ -217,12 +246,17 @@ export default function SetListDialog({ show, trigger }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-5 md:grid-cols-2 md:gap-6 pt-2">
+        <div
+          className={cn(
+            "grid gap-5 md:grid-cols-2 md:gap-6 pt-2",
+            isMobile && "flex flex-col-reverse",
+          )}
+        >
           {/* ── Catalog ─────────────────────────────────────────────── */}
           <section className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
-                Catalog · {songs.length}
+                Catalog · {search.trim() ? `${filteredSongs.length} of ${songs.length}` : songs.length}
               </span>
             </div>
 
@@ -237,7 +271,11 @@ export default function SetListDialog({ show, trigger }: Props) {
             </div>
 
             <div className="rounded-lg border bg-card overflow-hidden max-h-[360px] overflow-y-auto">
-              {songsLoading ? (
+              {isMobile && !search.trim() && songs.length > 0 ? (
+                <div className="text-center py-8 px-4 text-sm text-muted-foreground">
+                  Search your catalog of {songs.length} songs.
+                </div>
+              ) : songsLoading ? (
                 <div className="p-3 space-y-2">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="h-9 rounded-md bg-muted animate-pulse" />
@@ -256,20 +294,28 @@ export default function SetListDialog({ show, trigger }: Props) {
                   No songs match "{search}".
                 </div>
               ) : (
-                filteredSongs.map((s, i) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => addSong(s)}
-                    className={cn(
-                      "flex items-center justify-between w-full text-left px-3 py-2 hover:bg-muted/60 [transition:background-color_150ms_var(--ease-out)]",
-                      i < filteredSongs.length - 1 && "border-b border-border/60",
-                    )}
-                  >
-                    <span className="text-sm text-foreground truncate">{s.title}</span>
-                    <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-2" />
-                  </button>
-                ))
+                filteredSongs.map((s, i) => {
+                  const checked = selectedSongIds.has(s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => toggleSong(s)}
+                      aria-pressed={checked}
+                      className={cn(
+                        "flex items-center justify-between w-full text-left px-3 py-2 hover:bg-muted/60 [transition:background-color_150ms_var(--ease-out)]",
+                        i < filteredSongs.length - 1 && "border-b border-border/60",
+                      )}
+                    >
+                      <span className="text-sm text-foreground truncate">{s.title}</span>
+                      {checked ? (
+                        <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-2" />
+                      ) : (
+                        <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-2" />
+                      )}
+                    </button>
+                  );
+                })
               )}
             </div>
           </section>
@@ -320,7 +366,7 @@ export default function SetListDialog({ show, trigger }: Props) {
                 <div className="text-center py-8 px-4 text-muted-foreground">
                   <ListMusic className="h-7 w-7 mx-auto mb-2 opacity-40" />
                   <p className="text-sm">Nothing picked yet.</p>
-                  <p className="text-xs mt-1">Click songs from the catalog to add them.</p>
+                  <p className="text-xs mt-1">Pick from your catalog or add a custom song.</p>
                 </div>
               ) : (
                 entries.map((e, i) => {
