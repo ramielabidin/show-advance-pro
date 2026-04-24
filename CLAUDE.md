@@ -6,6 +6,8 @@
 
 Currently pre-launch, transitioning from personal tool to SaaS product. The UI is the product — output quality (PDFs, emails, Slack messages) must match in-app quality.
 
+**Production domain is `advancetouring.com`** (served from `app.advancetouring.com` for the app). Some older design handoff mocks use the placeholder `advance.fm` — that is **not** the real domain and should not appear in shipped copy, emails, or UI.
+
 ## Project context
 
 Always consult `ROADMAP.md` (at the repo root) before proposing significant feature work or architectural changes — it is the source of truth for product direction, pricing, roles/permissions, and phase priorities.
