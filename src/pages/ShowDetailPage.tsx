@@ -79,6 +79,40 @@ function formatCurrency(raw: string): string {
   }).format(num);
 }
 
+interface ShareMenuContentProps {
+  show: Show;
+  showId: string;
+  onOpenDelete: () => void;
+}
+
+function ShareMenuContent({ show, showId, onOpenDelete }: ShareMenuContentProps) {
+  const { copyOrCreate: copyMagicLink, isPending: isCopyPending } = useGuestLink(showId, "daysheet");
+  return (
+    <>
+      <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
+      <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
+      <ExportPdfDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        onSelect={(e) => {
+          e.preventDefault();
+          copyMagicLink();
+        }}
+        disabled={isCopyPending}
+      >
+        <Sparkles className="h-3.5 w-3.5 mr-2" /> Copy magic link
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        className="text-destructive focus:text-destructive"
+        onClick={onOpenDelete}
+      >
+        <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete show
+      </DropdownMenuItem>
+    </>
+  );
+}
+
 interface HeaderActionsProps {
   show: Show;
   showId: string;
@@ -231,26 +265,7 @@ function HeaderActions({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
-            <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
-            <ExportPdfDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onSelect={(e) => {
-                e.preventDefault();
-                copyMagicLink();
-              }}
-              disabled={isCopyPending}
-            >
-              <Sparkles className="h-3.5 w-3.5 mr-2" /> Copy magic link
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={onOpenDelete}
-            >
-              <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete show
-            </DropdownMenuItem>
+            <ShareMenuContent show={show} showId={showId} onOpenDelete={onOpenDelete} />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -911,6 +926,22 @@ export default function ShowDetailPage() {
         <span className="font-display text-base leading-none truncate flex-1">
           {show.venue_name}
         </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="secondary"
+              className="h-8 px-3 rounded-md gap-1.5 text-xs font-medium shrink-0"
+              tabIndex={headerCollapsed ? 0 : -1}
+              aria-label="Share"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              <span>Share</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <ShareMenuContent show={show as Show} showId={id!} onOpenDelete={() => setDeleteOpen(true)} />
+          </DropdownMenuContent>
+        </DropdownMenu>
         {show.is_settled ? (
           <Button
             variant="outline"
