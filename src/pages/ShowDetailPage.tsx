@@ -478,6 +478,15 @@ export default function ShowDetailPage() {
     }
   }, [inlineField]);
 
+  const hasDealData = !!(
+    show?.guarantee ||
+    show?.backend_deal ||
+    show?.ticket_price ||
+    show?.venue_capacity ||
+    show?.walkout_potential ||
+    show?.artist_comps
+  );
+
   // Silently mark the show as reviewed on first visit. Drives the "New" badge
   // on show cards — visiting the detail page counts as acknowledgement.
   const autoReviewedRef = useRef<string | null>(null);
@@ -1122,7 +1131,7 @@ export default function ShowDetailPage() {
               className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
             >
               Deal Info
-              {!dealTabSeen && (
+              {!dealTabSeen && hasDealData && (
                 <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" aria-hidden />
               )}
             </TabsTrigger>
@@ -1137,11 +1146,6 @@ export default function ShowDetailPage() {
               className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
             >
               Set List
-              {Array.isArray(show.set_list) && show.set_list.length > 0 && (
-                <span className="ml-1.5 text-[10px] font-mono text-muted-foreground">
-                  {show.set_list.length}
-                </span>
-              )}
             </TabsTrigger>
           </TabsList>
         </div>
