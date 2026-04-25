@@ -368,14 +368,14 @@ export default function DashboardPage() {
         const last = tourShows[tourShows.length - 1];
         return last ? { show: last, mode: "final" as const } : null;
       }
-      const next = tourShows.find((s) => isUpcomingDate(s.date));
+      const next = tourShows.find((s) => isUpcomingDate(s.date) && !s.is_settled);
       return next ? { show: next, mode: "next" as const } : null;
     }
     if (scope === "standalone") {
-      const next = standaloneUpcoming[0];
+      const next = standaloneUpcoming.find((s) => !s.is_settled);
       return next ? { show: next, mode: "next" as const } : null;
     }
-    const next = allUpcoming[0];
+    const next = allUpcoming.find((s) => !s.is_settled);
     return next ? { show: next, mode: "next" as const } : null;
   }, [scope, activeTour, isPastTour, tourShows, standaloneUpcoming, allUpcoming]);
 
