@@ -1,13 +1,18 @@
 import type jsPDF from "jspdf";
 
-// Hands the PDF to the OS share sheet when the browser supports sharing files
-// (mobile Safari/Chrome), otherwise falls back to a normal download.
+// Hands the PDF to the OS share sheet on touch devices (mobile Safari/Chrome),
+// otherwise falls back to a normal download.
 //
 // Why: jsPDF's `doc.save()` on iOS Safari opens the PDF in a new tab via a
 // `blob:` URL. If the user then taps Share → Mail from that tab, Mail picks
 // up the blob URL as a link in the email body — recipients hit a 404 because
 // blob URLs are scoped to the originating document. Sharing the file directly
 // attaches the actual PDF instead.
+//
+// Desktop browsers (macOS Safari, Chrome) also implement the Web Share API
+// with files, but on desktop the right behavior is a direct download — the
+// share sheet is an unnecessary extra step. Gate on `pointer: coarse` so only
+// touch-primary devices get the share flow.
 export async function shareOrDownloadPdf(
   doc: jsPDF,
   filename: string,
@@ -21,7 +26,11 @@ export async function shareOrDownloadPdf(
     share?: (data: { files: File[]; title?: string }) => Promise<void>;
   };
 
-  if (nav.canShare?.({ files: [file] }) && nav.share) {
+  const isTouchPrimary =
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(pointer: coarse)").matches;
+
+  if (isTouchPrimary && nav.canShare?.({ files: [file] }) && nav.share) {
     try {
       await nav.share({ files: [file], title: shareTitle ?? filename });
       return "shared";
