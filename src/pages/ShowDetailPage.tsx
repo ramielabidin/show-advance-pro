@@ -375,6 +375,20 @@ export default function ShowDetailPage() {
     return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
   }, [loadInMinutes, driveTime]);
 
+  // Hide drive-time row once the band is at load-in (or noon on show day if no load-in entry)
+  const shouldHideDriveTime = useMemo(() => {
+    if (!show?.date) return false;
+    const showDate = parseISO(show.date);
+    if (loadInMinutes != null) {
+      const loadInDate = new Date(showDate);
+      loadInDate.setHours(Math.floor(loadInMinutes / 60), loadInMinutes % 60, 0, 0);
+      return new Date() >= loadInDate;
+    }
+    const noon = new Date(showDate);
+    noon.setHours(12, 0, 0, 0);
+    return new Date() >= noon;
+  }, [show?.date, loadInMinutes]);
+
   // Formatted drive duration: "X hr Y min"
   const driveTimeLabel = useMemo(() => {
     if (!driveTime?.duration_seconds) return null;
@@ -774,12 +788,6 @@ export default function ShowDetailPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-1.5">
-            {show.is_settled && (
-              <Badge className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 bg-[hsl(var(--primary))] text-primary-foreground gap-1">
-                <CheckCircle2 className="h-2.5 w-2.5" />
-                Settled
-              </Badge>
-            )}
             {show.tours?.name && (
               <Link to={`/shows?view=tour&tourId=${show.tours.id}`}>
                 <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 hover:bg-secondary/80 transition-colors">
@@ -930,7 +938,7 @@ export default function ShowDetailPage() {
         </div>
 
         {/* Drive-time — paired with address as venue context */}
-        {driveTimeLabel && departureOrigin && (
+        {driveTimeLabel && departureOrigin && !shouldHideDriveTime && (
           <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5">
             <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} />
             <span className="font-mono text-foreground">{driveTimeLabel}</span>
