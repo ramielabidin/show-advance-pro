@@ -980,26 +980,28 @@ export default function ShowDetailPage() {
                 />
               </div>
             ) : (
-              <h1
-                className="font-display font-bold text-[28px] sm:text-4xl leading-[1.05] tracking-[-0.02em] cursor-pointer hover:text-primary/80 transition-colors"
-                onClick={() => { setInlineField("venue_name"); setInlineValue(show.venue_name); }}
-              >
-                {show.venue_name}
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1
+                  className="font-display font-bold text-[28px] sm:text-4xl leading-[1.05] tracking-[-0.02em] cursor-pointer hover:text-primary/80 transition-colors"
+                  onClick={() => { setInlineField("venue_name"); setInlineValue(show.venue_name); }}
+                >
+                  {show.venue_name}
+                </h1>
                 {show.advanced_at && (
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); toggleAdvancedMutation.mutate(false); }}
+                    onClick={() => toggleAdvancedMutation.mutate(false)}
                     disabled={toggleAdvancedMutation.isPending}
                     aria-label="Unmark advanced"
                     title="Click to unmark as advanced"
-                    className="hidden sm:inline-flex items-center gap-1 rounded-full px-2.5 py-[3px] text-[11px] font-medium font-sans align-middle ml-3 transition-opacity hover:opacity-80 disabled:opacity-50"
+                    className="hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium leading-none transition-opacity hover:opacity-80 disabled:opacity-50"
                     style={{ background: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
                   >
                     <Check className="h-3 w-3" />
                     Advanced
                   </button>
                 )}
-              </h1>
+              </div>
             )}
 
             {/* Desktop meta row — address · drive-time inline */}
