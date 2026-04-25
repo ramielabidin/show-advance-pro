@@ -7,7 +7,7 @@ import { parseGuestList, guestTotal } from "@/components/GuestListEditor";
 import type { Show, ScheduleEntry } from "@/lib/types";
 import ActionCard from "./ActionCard";
 import ScheduleList from "./ScheduleList";
-import { fmt12parts, formatRelative, timeToMinutes } from "./timeUtils";
+import { fmt12parts, formatRelative, showDayMinutes } from "./timeUtils";
 
 interface PhasePreShowProps {
   show: Show;
@@ -25,8 +25,10 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
   const sortedEntries = useMemo<ScheduleEntry[]>(() => {
     const entries = [...(show.schedule_entries ?? [])];
     entries.sort((a, b) => {
-      const am = timeToMinutes(a.time);
-      const bm = timeToMinutes(b.time);
+      // Use show-day minutes so post-midnight events (curfew, load-out)
+      // sort AFTER the preceding evening's load-in / soundcheck / set.
+      const am = showDayMinutes(a.time);
+      const bm = showDayMinutes(b.time);
       if (am === null && bm === null) return a.sort_order - b.sort_order;
       if (am === null) return 1;
       if (bm === null) return -1;
@@ -38,9 +40,11 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
 
   // Hero = first entry whose time is in the future (>= now). If everything is
   // past, fall back to the last entry (the curfew/load-out has just happened).
+  // Comparison uses show-day minutes so a curfew at 12:30 AM is correctly
+  // seen as "in 35 min" at 11:55 PM, not as "23.5 hours away".
   const heroIndex = useMemo(() => {
     const idx = sortedEntries.findIndex((e) => {
-      const m = timeToMinutes(e.time);
+      const m = showDayMinutes(e.time);
       return m !== null && m >= nowMin;
     });
     if (idx !== -1) return idx;
@@ -48,7 +52,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
   }, [sortedEntries, nowMin]);
 
   const hero = heroIndex !== null ? sortedEntries[heroIndex] : null;
-  const heroMin = hero ? timeToMinutes(hero.time) : null;
+  const heroMin = hero ? showDayMinutes(hero.time) : null;
   const remaining = heroMin !== null ? heroMin - nowMin : null;
   const isFuture = remaining !== null && remaining > 0;
 

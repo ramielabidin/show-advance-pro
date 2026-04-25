@@ -2,7 +2,7 @@ import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { to12Hour } from "@/lib/timeFormat";
 import type { ScheduleEntry } from "@/lib/types";
-import { timeToMinutes } from "./timeUtils";
+import { showDayMinutes } from "./timeUtils";
 
 interface ScheduleListProps {
   entries: ScheduleEntry[];
@@ -26,7 +26,9 @@ export default function ScheduleList({ entries, nowMin, heroIndex }: ScheduleLis
       style={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
     >
       {entries.map((row, i) => {
-        const min = timeToMinutes(row.time);
+        // Use show-day minutes so a 12:30 AM curfew isn't dimmed/struck
+        // through at 7 PM — it's the LAST event of the night, not a past one.
+        const min = showDayMinutes(row.time);
         const isHero = i === heroIndex;
         const isPast = min !== null && min <= nowMin && !isHero;
         const display = to12Hour(row.time) ?? row.time;

@@ -45,3 +45,30 @@ export function formatRelative(minutes: number): string {
   const m = minutes % 60;
   return m > 0 ? `in ${h} hr ${m} min` : `in ${h} hr`;
 }
+
+/**
+ * Anything before this hour is treated as belonging to the *next* calendar
+ * day for show-day sorting purposes. 4 AM is the cliff: late after-parties
+ * and load-outs can run to 3-something AM, but a 5 AM event is almost
+ * certainly the next show day's call time, not last night's tail end. This
+ * is decoupled from the auto-resolve cutoff (which is when Day of Show Mode
+ * ends itself the morning after — a separate value).
+ */
+const EARLY_MORNING_CUTOFF_MIN = 4 * 60;
+
+/**
+ * Like `timeToMinutes`, but adds 24 hours to early-morning times so a show's
+ * post-midnight events (curfew, load-out, after-parties) sort AFTER the
+ * preceding evening's load-in / soundcheck / set, not before them.
+ *
+ *   "3:00 PM"  → 900   (unchanged)
+ *   "9:30 PM"  → 1290  (unchanged)
+ *   "12:30 AM" → 1470  (30 + 1440 — bumped to "next day" for sort purposes)
+ *   "5:00 AM"  → 1740  (300 + 1440 — still in the show night)
+ *   "7:00 AM"  → 420   (unchanged — past the cliff, treated as today)
+ */
+export function showDayMinutes(time: string | null | undefined): number | null {
+  const m = timeToMinutes(time);
+  if (m === null) return null;
+  return m < EARLY_MORNING_CUTOFF_MIN ? m + 24 * 60 : m;
+}
