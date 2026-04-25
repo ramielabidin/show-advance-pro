@@ -103,6 +103,7 @@ type Block = Record<string, unknown>;
 interface ScheduleEntryForSlack {
   label?: string | null;
   time?: string | null;
+  is_band?: boolean | null;
 }
 interface ShowForSlack {
   venue_name?: string | null;
@@ -113,9 +114,9 @@ interface ShowForSlack {
 
 /**
  * Render the band day sheet as a minimal Slack Block Kit "show card":
- * venue header, date + address, Load In / Sound Check fields, and a
- * primary button linking to the guest day sheet. Everything else lives
- * behind the link.
+ * venue header, date + address, Load In / Set fields, and a primary
+ * button linking to the guest day sheet. Everything else lives behind
+ * the link.
  */
 function buildDaySheetBlocks(show: ShowForSlack, guestUrl: string | null): Block[] {
   const blocks: Block[] = [];
@@ -141,15 +142,14 @@ function buildDaySheetBlocks(show: ShowForSlack, guestUrl: string | null): Block
   const entries: ScheduleEntryForSlack[] = Array.isArray(show.schedule_entries)
     ? show.schedule_entries
     : [];
-  const findTime = (re: RegExp): string => {
-    const hit = entries.find((e) => e?.label && re.test(String(e.label)));
-    return val(hit?.time) ?? "—";
-  };
+  const loadInTime =
+    val(entries.find((e) => e?.label && /\bload[-\s]*in\b/i.test(String(e.label)))?.time) ?? "—";
+  const setTime = val(entries.find((e) => e?.is_band)?.time) ?? "—";
   blocks.push({
     type: "section",
     fields: [
-      { type: "mrkdwn", text: `*Load In*\n${findTime(/\bload[-\s]*in\b/i)}` },
-      { type: "mrkdwn", text: `*Sound Check*\n${findTime(/\bsound[-\s]*check\b/i)}` },
+      { type: "mrkdwn", text: `*Load In*\n${loadInTime}` },
+      { type: "mrkdwn", text: `*Set*\n${setTime}` },
     ],
   });
 
