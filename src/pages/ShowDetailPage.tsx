@@ -309,6 +309,24 @@ export default function ShowDetailPage() {
   const [settleOpen, setSettleOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [clearSettleOpen, setClearSettleOpen] = useState(false);
+
+  // Sticky collapsed header on mobile — flips on once the page header has
+  // scrolled out of view, so the back nav and primary action stay reachable.
+  const headerSentinelRef = useRef<HTMLDivElement>(null);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  useEffect(() => {
+    const el = headerSentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Sentinel is collapsed-above-viewport: header has scrolled past.
+        setHeaderCollapsed(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      { threshold: 0 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [id]);
   // When the advance hasn't been imported, the Show Info tab shows a CTA card.
   // The user can click "or fill in manually" to bypass the CTA and see the
   // normal field layout without waiting for a parsed advance.
@@ -837,6 +855,11 @@ export default function ShowDetailPage() {
     );
   };
 
+  const openSettleModal = () => {
+    setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
+    setSettleOpen(true);
+  };
+
   const lookupAddress = async () => {
     if (!show) return;
     setLookingUpAddress(true);
@@ -864,6 +887,51 @@ export default function ShowDetailPage() {
 
   return (
     <div className="animate-fade-in max-w-3xl">
+      {/* Mobile sticky collapsed header — overlays AppLayout's mobile chrome
+          while scrolled. Slides in from above; mirrors the back-arrow + venue
+          + primary action from the page header. */}
+      <div
+        className={cn(
+          "md:hidden fixed top-0 left-0 right-0 z-[60] h-12 px-3 flex items-center gap-2 border-b bg-background/95 backdrop-blur-sm transition-transform duration-200 ease-out",
+          headerCollapsed ? "translate-y-0" : "-translate-y-full",
+        )}
+        aria-hidden={!headerCollapsed}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 -ml-1"
+          onClick={() => navigate("/")}
+          tabIndex={headerCollapsed ? 0 : -1}
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <span className="font-display text-base leading-none truncate flex-1">
+          {show.venue_name}
+        </span>
+        {show.is_settled ? (
+          <Button
+            variant="outline"
+            disabled
+            className="h-8 px-3 rounded-md gap-1.5 text-xs font-medium opacity-100 shrink-0"
+            style={{ color: "var(--pastel-green-fg)" }}
+            tabIndex={-1}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Settled
+          </Button>
+        ) : (
+          <Button
+            onClick={openSettleModal}
+            className="h-8 px-3 rounded-md gap-1.5 text-xs font-medium bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:bg-[hsl(var(--success))]/90 shrink-0"
+            tabIndex={headerCollapsed ? 0 : -1}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Settle
+          </Button>
+        )}
+      </div>
+
       {/* Controlled parse dialog driven by inbound-email review flow. Opens
           automatically when location state carries a forwarded email body and
           auto-invokes the AI parse so the user lands on the confirm step. */}
@@ -1109,10 +1177,7 @@ export default function ShowDetailPage() {
           <HeaderActions
             show={show as Show}
             showId={id!}
-            onOpenSettle={() => {
-              setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
-              setSettleOpen(true);
-            }}
+            onOpenSettle={openSettleModal}
             onOpenClearSettle={() => setClearSettleOpen(true)}
             onOpenDelete={() => setDeleteOpen(true)}
             onParseUpdated={() => {
@@ -1121,6 +1186,9 @@ export default function ShowDetailPage() {
             }}
           />
         </div>
+        {/* Scroll sentinel — when this leaves the viewport above, the sticky
+            collapsed header on mobile fades in. */}
+        <div ref={headerSentinelRef} aria-hidden className="h-px" />
 
         {/* Underlined text tabs */}
         <div className="pt-3 border-b border-border">
