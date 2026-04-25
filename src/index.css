@@ -35,18 +35,19 @@
   }
 }
 
-/* Day of Show entry chip — red "on air" halo pulse on the dashboard.
-   Distinct from .mic-glow (which is a soft red icon-level filter for the
-   "tonight" indicator on show cards). This is a chip-level box-shadow halo
-   tuned to a more saturated studio red. */
+/* Day of Show entry chip — "live now" red halo pulse on the dashboard.
+   Distinct from .mic-glow (a soft red icon-level filter for the "tonight"
+   indicator on show cards). This is a chip-level box-shadow halo using the
+   --day-of-active token so the same red is reusable for any "live / on now"
+   moment in the Day of Show surface. */
 @keyframes mic-chip-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 hsl(var(--mic-red) / 0.55),
-                0 0 16px 0 hsl(var(--mic-red) / 0.45);
+    box-shadow: 0 0 0 0 hsl(var(--day-of-active) / 0.55),
+                0 0 16px 0 hsl(var(--day-of-active) / 0.45);
   }
   50% {
-    box-shadow: 0 0 0 6px hsl(var(--mic-red) / 0),
-                0 0 22px 2px hsl(var(--mic-red) / 0.7);
+    box-shadow: 0 0 0 6px hsl(var(--day-of-active) / 0),
+                0 0 22px 2px hsl(var(--day-of-active) / 0.7);
   }
 }
 
@@ -105,9 +106,10 @@
     --badge-new: 210 80% 52%;
     --badge-new-foreground: 0 0% 100%;
 
-    /* "On air" red — saturated studio cue used for the Day of Show entry chip
-       + halo. Distinct from the soft pastel-red text token. */
-    --mic-red: 0 78% 56%;
+    /* "Live / active right now" red — used for the Day of Show entry chip
+       and any future Day of Show moment that needs a "this is happening"
+       cue. Saturated studio red, distinct from the soft pastel-red text. */
+    --day-of-active: 0 78% 56%;
 
     /* Muted pastel accent system — desaturated, editorial */
     --pastel-red-bg: #fdebec;
@@ -159,10 +161,9 @@
     --badge-new: 210 80% 52%;
     --badge-new-foreground: 0 0% 100%;
 
-    /* "On air" red used for the Day of Show entry chip + halo (dark mode
-       calibration — slightly lighter than light mode for legibility on the
-       warm dark canvas). */
-    --mic-red: 0 80% 62%;
+    /* "Live / active right now" — dark-mode calibration: slightly lighter
+       than light mode for legibility on the warm dark canvas. */
+    --day-of-active: 0 80% 62%;
     --pastel-red-bg: hsla(0, 40%, 22%, 0.5);
     --pastel-red-fg: #f0b4b2;
     --pastel-blue-bg: hsla(205, 50%, 22%, 0.5);

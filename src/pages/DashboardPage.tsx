@@ -415,22 +415,34 @@ export default function DashboardPage() {
     );
   }
 
+  const dateEyebrow = `${format(today, "EEEE")} · ${format(today, "MMM d")}`.toUpperCase();
+
   const header = (
-    <div className="space-y-3">
-      <div className="flex items-start justify-between gap-3 md:gap-4">
-        <h1 className="min-w-0 flex-1 font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
-          {headerLine}
-        </h1>
+    <div className="space-y-2">
+      {/* Date eyebrow + utility actions on a compact row */}
+      <div className="flex items-center justify-between gap-3">
+        <span
+          className="text-[11px] uppercase font-medium leading-none truncate"
+          style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
+        >
+          {dateEyebrow}
+        </span>
         <div className="flex items-center gap-2 shrink-0">
           <BulkUploadDialog triggerClassName="h-9" iconOnlyMobile />
           <CreateShowDialog triggerClassName="h-9" iconOnlyMobile />
         </div>
       </div>
-      {showToday && (
-        <div>
+
+      {/* Greeting + (on a show day) the mic chip, inline. flex-wrap so the
+          chip drops to the next line gracefully on very narrow widths. */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h1 className="min-w-0 flex-1 font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
+          {headerLine}
+        </h1>
+        {showToday && (
           <MicChip onClick={() => setDayOfShowOpen(true)} />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 

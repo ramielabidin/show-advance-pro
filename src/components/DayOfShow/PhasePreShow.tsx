@@ -70,13 +70,32 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(target)}`;
   }, [show.venue_address, show.city]);
 
+  /**
+   * Split a free-text address into clean stacked lines for the venue column.
+   * "25 Temple St, Portland, ME 04101" → ["25 Temple St", "Portland, ME 04101"]
+   * — first comma splits street vs. the rest. Falls back to formatted city
+   * when there's no address. Returns an empty array if there's nothing to show.
+   */
+  function addressLines(address: string | null | undefined, city: string | null | undefined): string[] {
+    if (address?.trim()) {
+      const parts = address.split(",").map((s) => s.trim()).filter(Boolean);
+      if (parts.length <= 1) return parts;
+      const [street, ...rest] = parts;
+      return [street, rest.join(", ")];
+    }
+    const fallback = formatCityState(city || "");
+    return fallback ? [fallback] : [];
+  }
+
   return (
     <div className="px-[22px] pt-2 pb-7 flex-1 flex flex-col">
-      {/* Hero — two columns: time on the left (operative), venue on the right
-          (so it lands above the fold instead of buried below the schedule). */}
-      <div className="pt-[14px] pb-1 flex items-start gap-4">
+      {/* Hero — two columns sharing structure but differing in scale.
+          Left = when (temporal hero), right = where (venue as quiet
+          mirrored typography, no card chrome). Eyebrows align at the top
+          baseline so the two sides read as one rhythm. */}
+      <div className="pt-[14px] pb-1 grid grid-cols-[1.2fr_1fr] gap-5 items-start">
         {/* Time column */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <div
             className="text-[11px] uppercase font-medium leading-none mb-2.5"
             style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
@@ -87,7 +106,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
           {hero && (
             <>
               <div
-                className="text-[26px] font-medium leading-[1.05] truncate"
+                className="text-[28px] font-medium leading-[1.05] truncate"
                 style={{ letterSpacing: "-0.02em", color: "hsl(var(--foreground))" }}
               >
                 {hero.label}
@@ -96,13 +115,13 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
               {/* Big serif TIME — the operative number */}
               {heroParts && (
                 <div
-                  className="mt-[18px] flex items-baseline gap-2 tabular-nums"
+                  className="mt-[18px] flex items-baseline gap-2.5 tabular-nums"
                   style={{ letterSpacing: "-0.05em" }}
                 >
                   <span
                     className="font-display"
                     style={{
-                      fontSize: 96,
+                      fontSize: 110,
                       lineHeight: 0.9,
                       color: "hsl(var(--foreground))",
                     }}
@@ -112,7 +131,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
                   <span
                     className="font-display"
                     style={{
-                      fontSize: 32,
+                      fontSize: 38,
                       lineHeight: 0.9,
                       letterSpacing: "-0.02em",
                       color: "hsl(var(--muted-foreground))",
@@ -136,49 +155,49 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
           )}
         </div>
 
-        {/* Venue column — promoted from the bottom action stack so it lives
-            in the previously-empty space next to the time. Tap to navigate. */}
+        {/* Venue column — quiet typography mirror. No border, no card.
+            Whole column is one tap target → opens system maps. */}
         {show.venue_name && (
           <a
             href={venueNavHref ?? undefined}
             target={venueNavHref ? "_blank" : undefined}
             rel={venueNavHref ? "noopener noreferrer" : undefined}
-            className="shrink-0 max-w-[44%] block rounded-[12px] border p-3 [transition:transform_160ms_var(--ease-out),background-color_160ms_var(--ease-out)] active:scale-[0.98]"
-            style={{
-              background: "hsl(var(--muted) / 0.4)",
-              borderColor: "hsl(var(--border))",
-            }}
+            className="text-left flex flex-col items-stretch min-w-0 [transition:transform_160ms_var(--ease-out)] active:scale-[0.985]"
           >
-            <div className="flex items-start justify-between gap-2 mb-1.5">
-              <div
-                className="text-[9.5px] uppercase font-medium leading-none"
-                style={{ letterSpacing: "0.14em", color: "hsl(var(--muted-foreground))" }}
+            <div className="flex items-center justify-between mb-2.5">
+              <span
+                className="text-[11px] uppercase font-medium leading-none"
+                style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
               >
                 Venue
-              </div>
+              </span>
               {venueNavHref && (
                 <ArrowUpRight
-                  className="h-3.5 w-3.5 shrink-0 -mt-0.5"
+                  className="h-3.5 w-3.5 shrink-0"
+                  strokeWidth={1.75}
                   style={{ color: "hsl(var(--muted-foreground))" }}
                 />
               )}
             </div>
             <div
-              className="font-display leading-[1.1] mb-1"
+              className="font-display leading-[1.1] break-words"
               style={{
-                fontSize: 20,
+                fontSize: "clamp(20px, 5.2vw, 24px)",
                 letterSpacing: "-0.02em",
                 color: "hsl(var(--foreground))",
+                textWrap: "pretty",
               }}
             >
               {show.venue_name}
             </div>
             {(show.venue_address || show.city) && (
               <div
-                className="text-[11.5px] leading-[1.35] line-clamp-2 break-words"
+                className="mt-2 font-mono text-[12px] leading-[1.45]"
                 style={{ color: "hsl(var(--muted-foreground))" }}
               >
-                {show.venue_address ?? formatCityState(show.city || "")}
+                {addressLines(show.venue_address, show.city).map((line, i) => (
+                  <div key={i}>{line}</div>
+                ))}
               </div>
             )}
           </a>

@@ -26,9 +26,9 @@ export default function MicChip({ label = "Day of Show", onClick, className }: M
         className,
       )}
       style={{
-        background: "hsl(var(--mic-red) / 0.13)",
-        borderColor: "hsl(var(--mic-red) / 0.4)",
-        color: "hsl(var(--mic-red))",
+        background: "hsl(var(--day-of-active) / 0.13)",
+        borderColor: "hsl(var(--day-of-active) / 0.4)",
+        color: "hsl(var(--day-of-active))",
       }}
     >
       <span
@@ -36,7 +36,7 @@ export default function MicChip({ label = "Day of Show", onClick, className }: M
         style={{
           width: 22,
           height: 22,
-          background: "hsl(var(--mic-red))",
+          background: "hsl(var(--day-of-active))",
           color: "#fff",
         }}
       >
