@@ -406,12 +406,12 @@ export default function ShowDetailPage() {
     if (previousShow?.city && show?.date) {
       const dayGap = differenceInDays(parseISO(show.date), parseISO(previousShow.date));
       if (dayGap <= 3) {
-        return { label: previousShow.city, query: previousShow.venue_address || previousShow.city };
+        return { label: formatCityState(previousShow.city), query: previousShow.venue_address || previousShow.city };
       }
     }
     const home = appSettings?.home_base_city?.trim();
     if (home) {
-      return { label: home, query: home };
+      return { label: formatCityState(home), query: home };
     }
     return null;
   }, [previousShow, appSettings, show]);
