@@ -199,32 +199,6 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
           </>
         )}
 
-        {has("hotel") && (
-          <>
-            <Separator />
-            <FieldGroup title="Accommodations" contentClassName="space-y-2">
-              <FieldRow label="Name" value={show.hotel_name} />
-              {show.hotel_address ? (
-                <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                  <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Address</span>
-                  <a
-                    href={`https://maps.google.com/?q=${encodeURIComponent(show.hotel_address)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-foreground inline-flex items-start gap-1 hover:underline hover:text-foreground/80 transition-colors"
-                  >
-                    <MapPin className="h-3 w-3 shrink-0 mt-1" />
-                    <span>{show.hotel_address.replace(/,?\s*United States$/i, "")}</span>
-                  </a>
-                </div>
-              ) : null}
-              <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
-              <FieldRow label="Check In" value={show.hotel_checkin} mono />
-              <FieldRow label="Check Out" value={show.hotel_checkout} mono />
-            </FieldGroup>
-          </>
-        )}
-
         <Separator />
 
         <FieldGroup title="Guest List">
@@ -234,6 +208,71 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
             compsAllotment={show.artist_comps}
           />
         </FieldGroup>
+
+        {has("hotel") && (
+          <>
+            <Separator />
+            <FieldGroup title="Accommodations">
+              <div className="rounded-lg border border-dashed border-foreground/20 bg-background/40">
+                {(show.hotel_name || show.hotel_address) && (
+                  <div className="px-4 sm:px-5 pt-4 pb-3">
+                    {show.hotel_name && (
+                      <div className="font-display text-xl sm:text-2xl tracking-tight leading-tight text-foreground">
+                        {show.hotel_name}
+                      </div>
+                    )}
+                    {show.hotel_address && (
+                      <a
+                        href={`https://maps.google.com/?q=${encodeURIComponent(show.hotel_address)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                          "inline-flex items-start gap-1 font-mono text-[12px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 decoration-muted-foreground/40 hover:decoration-foreground",
+                          show.hotel_name && "mt-1.5"
+                        )}
+                      >
+                        <MapPin className="h-3 w-3 shrink-0 mt-[3px]" />
+                        <span>{show.hotel_address.replace(/,?\s*United States$/i, "")}</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+                {(show.hotel_confirmation || show.hotel_checkin || show.hotel_checkout) && (
+                  <div
+                    className={cn(
+                      "px-4 sm:px-5 pb-4 pt-3 grid gap-4",
+                      (show.hotel_name || show.hotel_address) && "border-t border-dashed border-foreground/15",
+                      [show.hotel_confirmation, show.hotel_checkin, show.hotel_checkout].filter(Boolean).length === 3
+                        ? "grid-cols-3"
+                        : [show.hotel_confirmation, show.hotel_checkin, show.hotel_checkout].filter(Boolean).length === 2
+                          ? "grid-cols-2"
+                          : "grid-cols-1"
+                    )}
+                  >
+                    {show.hotel_confirmation && (
+                      <div>
+                        <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Confirmation #</div>
+                        <div className="font-mono text-[13px] text-foreground mt-1 break-all">{show.hotel_confirmation}</div>
+                      </div>
+                    )}
+                    {show.hotel_checkin && (
+                      <div>
+                        <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check In</div>
+                        <div className="font-mono text-[13px] text-foreground mt-1">{show.hotel_checkin}</div>
+                      </div>
+                    )}
+                    {show.hotel_checkout && (
+                      <div>
+                        <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check Out</div>
+                        <div className="font-mono text-[13px] text-foreground mt-1">{show.hotel_checkout}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </FieldGroup>
+          </>
+        )}
 
         {show.additional_info && (
           <>
