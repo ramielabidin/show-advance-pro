@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Phone, Users, ArrowUpRight } from "lucide-react";
 import { to24Hour } from "@/lib/timeFormat";
 import { roleLabel } from "@/lib/contactRoles";
@@ -22,6 +23,7 @@ interface PhasePreShowProps {
  * guest list count, then a full-width venue navigate row.
  */
 export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
+  const navigate = useNavigate();
   const sortedEntries = useMemo<ScheduleEntry[]>(() => {
     const entries = [...(show.schedule_entries ?? [])];
     entries.sort((a, b) => {
@@ -244,6 +246,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
           sub={guestCount === 0 ? "no guests yet" : "confirmed names"}
           titleMono
           fullWidth
+          onClick={() => navigate(`/shows/${show.id}`)}
         />
       </div>
     </div>
