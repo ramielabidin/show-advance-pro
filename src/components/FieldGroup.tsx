@@ -10,6 +10,7 @@ interface FieldGroupProps {
   incomplete?: boolean;
   collapsible?: boolean;
   defaultOpen?: boolean;
+  headerRight?: React.ReactNode;
 }
 
 export default function FieldGroup({
@@ -20,6 +21,7 @@ export default function FieldGroup({
   incomplete,
   collapsible,
   defaultOpen = true,
+  headerRight,
 }: FieldGroupProps) {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -41,10 +43,19 @@ export default function FieldGroup({
         >
           <div className="w-0.5 h-3.5 rounded-full bg-foreground/25 shrink-0" />
           {header}
+          {headerRight && (
+            <span
+              className="ml-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {headerRight}
+            </span>
+          )}
           <ChevronDown
             aria-hidden
             className={cn(
-              "ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:text-foreground/70",
+              "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:text-foreground/70",
+              headerRight ? "ml-2" : "ml-auto",
               open && "rotate-180"
             )}
           />
@@ -68,6 +79,7 @@ export default function FieldGroup({
       <div className="flex items-center gap-2 mb-3">
         <div className="w-0.5 h-3.5 rounded-full bg-foreground/25 shrink-0" />
         {header}
+        {headerRight && <span className="ml-auto">{headerRight}</span>}
       </div>
       <div className={cn("space-y-3", contentClassName)}>{children}</div>
     </div>

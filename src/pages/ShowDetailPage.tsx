@@ -47,7 +47,7 @@ import ExportPdfDialog from "@/components/ExportPdfDialog";
 import SetListEditor from "@/components/SetListEditor";
 import CopyGuestLinkButton from "@/components/CopyGuestLinkButton";
 import { useGuestLink } from "@/hooks/useGuestLink";
-import GuestListEditor, { parseComps, parseGuestList, serializeGuestList } from "@/components/GuestListEditor";
+import GuestListEditor, { GuestCount, guestTotal, parseGuestList } from "@/components/GuestListEditor";
 import ScheduleEditor from "@/components/ScheduleEditor";
 import ContactsEditor, { type ContactRow } from "@/components/ContactsEditor";
 import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
@@ -289,8 +289,6 @@ export default function ShowDetailPage() {
 
   const [lookingUpAddress, setLookingUpAddress] = useState(false);
   const [scheduleKey, setScheduleKey] = useState(0);
-  const [guestDraft, setGuestDraft] = useState<string>("");
-  const [guestEditorKey, setGuestEditorKey] = useState(0);
   const [suggestionDismissed, setSuggestionDismissed] = useState(() =>
     id ? localStorage.getItem(`departure-suggestion-dismissed-${id}`) === "true" : false
   );
@@ -339,11 +337,6 @@ export default function ShowDetailPage() {
       return data;
     },
   });
-
-  useEffect(() => {
-    setGuestDraft(show?.guest_list_details ?? "");
-    setGuestEditorKey((k) => k + 1);
-  }, [show?.guest_list_details]);
 
   // ── Drive-time: app settings (for home base city) ──
   const { data: appSettings } = useQuery({
@@ -528,6 +521,25 @@ export default function ShowDetailPage() {
     onError: (err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(`Failed to update show: ${msg}`);
+    },
+  });
+
+  // Guest list autosaves on every commit (Enter / blur / trash). Silent on
+  // success — the toast firehose from updateMutation would be unbearable.
+  const guestListMutation = useMutation({
+    mutationFn: async (guest_list_details: string | null) => {
+      const { error } = await supabase
+        .from("shows")
+        .update({ guest_list_details })
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["show", id] });
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Could not save guest list: ${msg}`);
     },
   });
 
@@ -783,57 +795,16 @@ export default function ShowDetailPage() {
     );
   };
 
-  // Guest list rendering
-  const renderGuestList = () => {
-    const comps = parseComps(show.artist_comps);
-    const savedValue = show.guest_list_details ?? "";
-    const draftNormalized = serializeGuestList(parseGuestList(guestDraft));
-    const savedNormalized = serializeGuestList(parseGuestList(savedValue));
-    const isDirty = draftNormalized !== savedNormalized;
-    const handleGuestSave = () => {
-      updateMutation.mutate({ guest_list_details: draftNormalized === "[]" ? null : draftNormalized });
-    };
-    const handleGuestCancel = () => {
-      setGuestDraft(savedValue);
-      setGuestEditorKey((k) => k + 1);
-    };
-
-    return (
-      <div className="space-y-2">
-        {comps !== null && (
-          <p className="text-xs text-muted-foreground">{comps} comps available</p>
-        )}
-        <GuestListEditor
-          key={guestEditorKey}
-          value={guestDraft}
-          capacity={show.venue_capacity}
-          compsAllotment={show.artist_comps}
-          onChange={setGuestDraft}
-        />
-        {isDirty && (
-          <div className="flex items-center gap-1.5 pt-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleGuestCancel}
-              disabled={updateMutation.isPending}
-              className="h-7 text-xs"
-            >
-              <X className="h-3 w-3 mr-1" /> Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleGuestSave}
-              disabled={updateMutation.isPending}
-              className="h-7 text-xs"
-            >
-              <Save className="h-3 w-3 mr-1" /> Save
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  };
+  const renderGuestList = () => (
+    <GuestListEditor
+      value={show.guest_list_details}
+      capacity={show.venue_capacity}
+      compsAllotment={show.artist_comps}
+      onChange={(serialized) =>
+        guestListMutation.mutate(serialized === "[]" ? null : serialized)
+      }
+    />
+  );
 
   const lookupAddress = async () => {
     if (!show) return;
@@ -1485,6 +1456,14 @@ export default function ShowDetailPage() {
               collapsible
               defaultOpen={!!(show.guest_list_details || show.artist_comps)}
               incomplete={!!show.artist_comps && !show.guest_list_details}
+              headerRight={
+                show.guest_list_details || show.artist_comps ? (
+                  <GuestCount
+                    total={guestTotal(parseGuestList(show.guest_list_details))}
+                    compsAllotment={show.artist_comps}
+                  />
+                ) : null
+              }
             >
               {renderGuestList()}
               <div className="pt-1">
