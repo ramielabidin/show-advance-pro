@@ -1261,7 +1261,6 @@ export default function ShowDetailPage() {
 
             <Separator />
 
-            {/* At The Venue + Accommodations — paired two-column */}
             <FieldGroup
               title="At The Venue"
               collapsible
@@ -1342,6 +1341,31 @@ export default function ShowDetailPage() {
 
             <Separator />
 
+            <FieldGroup title="Backline" collapsible defaultOpen={!!show.backline_provided}>
+              {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add backline notes" })}
+            </FieldGroup>
+
+            <Separator />
+
+            {/* Guest List */}
+            <FieldGroup
+              title="Guest List"
+              collapsible
+              defaultOpen={!!(show.guest_list_details || show.artist_comps)}
+              incomplete={!!show.artist_comps && !show.guest_list_details}
+            >
+              {renderGuestList()}
+              <div className="pt-1">
+                <CopyGuestLinkButton showId={id!} linkType="guestlist" />
+              </div>
+            </FieldGroup>
+
+            <Separator />
+
+            <ShowAttachments showId={show.id} />
+
+            <Separator />
+
             <FieldGroup
               title="Accommodations"
               collapsible
@@ -1386,61 +1410,70 @@ export default function ShowDetailPage() {
                       hotelEditor.startEdit();
                     }
                   }}
-                  className="w-full text-left space-y-3 card-pressable cursor-pointer"
+                  className="w-full text-left rounded-lg border border-dashed border-foreground/20 bg-background/40 hover:bg-foreground/[0.02] transition-colors cursor-pointer"
                 >
-                  <FieldRow label="Name" value={show.hotel_name} />
-                  {show.hotel_address ? (
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                      <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Address</span>
-                      <a
-                        href={`https://maps.google.com/?q=${encodeURIComponent(show.hotel_address)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-sm text-foreground inline-flex items-start gap-1 hover:underline hover:text-foreground/80 transition-colors"
-                      >
-                        <MapPin className="h-3 w-3 shrink-0 mt-1" />
-                        <span>{show.hotel_address.replace(/,?\s*United States$/i, "")}</span>
-                      </a>
+                  {(show.hotel_name || show.hotel_address) && (
+                    <div className="px-4 sm:px-5 pt-4 pb-3">
+                      {show.hotel_name && (
+                        <div className="font-display text-xl sm:text-2xl tracking-tight leading-tight text-foreground">
+                          {show.hotel_name}
+                        </div>
+                      )}
+                      {show.hotel_address && (
+                        <a
+                          href={`https://maps.google.com/?q=${encodeURIComponent(show.hotel_address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className={cn(
+                            "inline-flex items-start gap-1 font-mono text-[12px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 decoration-muted-foreground/40 hover:decoration-foreground",
+                            show.hotel_name && "mt-1.5"
+                          )}
+                        >
+                          <MapPin className="h-3 w-3 shrink-0 mt-[3px]" />
+                          <span>{show.hotel_address.replace(/,?\s*United States$/i, "")}</span>
+                        </a>
+                      )}
                     </div>
-                  ) : null}
-                  <FieldRow label="Confirmation #" value={show.hotel_confirmation} mono />
-                  {(show.hotel_checkin || show.hotel_checkout) ? (
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                      <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Check In / Out</span>
-                      <span className="text-sm text-foreground font-mono text-[13px]">
-                        {show.hotel_checkin || "—"} <span className="text-muted-foreground/60 px-1">→</span> {show.hotel_checkout || "—"}
-                      </span>
+                  )}
+                  {(show.hotel_confirmation || show.hotel_checkin || show.hotel_checkout) && (
+                    <div
+                      className={cn(
+                        "px-4 sm:px-5 pb-4 pt-3 grid gap-4",
+                        (show.hotel_name || show.hotel_address) && "border-t border-dashed border-foreground/15",
+                        // 1, 2, or 3 columns depending on populated fields
+                        [show.hotel_confirmation, show.hotel_checkin, show.hotel_checkout].filter(Boolean).length === 3
+                          ? "grid-cols-3"
+                          : [show.hotel_confirmation, show.hotel_checkin, show.hotel_checkout].filter(Boolean).length === 2
+                            ? "grid-cols-2"
+                            : "grid-cols-1"
+                      )}
+                    >
+                      {show.hotel_confirmation && (
+                        <div>
+                          <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Confirmation #</div>
+                          <div className="font-mono text-[13px] text-foreground mt-1 break-all">{show.hotel_confirmation}</div>
+                        </div>
+                      )}
+                      {show.hotel_checkin && (
+                        <div>
+                          <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check In</div>
+                          <div className="font-mono text-[13px] text-foreground mt-1">{show.hotel_checkin}</div>
+                        </div>
+                      )}
+                      {show.hotel_checkout && (
+                        <div>
+                          <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check Out</div>
+                          <div className="font-mono text-[13px] text-foreground mt-1">{show.hotel_checkout}</div>
+                        </div>
+                      )}
                     </div>
-                  ) : null}
+                  )}
                 </div>
               )}
             </FieldGroup>
 
             <Separator />
-
-            <FieldGroup title="Backline" collapsible defaultOpen={!!show.backline_provided}>
-              {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add backline notes" })}
-            </FieldGroup>
-
-            <Separator />
-
-            {/* Guest List */}
-            <FieldGroup
-              title="Guest List"
-              collapsible
-              defaultOpen={!!(show.guest_list_details || show.artist_comps)}
-              incomplete={!!show.artist_comps && !show.guest_list_details}
-            >
-              {renderGuestList()}
-              <div className="pt-1">
-                <CopyGuestLinkButton showId={id!} linkType="guestlist" />
-              </div>
-            </FieldGroup>
-
-            <Separator />
-
-            <ShowAttachments showId={show.id} />
 
             {/* Notes — collapsed by default on fresh shows */}
             <FieldGroup title="Notes" collapsible defaultOpen={!!show.additional_info}>

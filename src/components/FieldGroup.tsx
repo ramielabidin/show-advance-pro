@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 interface FieldGroupProps {
   title: string;
@@ -29,18 +30,6 @@ export default function FieldGroup({
     </h3>
   );
 
-  const marker = (openState: boolean) => (
-    <span
-      aria-hidden
-      className={cn(
-        "w-0.5 rounded-full shrink-0 [transition:height_200ms_var(--ease-out),background-color_150ms_var(--ease-out)]",
-        openState
-          ? "h-5 bg-foreground/50 group-hover:bg-foreground/70"
-          : "h-3.5 bg-foreground/25 group-hover:bg-foreground/45"
-      )}
-    />
-  );
-
   if (collapsible) {
     return (
       <div className={className}>
@@ -48,10 +37,16 @@ export default function FieldGroup({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="mb-3 w-full text-left group flex items-center gap-2"
+          className="mb-3 w-full text-left group flex items-center justify-between gap-2"
         >
-          {marker(open)}
           {header}
+          <ChevronDown
+            aria-hidden
+            className={cn(
+              "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:text-foreground/70",
+              open && "rotate-180"
+            )}
+          />
         </button>
         <div
           className={cn(
