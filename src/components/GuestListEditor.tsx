@@ -1,7 +1,13 @@
-import { useState, useEffect, useRef, useLayoutEffect, KeyboardEvent } from "react";
+import {
+  KeyboardEvent,
+  FocusEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { Plus, Trash2, UsersRound } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -9,6 +15,13 @@ export interface GuestEntry {
   name: string;
   plusOnes: number;
 }
+
+interface GuestRow extends GuestEntry {
+  id: string;
+}
+
+let idCounter = 0;
+const newId = () => `g${Date.now()}-${++idCounter}`;
 
 export function parseGuestList(raw: string | null | undefined): GuestEntry[] {
   if (!raw) return [];
@@ -31,7 +44,11 @@ export function parseGuestList(raw: string | null | undefined): GuestEntry[] {
 }
 
 export function serializeGuestList(entries: GuestEntry[]): string {
-  return JSON.stringify(entries.filter((e) => e.name.trim()));
+  return JSON.stringify(
+    entries
+      .filter((e) => e.name.trim())
+      .map((e) => ({ name: e.name.trim(), plusOnes: e.plusOnes })),
+  );
 }
 
 export function guestTotal(entries: GuestEntry[]): number {
@@ -44,7 +61,13 @@ export function parseComps(comps: string | null | undefined): number | null {
   return isNaN(n) ? null : n;
 }
 
-function GuestCount({ total, compsAllotment }: { total: number; compsAllotment?: string | null }) {
+interface GuestCountProps {
+  total: number;
+  compsAllotment?: string | null;
+  className?: string;
+}
+
+export function GuestCount({ total, compsAllotment, className }: GuestCountProps) {
   const cap = parseComps(compsAllotment);
 
   let colorClass = "text-muted-foreground";
@@ -54,53 +77,19 @@ function GuestCount({ total, compsAllotment }: { total: number; compsAllotment?:
   }
 
   return (
-    <div className={cn("flex items-center gap-1.5 text-xs", colorClass)}>
-      <Users className="h-3 w-3" />
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 font-mono text-xs",
+        colorClass,
+        className,
+      )}
+    >
+      <UsersRound className="h-3 w-3" />
       <span>
-        {total} guest{total !== 1 ? "s" : ""}
-        {cap !== null ? ` / ${cap} spots` : ""}
+        {total}
+        {cap !== null ? `/${cap}` : ""}
       </span>
-    </div>
-  );
-}
-
-interface GuestListViewProps {
-  value: string | null | undefined;
-  capacity?: string | null;
-  compsAllotment?: string | null;
-  onEdit: () => void;
-}
-
-export function GuestListView({ value, compsAllotment, onEdit }: GuestListViewProps) {
-  const entries = parseGuestList(value);
-  if (entries.length === 0) return null;
-
-  const total = guestTotal(entries);
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-end">
-        <button
-          onClick={onEdit}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Edit
-        </button>
-      </div>
-      <div className="space-y-1">
-        {entries.map((entry, i) => (
-          <div key={i} className="flex items-center gap-2 text-sm">
-            <span className="text-foreground">{entry.name}</span>
-            {entry.plusOnes > 0 && (
-              <span className="text-muted-foreground text-xs">+{entry.plusOnes}</span>
-            )}
-          </div>
-        ))}
-      </div>
-      <div className="pt-1">
-        <GuestCount total={total} compsAllotment={compsAllotment} />
-      </div>
-    </div>
+    </span>
   );
 }
 
@@ -109,144 +98,298 @@ interface GuestListEditorProps {
   capacity?: string | null;
   compsAllotment?: string | null;
   onChange: (serialized: string) => void;
-  isInline?: boolean;
 }
 
 export default function GuestListEditor({ value, compsAllotment, onChange }: GuestListEditorProps) {
-  const [entries, setEntries] = useState<GuestEntry[]>(() => {
-    const parsed = parseGuestList(value);
-    return parsed.length > 0 ? parsed : [{ name: "", plusOnes: 0 }];
-  });
+  const [rows, setRows] = useState<GuestRow[]>(() =>
+    parseGuestList(value).map((e) => ({ ...e, id: newId() })),
+  );
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<{ name: string; plus: string }>({ name: "", plus: "" });
+  const editStartName = useRef<string>("");
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingFocusId = useRef<string | null>(null);
 
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
-  const pendingFocusIdx = useRef<number | null>(null);
+  // Track the serialized form last reflected in `rows` so external `value`
+  // updates (undo, navigation, real-time refresh) re-sync without overwriting
+  // the user's in-flight edit on every parent re-render.
+  const lastSerializedRef = useRef<string>(serializeGuestList(parseGuestList(value)));
 
   useEffect(() => {
-    onChange(serializeGuestList(entries));
-  }, [entries]);
+    const incoming = serializeGuestList(parseGuestList(value));
+    if (incoming === lastSerializedRef.current) return;
+    lastSerializedRef.current = incoming;
+    setRows(parseGuestList(value).map((e) => ({ ...e, id: newId() })));
+    setEditingId(null);
+  }, [value]);
 
   useLayoutEffect(() => {
-    if (pendingFocusIdx.current !== null) {
-      const idx = pendingFocusIdx.current;
-      pendingFocusIdx.current = null;
-      inputRefs.current[idx]?.focus();
+    if (pendingFocusId.current && pendingFocusId.current === editingId) {
+      pendingFocusId.current = null;
+      nameInputRef.current?.focus();
+      nameInputRef.current?.select();
     }
-  });
+  }, [editingId]);
 
-  const update = (idx: number, patch: Partial<GuestEntry>) => {
-    setEntries((prev) => prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)));
+  const total = guestTotal(rows);
+  const cap = parseComps(compsAllotment);
+  const atCapacity = cap !== null && total >= cap;
+
+  const emit = (next: GuestRow[]) => {
+    setRows(next);
+    const serialized = serializeGuestList(next);
+    lastSerializedRef.current = serialized;
+    onChange(serialized);
   };
 
-  const appendBlankRow = () => {
-    setEntries((prev) => {
-      pendingFocusIdx.current = prev.length;
-      return [...prev, { name: "", plusOnes: 0 }];
-    });
+  const startEdit = (row: GuestRow) => {
+    editStartName.current = row.name;
+    setDraft({ name: row.name, plus: row.plusOnes ? String(row.plusOnes) : "" });
+    pendingFocusId.current = row.id;
+    setEditingId(row.id);
   };
 
-  const removeWithUndo = (idx: number) => {
-    const entry = entries[idx];
-    if (!entry) return;
-    setEntries((prev) => prev.filter((_, i) => i !== idx));
+  const cancel = () => setEditingId(null);
+
+  const buildCommitted = (): GuestRow[] => {
+    if (editingId == null) return rows;
+    const trimmed = draft.name.trim();
+    const plus = Math.max(0, Math.min(9, parseInt(draft.plus, 10) || 0));
+    return trimmed
+      ? rows.map((r) => (r.id === editingId ? { ...r, name: trimmed, plusOnes: plus } : r))
+      : rows.filter((r) => r.id !== editingId);
+  };
+
+  // Blur should never silently delete a previously-named row when the user
+  // accidentally clears the input. Trash + Enter-on-empty are the explicit
+  // delete affordances.
+  const safeBlurCommit = () => {
+    if (editingId == null) return;
+    const trimmed = draft.name.trim();
+    if (!trimmed) {
+      if (editStartName.current) {
+        setEditingId(null);
+        return;
+      }
+      const next = rows.filter((r) => r.id !== editingId);
+      emit(next);
+      setEditingId(null);
+      return;
+    }
+    emit(buildCommitted());
+    setEditingId(null);
+  };
+
+  const commitAndNext = () => {
+    const after = buildCommitted();
+    emit(after);
+    if (cap !== null && guestTotal(after) >= cap) {
+      setEditingId(null);
+      return;
+    }
+    const id = newId();
+    const next = [...after, { id, name: "", plusOnes: 0 }];
+    setRows(next);
+    editStartName.current = "";
+    setDraft({ name: "", plus: "" });
+    pendingFocusId.current = id;
+    setEditingId(id);
+  };
+
+  const addBlankRow = () => {
+    if (atCapacity) return;
+    const id = newId();
+    setRows((curr) => [...curr, { id, name: "", plusOnes: 0 }]);
+    editStartName.current = "";
+    setDraft({ name: "", plus: "" });
+    pendingFocusId.current = id;
+    setEditingId(id);
+  };
+
+  const removeWithUndo = (id: string) => {
+    const idx = rows.findIndex((r) => r.id === id);
+    if (idx === -1) return;
+    const removed = rows[idx];
+    const next = rows.filter((r) => r.id !== id);
+    emit(next);
+    if (editingId === id) setEditingId(null);
+    if (!removed.name.trim()) return;
     toast("Guest removed", {
       duration: 4000,
       action: {
         label: "Undo",
         onClick: () => {
-          setEntries((prev) => {
-            const next = [...prev];
-            next.splice(Math.min(idx, next.length), 0, entry);
-            return next;
+          setRows((curr) => {
+            const restored = [...curr];
+            restored.splice(Math.min(idx, restored.length), 0, removed);
+            const serialized = serializeGuestList(restored);
+            lastSerializedRef.current = serialized;
+            onChange(serialized);
+            return restored;
           });
         },
       },
     });
   };
 
-  const handleNameKeyDown = (idx: number, e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    const current = entries[idx];
-    if (!current?.name.trim()) return;
-    appendBlankRow();
-  };
-
-  const handlePlusGuestsChange = (idx: number, raw: string) => {
-    if (raw === "") {
-      update(idx, { plusOnes: 0 });
-      return;
+  const handleNameKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitAndNext();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancel();
     }
-    const parsed = parseInt(raw, 10);
-    if (isNaN(parsed)) return;
-    update(idx, { plusOnes: Math.max(0, Math.min(9, parsed)) });
   };
 
-  const total = guestTotal(entries.filter((e) => e.name.trim()));
-  const cap = parseComps(compsAllotment);
-  const atCapacity = cap !== null && total >= cap;
-  const hasBlankRow = entries.length > 0 && !entries[entries.length - 1].name.trim();
+  const handlePlusKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitAndNext();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancel();
+    }
+  };
+
+  const handleNameBlur = (rowId: string, e: FocusEvent<HTMLInputElement>) => {
+    const next = e.relatedTarget as HTMLElement | null;
+    if (next?.dataset?.rowSibling === rowId) return;
+    safeBlurCommit();
+  };
+
+  const handlePlusBlur = (e: FocusEvent<HTMLInputElement>) => {
+    const next = e.relatedTarget as HTMLElement | null;
+    if (next?.tagName === "INPUT" && next.getAttribute("placeholder") === "Guest name") return;
+    safeBlurCommit();
+  };
 
   return (
-    <div className="space-y-2">
-      {entries.map((entry, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <Input
-            ref={(el) => {
-              inputRefs.current[i] = el;
-            }}
-            value={entry.name}
-            onChange={(e) => update(i, { name: e.target.value })}
-            onKeyDown={(e) => handleNameKeyDown(i, e)}
-            placeholder="Guest name"
-            className="text-sm h-11 sm:h-9 flex-1"
-          />
-          <div className="flex items-center gap-1 shrink-0">
-            <span
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
+      {rows.length === 0 ? (
+        <div className="px-4 py-3.5 text-sm italic text-muted-foreground/70">
+          No guests yet. Add one below.
+        </div>
+      ) : (
+        rows.map((row, i) => {
+          const isLast = i === rows.length - 1;
+          const isEdit = editingId === row.id;
+
+          if (isEdit) {
+            return (
+              <div
+                key={row.id}
+                className={cn(
+                  "grid grid-cols-[1fr_64px_32px] gap-2.5 items-center px-3 py-2 bg-muted/35",
+                  !isLast && "border-b border-border/60",
+                )}
+              >
+                <Input
+                  ref={nameInputRef}
+                  value={draft.name}
+                  onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                  onKeyDown={handleNameKeyDown}
+                  onBlur={(e) => handleNameBlur(row.id, e)}
+                  placeholder="Guest name"
+                  className="h-9 text-sm"
+                />
+                <div className="flex items-center gap-1">
+                  <span
+                    className={cn(
+                      "text-xs",
+                      draft.plus && parseInt(draft.plus, 10) > 0
+                        ? "text-foreground"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    +
+                  </span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={9}
+                    data-row-sibling={row.id}
+                    value={draft.plus}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (raw === "") return setDraft((d) => ({ ...d, plus: "" }));
+                      const n = parseInt(raw, 10);
+                      if (isNaN(n)) return;
+                      setDraft((d) => ({ ...d, plus: String(Math.max(0, Math.min(9, n))) }));
+                    }}
+                    onKeyDown={handlePlusKeyDown}
+                    onBlur={handlePlusBlur}
+                    aria-label="Additional guests"
+                    className="h-9 w-11 px-1 text-center font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+                <div />
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={row.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => startEdit(row)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  startEdit(row);
+                }
+              }}
               className={cn(
-                "text-xs",
-                entry.plusOnes > 0 ? "text-foreground" : "text-muted-foreground",
+                "group grid grid-cols-[1fr_auto_32px] gap-2.5 items-center px-4 py-2.5",
+                "cursor-text hover:bg-muted/35 transition-colors",
+                !isLast && "border-b border-border/60",
               )}
             >
-              +
-            </span>
-            <Input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={9}
-              value={entry.plusOnes === 0 ? "" : String(entry.plusOnes)}
-              onChange={(e) => handlePlusGuestsChange(i, e.target.value)}
-              aria-label="Additional guests"
-              className="text-sm h-11 sm:h-9 w-11 px-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-            onClick={() => removeWithUndo(i)}
-            aria-label="Remove guest"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      ))}
-      <div className="flex items-center justify-between pt-1 min-h-7">
-        {!hasBlankRow ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={appendBlankRow}
-            className="h-7 text-xs gap-1"
-            disabled={atCapacity}
-          >
-            <Plus className="h-3 w-3" /> Add Guest
-          </Button>
-        ) : (
-          <span />
+              <span className="text-sm text-foreground truncate">{row.name}</span>
+              {row.plusOnes > 0 ? (
+                <span className="font-mono text-xs text-muted-foreground">
+                  +{row.plusOnes}
+                </span>
+              ) : (
+                <span />
+              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeWithUndo(row.id);
+                }}
+                aria-label={`Remove ${row.name || "guest"}`}
+                className={cn(
+                  "h-7 w-7 inline-flex items-center justify-center rounded-md",
+                  "text-muted-foreground/70 transition-[opacity,color,background-color] duration-150 ease-out",
+                  "opacity-100 md:opacity-0 md:group-hover:opacity-100",
+                  "hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100",
+                )}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          );
+        })
+      )}
+      <button
+        type="button"
+        onClick={addBlankRow}
+        disabled={atCapacity}
+        className={cn(
+          "w-full flex items-center gap-2 px-4 py-3 text-sm transition-colors",
+          rows.length > 0 && "border-t border-border/60",
+          atCapacity
+            ? "text-muted-foreground/40 cursor-not-allowed"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted/35",
         )}
-        <GuestCount total={total} compsAllotment={compsAllotment} />
-      </div>
+      >
+        <Plus className="h-3.5 w-3.5" />
+        {atCapacity ? "Comp limit reached" : "Add guest"}
+      </button>
     </div>
   );
 }
