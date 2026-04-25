@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, FileText, MoreHorizontal } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
@@ -312,21 +312,23 @@ export default function ShowDetailPage() {
 
   // Sticky collapsed header on mobile — flips on once the page header has
   // scrolled out of view, so the back nav and primary action stay reachable.
-  const headerSentinelRef = useRef<HTMLDivElement>(null);
+  // Callback ref (rather than useEffect on a regular ref) because the sentinel
+  // only mounts after the show data has loaded, which a [id]-keyed effect misses.
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
-  useEffect(() => {
-    const el = headerSentinelRef.current;
-    if (!el) return;
+  const headerObserverRef = useRef<IntersectionObserver | null>(null);
+  const headerSentinelRef = useCallback((node: HTMLDivElement | null) => {
+    headerObserverRef.current?.disconnect();
+    headerObserverRef.current = null;
+    if (!node) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // Sentinel is collapsed-above-viewport: header has scrolled past.
         setHeaderCollapsed(!entry.isIntersecting && entry.boundingClientRect.top < 0);
       },
       { threshold: 0 },
     );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [id]);
+    observer.observe(node);
+    headerObserverRef.current = observer;
+  }, []);
   // When the advance hasn't been imported, the Show Info tab shows a CTA card.
   // The user can click "or fill in manually" to bypass the CTA and see the
   // normal field layout without waiting for a parsed advance.
