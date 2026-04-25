@@ -35,6 +35,20 @@
   }
 }
 
+/* Day of Show entry chip — blue halo pulse on the dashboard.
+   Distinct from .mic-glow (which is a red icon-level filter for the
+   "tonight" indicator on show cards). This is a chip-level box-shadow halo. */
+@keyframes mic-chip-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--badge-new) / 0.55),
+                0 0 16px 0 hsl(var(--badge-new) / 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 6px hsl(var(--badge-new) / 0),
+                0 0 22px 2px hsl(var(--badge-new) / 0.7);
+  }
+}
+
 @layer base {
   :root {
     --background: 40 30% 97%;
@@ -172,6 +186,10 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
   /* Stagger entrance animation for list items */
   .stagger-item {
     opacity: 0;
@@ -219,6 +237,12 @@
     animation: mic-glow 2.4s ease-in-out infinite;
   }
 
+  /* Day of Show entry chip on the dashboard — pulsing blue halo.
+     Lives on the chip itself (a button), not on an icon. */
+  .mic-chip-pulse {
+    animation: mic-chip-pulse 2.4s ease-in-out infinite;
+  }
+
   /* Override tailwindcss-animate defaults with our stronger curves */
   [data-state] {
     animation-timing-function: var(--ease-out);
@@ -245,6 +269,10 @@
     .mic-glow {
       animation: none;
       opacity: 1;
+    }
+
+    .mic-chip-pulse {
+      animation: none;
     }
 
     /* Neutralize Radix animate-in/out transform motion; keep opacity fade only */

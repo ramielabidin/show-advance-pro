@@ -34,6 +34,8 @@ import SectionLabel from "@/components/SectionLabel";
 import ShowCard from "@/components/ShowCard";
 import StatusDot from "@/components/StatusDot";
 import StatusLegend from "@/components/StatusLegend";
+import MicChip from "@/components/DayOfShow/MicChip";
+import DayOfShowMode from "@/components/DayOfShow/DayOfShowMode";
 import type { Show, Tour } from "@/lib/types";
 
 type Scope = "tour" | "standalone" | "upcoming";
@@ -111,6 +113,7 @@ export default function DashboardPage() {
   const requestedTourId = searchParams.get("tourId");
   const { session } = useAuth();
   const [revenueCollapsed, setRevenueCollapsed] = useState(false);
+  const [dayOfShowOpen, setDayOfShowOpen] = useState(false);
 
   const { data: shows = [], isLoading: showsLoading } = useQuery<ShowWithTour[]>({
     queryKey: ["shows"],
@@ -413,13 +416,16 @@ export default function DashboardPage() {
   }
 
   const header = (
-    <div className="flex items-start justify-between gap-3 md:gap-4">
+    <div className="flex items-start justify-between gap-3 md:gap-4 flex-wrap">
       <div className="min-w-0 flex-1">
         <h1 className="font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
           {headerLine}
         </h1>
       </div>
       <div className="flex items-center gap-2 shrink-0">
+        {showToday && (
+          <MicChip onClick={() => setDayOfShowOpen(true)} />
+        )}
         <BulkUploadDialog triggerClassName="h-9" iconOnlyMobile />
         <CreateShowDialog triggerClassName="h-9" iconOnlyMobile />
       </div>
@@ -551,6 +557,10 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Day of Show overlay — mounts on demand for today's show */}
+      {dayOfShowOpen && showToday && (
+        <DayOfShowMode showId={showToday.id} onClose={() => setDayOfShowOpen(false)} />
+      )}
     </div>
   );
 }
