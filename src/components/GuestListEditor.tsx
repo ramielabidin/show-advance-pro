@@ -6,10 +6,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { Plus, Trash2, UsersRound } from "lucide-react";
+import { Plus, Sparkles, Trash2, UsersRound } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import PasteGuestListDialog from "@/components/PasteGuestListDialog";
 
 export interface GuestEntry {
   name: string;
@@ -105,6 +106,7 @@ export default function GuestListEditor({ value, compsAllotment, onChange }: Gue
     parseGuestList(value).map((e) => ({ ...e, id: newId() })),
   );
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [pasteOpen, setPasteOpen] = useState(false);
   const [draft, setDraft] = useState<{ name: string; plus: string }>({ name: "", plus: "" });
   const editStartName = useRef<string>("");
   const nameInputRef = useRef<HTMLInputElement | null>(null);
@@ -204,6 +206,20 @@ export default function GuestListEditor({ value, compsAllotment, onChange }: Gue
     setDraft({ name: "", plus: "" });
     pendingFocusId.current = id;
     setEditingId(id);
+  };
+
+  const appendParsedGuests = (entries: GuestEntry[]) => {
+    if (entries.length === 0) return;
+    const trimmedExisting = rows.filter((r) => r.name.trim());
+    const next: GuestRow[] = [
+      ...trimmedExisting,
+      ...entries.map((e) => ({ ...e, id: newId() })),
+    ];
+    emit(next);
+    setEditingId(null);
+    toast.success(
+      `Added ${entries.length} guest${entries.length === 1 ? "" : "s"}`,
+    );
   };
 
   const removeWithUndo = (id: string) => {
@@ -375,21 +391,46 @@ export default function GuestListEditor({ value, compsAllotment, onChange }: Gue
           );
         })
       )}
-      <button
-        type="button"
-        onClick={addBlankRow}
-        disabled={atCapacity}
+      <div
         className={cn(
-          "w-full flex items-center gap-2 px-4 py-3 text-sm transition-colors",
+          "flex items-stretch text-sm",
           rows.length > 0 && "border-t border-border/60",
-          atCapacity
-            ? "text-muted-foreground/40 cursor-not-allowed"
-            : "text-muted-foreground hover:text-foreground hover:bg-muted/35",
         )}
       >
-        <Plus className="h-3.5 w-3.5" />
-        {atCapacity ? "Comp limit reached" : "Add guest"}
-      </button>
+        <button
+          type="button"
+          onClick={addBlankRow}
+          disabled={atCapacity}
+          className={cn(
+            "flex-1 flex items-center gap-2 px-4 py-3 transition-colors",
+            atCapacity
+              ? "text-muted-foreground/40 cursor-not-allowed"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/35",
+          )}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {atCapacity ? "Comp limit reached" : "Add guest"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setPasteOpen(true)}
+          className={cn(
+            "flex items-center gap-1.5 px-4 py-3 border-l border-border/60 transition-colors",
+            "text-muted-foreground hover:text-foreground hover:bg-muted/35",
+          )}
+          title="Paste a list — AI will clean it up"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Paste list</span>
+        </button>
+      </div>
+      <PasteGuestListDialog
+        open={pasteOpen}
+        onOpenChange={setPasteOpen}
+        existingGuests={rows.filter((r) => r.name.trim()).map(({ name, plusOnes }) => ({ name, plusOnes }))}
+        cap={cap}
+        onConfirm={appendParsedGuests}
+      />
     </div>
   );
 }
