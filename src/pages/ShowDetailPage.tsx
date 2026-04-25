@@ -1,8 +1,7 @@
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, FileText } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, FileText, MoreHorizontal } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -39,7 +38,6 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
-import Eyebrow from "@/components/Eyebrow";
 import StatTile from "@/components/StatTile";
 import SlackPushDialog from "@/components/SlackPushDialog";
 import EmailBandDialog from "@/components/EmailBandDialog";
@@ -102,88 +100,161 @@ function HeaderActions({
   const isSettled = !!show.is_settled;
 
   return (
-    <div className="flex items-center gap-1.5 shrink-0">
-      {/* Settle — primary action when unsettled, status+clear menu when settled */}
-      {isSettled ? (
+    <>
+      {/* Mobile: full-width Settle + overflow menu holding everything else */}
+      <div className="sm:hidden flex items-center gap-2 mt-3.5">
+        {isSettled ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled
+            className="flex-1 h-10 rounded-md gap-1.5 text-sm font-medium opacity-100"
+            style={{ color: "var(--pastel-green-fg)" }}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            <span>Settled</span>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            onClick={onOpenSettle}
+            className="flex-1 h-10 rounded-md gap-1.5 text-sm font-medium bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:bg-[hsl(var(--success))]/90"
+          >
+            <CheckCircle2 className="h-[15px] w-[15px]" />
+            <span>Settle show</span>
+          </Button>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              size="sm"
-              className="h-9 gap-1.5 rounded-full"
-              style={{ color: "var(--pastel-green-fg)" }}
+              size="icon"
+              className="h-10 w-10 rounded-md text-muted-foreground"
+              aria-label="More actions"
             >
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Settled</span>
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onOpenClearSettle}>Clear settlement…</DropdownMenuItem>
+            <ParseAdvanceForShowDialog
+              showId={showId}
+              currentShow={show}
+              onUpdated={onParseUpdated}
+              trigger={
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <FileText className="h-3.5 w-3.5 mr-2" /> Import advance
+                </DropdownMenuItem>
+              }
+            />
+            <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
+            <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
+            <ExportPdfDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                copyMagicLink();
+              }}
+              disabled={isCopyPending}
+            >
+              <Sparkles className="h-3.5 w-3.5 mr-2" /> Copy magic link
+            </DropdownMenuItem>
+            {isSettled && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onOpenClearSettle}>Clear settlement…</DropdownMenuItem>
+              </>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={onOpenDelete}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete show
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      ) : (
-        <Button
-          type="button"
-          size="sm"
-          onClick={onOpenSettle}
-          className="h-9 gap-1.5 rounded-full bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:bg-[hsl(var(--success))]/90"
-        >
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          <span>Settle</span>
-        </Button>
-      )}
+      </div>
 
-      <ParseAdvanceForShowDialog
-        showId={showId}
-        currentShow={show}
-        onUpdated={onParseUpdated}
-        trigger={
+      {/* Desktop: full Settle / Import / Share row */}
+      <div className="hidden sm:flex items-center gap-2 shrink-0">
+        {isSettled ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-10 rounded-md gap-1.5 text-[13.5px] font-medium"
+                style={{ color: "var(--pastel-green-fg)" }}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Settled</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onOpenClearSettle}>Clear settlement…</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
           <Button
             type="button"
-            variant="outline"
-            size="sm"
-            className="h-9 gap-1.5 rounded-full"
-            aria-label="Import advance"
-            title="Import advance"
+            onClick={onOpenSettle}
+            className="h-10 rounded-md gap-1.5 text-[13.5px] font-medium bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:bg-[hsl(var(--success))]/90"
           >
-            <FileText className="h-3.5 w-3.5" />
-            <span>Import</span>
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            <span>Settle show</span>
           </Button>
-        }
-      />
+        )}
 
-      {/* Share — everything else folds in here */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="secondary" size="sm" className="h-9 gap-1.5 rounded-full">
-            <Share2 className="h-3.5 w-3.5" />
-            <span>Share</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
-          <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
-          <ExportPdfDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault();
-              copyMagicLink();
-            }}
-            disabled={isCopyPending}
-          >
-            <Sparkles className="h-3.5 w-3.5 mr-2" /> Copy magic link
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onClick={onOpenDelete}
-          >
-            <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete show
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+        <ParseAdvanceForShowDialog
+          showId={showId}
+          currentShow={show}
+          onUpdated={onParseUpdated}
+          trigger={
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 rounded-md gap-1.5 text-[13.5px] font-medium"
+              aria-label="Import advance"
+              title="Import advance"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              <span>Import</span>
+            </Button>
+          }
+        />
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary" className="h-10 rounded-md gap-1.5 text-[13.5px] font-medium">
+              <Share2 className="h-3.5 w-3.5" />
+              <span>Share</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
+            <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
+            <ExportPdfDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                copyMagicLink();
+              }}
+              disabled={isCopyPending}
+            >
+              <Sparkles className="h-3.5 w-3.5 mr-2" /> Copy magic link
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={onOpenDelete}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete show
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </>
   );
 }
 
@@ -752,6 +823,31 @@ export default function ShowDetailPage() {
     );
   };
 
+  const lookupAddress = async () => {
+    if (!show) return;
+    setLookingUpAddress(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("lookup-venue-address", {
+        body: { venue_name: show.venue_name, city: show.city },
+      });
+      if (error || data?.error) throw new Error(data?.error || error.message);
+      const cleanAddress = (data.address as string).replace(/,?\s*United States$/, "");
+      const cleanCity = show.city?.replace(/\*+$/, "").trim() ?? show.city;
+      const { error: updateError } = await supabase
+        .from("shows")
+        .update({ venue_address: cleanAddress, city: cleanCity })
+        .eq("id", show.id);
+      if (updateError) throw updateError;
+      queryClient.invalidateQueries({ queryKey: ["show", id] });
+      toast.success("Address found and saved");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Could not find address";
+      toast.error(msg);
+    } finally {
+      setLookingUpAddress(false);
+    }
+  };
+
   return (
     <div className="animate-fade-in max-w-3xl">
       {/* Controlled parse dialog driven by inbound-email review flow. Opens
@@ -781,192 +877,216 @@ export default function ShowDetailPage() {
         }}
       >
       {/* Header */}
-      <div className="mb-5 space-y-1.5 sm:space-y-2">
-        {/* Back arrow + badges row */}
-        <div className="flex items-center justify-between">
+      <div className="mb-5">
+        {/* Not-advanced banner — silent on the happy path */}
+        {!show.advanced_at && (
+          <div
+            className="mb-4 flex items-center gap-2.5 px-4 py-2.5 text-[12.5px] font-medium border-y sm:border sm:rounded-md -mx-4 sm:mx-0"
+            style={{ background: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-current shrink-0" aria-hidden />
+            <span>Show hasn't been advanced yet</span>
+            <button
+              type="button"
+              onClick={() => toggleAdvancedMutation.mutate(true)}
+              disabled={toggleAdvancedMutation.isPending}
+              className="ml-auto underline underline-offset-2 hover:opacity-80 disabled:opacity-50"
+            >
+              Mark advanced
+            </button>
+          </div>
+        )}
+
+        {/* Back arrow */}
+        <div className="flex items-center">
           <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 -ml-1" onClick={() => navigate("/")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex items-center gap-1.5">
-            {show.tours?.name && (
-              <Link to={`/shows?view=tour&tourId=${show.tours.id}`}>
-                <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-medium px-2 py-0 h-5 hover:bg-secondary/80 transition-colors">
-                  {show.tours.name}
-                </Badge>
-              </Link>
-            )}
-          </div>
         </div>
 
-        {/* Eyebrow — date (click to edit) */}
-        {inlineField === "date" ? (
-          <div ref={inlineRef}>
-            <Input
-              type="date"
-              autoFocus
-              value={inlineValue}
-              onChange={(e) => setInlineValue(e.target.value)}
-              onBlur={() => {
-                if (inlineValue && inlineValue !== show.date) {
-                  updateMutation.mutate({ date: inlineValue });
-                } else {
-                  setInlineField(null);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  (e.target as HTMLInputElement).blur();
-                } else if (e.key === "Escape") {
-                  setInlineField(null);
-                }
-              }}
-              className="h-auto py-0 px-1 text-xs w-auto inline-block"
-            />
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => { setInlineField("date"); setInlineValue(show.date); }}
-            className="block text-left hover:text-foreground transition-colors"
-          >
-            <Eyebrow className="mb-0">
-              {format(parseISO(show.date), "MMM d · EEEE")}
-            </Eyebrow>
-          </button>
-        )}
-
-        {/* Venue name — inline editable */}
-        {inlineField === "venue_name" ? (
-          <div ref={inlineRef}>
-            <Input
-              autoFocus
-              value={inlineValue}
-              onChange={(e) => setInlineValue(e.target.value)}
-              onBlur={() => {
-                if (inlineValue.trim() && inlineValue !== show.venue_name) {
-                  updateMutation.mutate({ venue_name: inlineValue.trim() });
-                } else {
-                  setInlineField(null);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  (e.target as HTMLInputElement).blur();
-                } else if (e.key === "Escape") {
-                  setInlineField(null);
-                }
-              }}
-              className="text-2xl sm:text-3xl font-display font-bold tracking-tight h-auto py-0.5 px-1 -ml-1"
-            />
-          </div>
-        ) : (
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <h1
-              className="text-2xl sm:text-3xl font-display font-bold tracking-tight leading-tight cursor-pointer hover:text-primary/80 transition-colors"
-              onClick={() => { setInlineField("venue_name"); setInlineValue(show.venue_name); }}
-            >
-              {show.venue_name}
-            </h1>
-            {show.advanced_at && (
-              <button
-                type="button"
-                onClick={() => toggleAdvancedMutation.mutate(false)}
-                disabled={toggleAdvancedMutation.isPending}
-                aria-label="Unmark advanced"
-                title="Click to unmark as advanced"
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0 transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
-              >
-                <Check className="h-3 w-3" />
-                Advanced
-              </button>
+        {/* Title row — eyebrow / venue / meta on the left, action buttons on the right (desktop) */}
+        <div className="mt-2 sm:flex sm:items-end sm:justify-between sm:gap-6 sm:flex-wrap">
+          <div className="min-w-0 sm:flex-1">
+            {/* Eyebrow — combined tour + date */}
+            {inlineField === "date" ? (
+              <div ref={inlineRef}>
+                <Input
+                  type="date"
+                  autoFocus
+                  value={inlineValue}
+                  onChange={(e) => setInlineValue(e.target.value)}
+                  onBlur={() => {
+                    if (inlineValue && inlineValue !== show.date) {
+                      updateMutation.mutate({ date: inlineValue });
+                    } else {
+                      setInlineField(null);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      (e.target as HTMLInputElement).blur();
+                    } else if (e.key === "Escape") {
+                      setInlineField(null);
+                    }
+                  }}
+                  className="h-auto py-0 px-1 text-xs w-auto inline-block"
+                />
+              </div>
+            ) : (
+              <p className="mb-2 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                {show.tours?.name && (
+                  <>
+                    <Link
+                      to={`/shows?view=tour&tourId=${show.tours.id}`}
+                      className="hover:text-foreground transition-colors"
+                    >
+                      {show.tours.name}
+                    </Link>
+                    <span className="mx-1.5" aria-hidden>·</span>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setInlineField("date"); setInlineValue(show.date); }}
+                  className="hover:text-foreground transition-colors"
+                >
+                  {format(parseISO(show.date), "MMM d EEE")}
+                </button>
+              </p>
             )}
-          </div>
-        )}
 
-        {/* Address row */}
-        <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5">
-          {show.venue_address ? (
-            <a
-              href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 hover:underline hover:text-foreground transition-colors"
-            >
-              <MapPin className="h-3 w-3 shrink-0" />
-              {show.venue_address.replace(/,?\s*United States$/i, "")}
-            </a>
-          ) : (
-            <span className="inline-flex items-center gap-1">
-              <MapPin className="h-3 w-3 shrink-0" />
-              <span>{formatCityState(show.city)}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1 text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
-                disabled={lookingUpAddress}
-                onClick={async () => {
-                  setLookingUpAddress(true);
-                  try {
-                    const { data, error } = await supabase.functions.invoke("lookup-venue-address", {
-                      body: { venue_name: show.venue_name, city: show.city },
-                    });
-                    if (error || data?.error) throw new Error(data?.error || error.message);
-                    const cleanAddress = (data.address as string).replace(/,?\s*United States$/, "");
-                    // Also strip any trailing asterisks from city when confirming the address
-                    const cleanCity = show.city?.replace(/\*+$/, "").trim() ?? show.city;
-                    const { error: updateError } = await supabase
-                      .from("shows")
-                      .update({ venue_address: cleanAddress, city: cleanCity })
-                      .eq("id", show.id);
-                    if (updateError) throw updateError;
-                    queryClient.invalidateQueries({ queryKey: ["show", id] });
-                    toast.success("Address found and saved");
-                  } catch (err: unknown) {
-                    const msg = err instanceof Error ? err.message : "Could not find address";
-                    toast.error(msg);
-                  } finally {
-                    setLookingUpAddress(false);
-                  }
-                }}
+            {/* Venue name — inline editable */}
+            {inlineField === "venue_name" ? (
+              <div ref={inlineRef}>
+                <Input
+                  autoFocus
+                  value={inlineValue}
+                  onChange={(e) => setInlineValue(e.target.value)}
+                  onBlur={() => {
+                    if (inlineValue.trim() && inlineValue !== show.venue_name) {
+                      updateMutation.mutate({ venue_name: inlineValue.trim() });
+                    } else {
+                      setInlineField(null);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      (e.target as HTMLInputElement).blur();
+                    } else if (e.key === "Escape") {
+                      setInlineField(null);
+                    }
+                  }}
+                  className="text-[28px] sm:text-4xl font-display font-bold tracking-[-0.02em] h-auto py-0.5 px-1 -ml-1"
+                />
+              </div>
+            ) : (
+              <h1
+                className="font-display font-bold text-[28px] sm:text-4xl leading-[1.05] tracking-[-0.02em] cursor-pointer hover:text-primary/80 transition-colors"
+                onClick={() => { setInlineField("venue_name"); setInlineValue(show.venue_name); }}
               >
-                {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                Lookup
-              </Button>
-            </span>
-          )}
-        </div>
-
-        {/* Drive-time — paired with address as venue context */}
-        {driveTimeLabel && departureOrigin && !shouldHideDriveTime && (
-          <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-x-1.5">
-            <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} />
-            <span className="font-mono text-foreground">{driveTimeLabel}</span>
-            <span>drive from {departureOrigin.label}</span>
-            {driveTime?.distance_text && (
-              <>
-                <span className="text-border mx-0.5">·</span>
-                <span className="font-mono">{driveTime.distance_text}</span>
-              </>
+                {show.venue_name}
+                {show.advanced_at && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); toggleAdvancedMutation.mutate(false); }}
+                    disabled={toggleAdvancedMutation.isPending}
+                    aria-label="Unmark advanced"
+                    title="Click to unmark as advanced"
+                    className="hidden sm:inline-flex items-center gap-1 rounded-full px-2.5 py-[3px] text-[11px] font-medium font-sans align-middle ml-3 transition-opacity hover:opacity-80 disabled:opacity-50"
+                    style={{ background: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+                  >
+                    <Check className="h-3 w-3" />
+                    Advanced
+                  </button>
+                )}
+              </h1>
             )}
-          </div>
-        )}
 
-        {/* Status + actions — labeled buttons always */}
-        <div className="pt-3 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2 min-w-0 flex-wrap">
-            {!show.advanced_at && (
-              <button
-                type="button"
-                onClick={() => toggleAdvancedMutation.mutate(true)}
-                disabled={toggleAdvancedMutation.isPending}
-                aria-label="Mark as advanced"
-                title="Click to mark as advanced"
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium shrink-0 transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }}
+            {/* Desktop meta row — address · drive-time inline */}
+            <div className="hidden sm:flex items-center gap-3 mt-2.5 text-sm text-muted-foreground flex-wrap">
+              {show.venue_address ? (
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 hover:underline hover:text-foreground transition-colors"
+                >
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  {show.venue_address.replace(/,?\s*United States$/i, "")}
+                </a>
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  <span>{formatCityState(show.city)}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1 text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
+                    disabled={lookingUpAddress}
+                    onClick={lookupAddress}
+                  >
+                    {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                    Lookup
+                  </Button>
+                </span>
+              )}
+              {driveTimeLabel && departureOrigin && !shouldHideDriveTime && (
+                <>
+                  <span className="w-[3px] h-[3px] rounded-full bg-muted-foreground/50 shrink-0" aria-hidden />
+                  <span className="inline-flex items-center gap-1.5 flex-wrap">
+                    <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} />
+                    <span className="font-mono text-foreground font-medium">{driveTimeLabel}</span>
+                    <span>from {departureOrigin.label}</span>
+                    {driveTime?.distance_text && (
+                      <>
+                        <span className="opacity-60">·</span>
+                        <span className="font-mono">{driveTime.distance_text}</span>
+                      </>
+                    )}
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Mobile meta — quiet city line, drive-time as muted strip */}
+            <div className="sm:hidden mt-1.5 text-[13px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
+              {show.venue_address ? (
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline hover:text-foreground transition-colors"
+                >
+                  {formatCityState(show.city)}
+                </a>
+              ) : (
+                <>
+                  <span>{formatCityState(show.city)}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1 text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
+                    disabled={lookingUpAddress}
+                    onClick={lookupAddress}
+                  >
+                    {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                    Lookup
+                  </Button>
+                </>
+              )}
+            </div>
+            {driveTimeLabel && departureOrigin && !shouldHideDriveTime && (
+              <div
+                className="sm:hidden flex items-center gap-2.5 mt-3 px-2.5 py-2 rounded-md text-[12.5px] text-muted-foreground"
+                style={{ background: "hsl(var(--muted) / 0.55)" }}
               >
-                Needs advancing
-              </button>
+                <Car className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                <span className="font-mono font-medium text-foreground">{driveTimeLabel}</span>
+                <span className="truncate">from {departureOrigin.label}</span>
+                {driveTime?.distance_text && (
+                  <span className="ml-auto font-mono font-medium shrink-0">{driveTime.distance_text}</span>
+                )}
+              </div>
             )}
           </div>
 
