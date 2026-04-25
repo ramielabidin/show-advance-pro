@@ -148,7 +148,6 @@ function HeaderActions({
             />
             <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
             <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
-            <ExportPdfDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={(e) => {
@@ -233,7 +232,6 @@ function HeaderActions({
           <DropdownMenuContent align="end">
             <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
             <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
-            <ExportPdfDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Export Run of Show</DropdownMenuItem>} />
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={(e) => {
@@ -1244,6 +1242,9 @@ export default function ShowDetailPage() {
                     }
                   }}
                 />
+                <div className="flex justify-end">
+                  <ExportPdfDialog show={show} />
+                </div>
               </FieldGroup>
             </div>
 
