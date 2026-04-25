@@ -299,6 +299,11 @@ export default function ShowDetailPage() {
   const [dealTabSeen, setDealTabSeen] = useState(() =>
     id ? localStorage.getItem(`deal-tab-seen-${id}`) === "true" : true
   );
+  // Re-sync when navigating between shows — useState init only runs at mount,
+  // and react-router reuses the component instance across :id changes.
+  useEffect(() => {
+    setDealTabSeen(id ? localStorage.getItem(`deal-tab-seen-${id}`) === "true" : true);
+  }, [id]);
 
   // Settle modal state
   const [settleOpen, setSettleOpen] = useState(false);
