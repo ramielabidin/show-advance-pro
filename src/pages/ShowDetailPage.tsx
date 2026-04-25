@@ -79,6 +79,14 @@ function formatCurrency(raw: string): string {
   }).format(num);
 }
 
+// Strip country + city/state tail from a Google-formatted address so the
+// mobile header can show just the street line beneath the city row.
+function streetFromAddress(addr: string): string {
+  const cleaned = addr.replace(/,?\s*United States$/i, "").trim();
+  const firstComma = cleaned.indexOf(",");
+  return firstComma > 0 ? cleaned.slice(0, firstComma).trim() : cleaned;
+}
+
 interface ShareMenuContentProps {
   show: Show;
   showId: string;
@@ -1138,19 +1146,22 @@ export default function ShowDetailPage() {
               )}
             </div>
 
-            {/* Mobile meta — quiet city line, drive-time as muted strip */}
-            <div className="sm:hidden mt-1.5 text-[13px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
+            {/* Mobile meta — quiet city line + street address, drive-time as muted strip */}
+            <div className="sm:hidden mt-1.5 text-[13px] text-muted-foreground">
               {show.venue_address ? (
                 <a
                   href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:underline hover:text-foreground transition-colors"
+                  className="block hover:text-foreground transition-colors"
                 >
-                  {formatCityState(show.city)}
+                  <span className="block">{formatCityState(show.city)}</span>
+                  <span className="block text-[12px] text-muted-foreground/75 mt-0.5">
+                    {streetFromAddress(show.venue_address)}
+                  </span>
                 </a>
               ) : (
-                <>
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span>{formatCityState(show.city)}</span>
                   <Button
                     variant="ghost"
@@ -1162,7 +1173,7 @@ export default function ShowDetailPage() {
                     {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                     Lookup
                   </Button>
-                </>
+                </div>
               )}
             </div>
             {driveTimeLabel && departureOrigin && !shouldHideDriveTime && (
