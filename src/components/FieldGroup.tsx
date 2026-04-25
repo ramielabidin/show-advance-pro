@@ -37,13 +37,14 @@ export default function FieldGroup({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="mb-3 w-full text-left group flex items-center justify-between gap-2"
+          className="mb-3 w-full text-left group flex items-center gap-2"
         >
+          <div className="w-0.5 h-3.5 rounded-full bg-foreground/25 shrink-0" />
           {header}
           <ChevronDown
             aria-hidden
             className={cn(
-              "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:text-foreground/70",
+              "ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:text-foreground/70",
               open && "rotate-180"
             )}
           />
