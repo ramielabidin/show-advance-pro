@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, FileText, MoreHorizontal } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
@@ -77,6 +77,39 @@ function formatCurrency(raw: string): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: num % 1 !== 0 ? 2 : 0,
   }).format(num);
+}
+
+interface ShareMenuContentProps {
+  show: Show;
+  showId: string;
+  onOpenDelete: () => void;
+}
+
+function ShareMenuContent({ show, showId, onOpenDelete }: ShareMenuContentProps) {
+  const { copyOrCreate: copyMagicLink, isPending: isCopyPending } = useGuestLink(showId, "daysheet");
+  return (
+    <>
+      <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
+      <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        onSelect={(e) => {
+          e.preventDefault();
+          copyMagicLink();
+        }}
+        disabled={isCopyPending}
+      >
+        <Sparkles className="h-3.5 w-3.5 mr-2" /> Copy magic link
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        className="text-destructive focus:text-destructive"
+        onClick={onOpenDelete}
+      >
+        <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete show
+      </DropdownMenuItem>
+    </>
+  );
 }
 
 interface HeaderActionsProps {
@@ -230,25 +263,7 @@ function HeaderActions({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
-            <SlackPushDialog showId={showId} show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Send to Slack</DropdownMenuItem>} />
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onSelect={(e) => {
-                e.preventDefault();
-                copyMagicLink();
-              }}
-              disabled={isCopyPending}
-            >
-              <Sparkles className="h-3.5 w-3.5 mr-2" /> Copy magic link
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={onOpenDelete}
-            >
-              <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete show
-            </DropdownMenuItem>
+            <ShareMenuContent show={show} showId={showId} onOpenDelete={onOpenDelete} />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -307,6 +322,26 @@ export default function ShowDetailPage() {
   const [settleOpen, setSettleOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [clearSettleOpen, setClearSettleOpen] = useState(false);
+
+  // Sticky collapsed header on mobile — flips on once the page header has
+  // scrolled out of view, so the back nav and primary action stay reachable.
+  // Callback ref (rather than useEffect on a regular ref) because the sentinel
+  // only mounts after the show data has loaded, which a [id]-keyed effect misses.
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const headerObserverRef = useRef<IntersectionObserver | null>(null);
+  const headerSentinelRef = useCallback((node: HTMLDivElement | null) => {
+    headerObserverRef.current?.disconnect();
+    headerObserverRef.current = null;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setHeaderCollapsed(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      { threshold: 0 },
+    );
+    observer.observe(node);
+    headerObserverRef.current = observer;
+  }, []);
   // When the advance hasn't been imported, the Show Info tab shows a CTA card.
   // The user can click "or fill in manually" to bypass the CTA and see the
   // normal field layout without waiting for a parsed advance.
@@ -384,12 +419,12 @@ export default function ShowDetailPage() {
     if (previousShow?.city && show?.date) {
       const dayGap = differenceInDays(parseISO(show.date), parseISO(previousShow.date));
       if (dayGap <= 3) {
-        return { label: previousShow.city, query: previousShow.venue_address || previousShow.city };
+        return { label: formatCityState(previousShow.city), query: previousShow.venue_address || previousShow.city };
       }
     }
     const home = appSettings?.home_base_city?.trim();
     if (home) {
-      return { label: home, query: home };
+      return { label: formatCityState(home), query: home };
     }
     return null;
   }, [previousShow, appSettings, show]);
@@ -835,6 +870,11 @@ export default function ShowDetailPage() {
     );
   };
 
+  const openSettleModal = () => {
+    setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
+    setSettleOpen(true);
+  };
+
   const lookupAddress = async () => {
     if (!show) return;
     setLookingUpAddress(true);
@@ -862,6 +902,71 @@ export default function ShowDetailPage() {
 
   return (
     <div className="animate-fade-in max-w-3xl">
+      {/* Mobile sticky collapsed header — overlays AppLayout's mobile chrome
+          while scrolled. Slides in from above; mirrors the back-arrow + venue
+          + primary action from the page header. */}
+      <div
+        className={cn(
+          "md:hidden fixed top-0 left-0 right-0 z-[60] h-12 px-3 flex items-center gap-2 border-b bg-background/95 backdrop-blur-sm transition-transform duration-200 ease-out",
+          headerCollapsed ? "translate-y-0" : "-translate-y-full",
+        )}
+        aria-hidden={!headerCollapsed}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 -ml-1"
+          onClick={() => navigate("/")}
+          tabIndex={headerCollapsed ? 0 : -1}
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <Link
+          to="/"
+          className="font-display text-lg leading-none tracking-tight text-foreground flex-1"
+          tabIndex={headerCollapsed ? 0 : -1}
+        >
+          Advance
+        </Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="secondary"
+              className="h-8 px-3 rounded-md gap-1.5 text-xs font-medium shrink-0"
+              tabIndex={headerCollapsed ? 0 : -1}
+              aria-label="Share"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              <span>Share</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <ShareMenuContent show={show as Show} showId={id!} onOpenDelete={() => setDeleteOpen(true)} />
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {show.is_settled ? (
+          <Button
+            variant="outline"
+            disabled
+            className="h-8 px-3 rounded-md gap-1.5 text-xs font-medium opacity-100 shrink-0"
+            style={{ color: "var(--pastel-green-fg)" }}
+            tabIndex={-1}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Settled
+          </Button>
+        ) : (
+          <Button
+            onClick={openSettleModal}
+            className="h-8 px-3 rounded-md gap-1.5 text-xs font-medium bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:bg-[hsl(var(--success))]/90 shrink-0"
+            tabIndex={headerCollapsed ? 0 : -1}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Settle
+          </Button>
+        )}
+      </div>
+
       {/* Controlled parse dialog driven by inbound-email review flow. Opens
           automatically when location state carries a forwarded email body and
           auto-invokes the AI parse so the user lands on the confirm step. */}
@@ -1107,10 +1212,7 @@ export default function ShowDetailPage() {
           <HeaderActions
             show={show as Show}
             showId={id!}
-            onOpenSettle={() => {
-              setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
-              setSettleOpen(true);
-            }}
+            onOpenSettle={openSettleModal}
             onOpenClearSettle={() => setClearSettleOpen(true)}
             onOpenDelete={() => setDeleteOpen(true)}
             onParseUpdated={() => {
@@ -1119,6 +1221,9 @@ export default function ShowDetailPage() {
             }}
           />
         </div>
+        {/* Scroll sentinel — when this leaves the viewport above, the sticky
+            collapsed header on mobile fades in. */}
+        <div ref={headerSentinelRef} aria-hidden className="h-px" />
 
         {/* Underlined text tabs */}
         <div className="pt-3 border-b border-border">
