@@ -923,9 +923,13 @@ export default function ShowDetailPage() {
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <span className="font-display text-base leading-none truncate flex-1">
-          {show.venue_name}
-        </span>
+        <Link
+          to="/"
+          className="font-display text-lg leading-none tracking-tight text-foreground flex-1"
+          tabIndex={headerCollapsed ? 0 : -1}
+        >
+          Advance
+        </Link>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
