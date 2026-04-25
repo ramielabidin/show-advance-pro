@@ -416,19 +416,21 @@ export default function DashboardPage() {
   }
 
   const header = (
-    <div className="flex items-start justify-between gap-3 md:gap-4 flex-wrap">
-      <div className="min-w-0 flex-1">
-        <h1 className="font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
+    <div className="space-y-3">
+      <div className="flex items-start justify-between gap-3 md:gap-4">
+        <h1 className="min-w-0 flex-1 font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
           {headerLine}
         </h1>
+        <div className="flex items-center gap-2 shrink-0">
+          <BulkUploadDialog triggerClassName="h-9" iconOnlyMobile />
+          <CreateShowDialog triggerClassName="h-9" iconOnlyMobile />
+        </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        {showToday && (
+      {showToday && (
+        <div>
           <MicChip onClick={() => setDayOfShowOpen(true)} />
-        )}
-        <BulkUploadDialog triggerClassName="h-9" iconOnlyMobile />
-        <CreateShowDialog triggerClassName="h-9" iconOnlyMobile />
-      </div>
+        </div>
+      )}
     </div>
   );
 

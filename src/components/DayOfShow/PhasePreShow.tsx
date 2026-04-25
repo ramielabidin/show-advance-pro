@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Phone, Users, Navigation } from "lucide-react";
+import { Phone, Users, ArrowUpRight } from "lucide-react";
 import { to24Hour } from "@/lib/timeFormat";
 import { roleLabel } from "@/lib/contactRoles";
 import { normalizePhone, formatCityState } from "@/lib/utils";
@@ -72,64 +72,116 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
 
   return (
     <div className="px-[22px] pt-2 pb-7 flex-1 flex flex-col">
-      {/* Hero — clock time as the operative info, countdown demoted to subtitle */}
-      <div className="pt-[14px] pb-1">
-        <div
-          className="text-[11px] uppercase font-medium leading-none mb-2.5"
-          style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
-        >
-          {isFuture ? "Up next" : "Now"}
+      {/* Hero — two columns: time on the left (operative), venue on the right
+          (so it lands above the fold instead of buried below the schedule). */}
+      <div className="pt-[14px] pb-1 flex items-start gap-4">
+        {/* Time column */}
+        <div className="min-w-0 flex-1">
+          <div
+            className="text-[11px] uppercase font-medium leading-none mb-2.5"
+            style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
+          >
+            {isFuture ? "Up next" : "Now"}
+          </div>
+
+          {hero && (
+            <>
+              <div
+                className="text-[26px] font-medium leading-[1.05] truncate"
+                style={{ letterSpacing: "-0.02em", color: "hsl(var(--foreground))" }}
+              >
+                {hero.label}
+              </div>
+
+              {/* Big serif TIME — the operative number */}
+              {heroParts && (
+                <div
+                  className="mt-[18px] flex items-baseline gap-2 tabular-nums"
+                  style={{ letterSpacing: "-0.05em" }}
+                >
+                  <span
+                    className="font-display"
+                    style={{
+                      fontSize: 96,
+                      lineHeight: 0.9,
+                      color: "hsl(var(--foreground))",
+                    }}
+                  >
+                    {heroParts.n}
+                  </span>
+                  <span
+                    className="font-display"
+                    style={{
+                      fontSize: 32,
+                      lineHeight: 0.9,
+                      letterSpacing: "-0.02em",
+                      color: "hsl(var(--muted-foreground))",
+                    }}
+                  >
+                    {heroParts.u}
+                  </span>
+                </div>
+              )}
+
+              {/* Countdown — supporting context */}
+              {remaining !== null && (
+                <div
+                  className="mt-2 text-[14px] font-medium leading-[1.2]"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  {isFuture ? formatRelative(remaining) : "now"}
+                </div>
+              )}
+            </>
+          )}
         </div>
 
-        {hero && (
-          <>
-            <div
-              className="text-[28px] font-medium leading-[1.05]"
-              style={{ letterSpacing: "-0.02em", color: "hsl(var(--foreground))" }}
-            >
-              {hero.label}
-            </div>
-
-            {/* Big serif TIME — the operative number */}
-            {heroParts && (
+        {/* Venue column — promoted from the bottom action stack so it lives
+            in the previously-empty space next to the time. Tap to navigate. */}
+        {show.venue_name && (
+          <a
+            href={venueNavHref ?? undefined}
+            target={venueNavHref ? "_blank" : undefined}
+            rel={venueNavHref ? "noopener noreferrer" : undefined}
+            className="shrink-0 max-w-[44%] block rounded-[12px] border p-3 [transition:transform_160ms_var(--ease-out),background-color_160ms_var(--ease-out)] active:scale-[0.98]"
+            style={{
+              background: "hsl(var(--muted) / 0.4)",
+              borderColor: "hsl(var(--border))",
+            }}
+          >
+            <div className="flex items-start justify-between gap-2 mb-1.5">
               <div
-                className="mt-[18px] flex items-baseline gap-2.5 tabular-nums"
-                style={{ letterSpacing: "-0.05em" }}
+                className="text-[9.5px] uppercase font-medium leading-none"
+                style={{ letterSpacing: "0.14em", color: "hsl(var(--muted-foreground))" }}
               >
-                <span
-                  className="font-display"
-                  style={{
-                    fontSize: 110,
-                    lineHeight: 0.9,
-                    color: "hsl(var(--foreground))",
-                  }}
-                >
-                  {heroParts.n}
-                </span>
-                <span
-                  className="font-display"
-                  style={{
-                    fontSize: 38,
-                    lineHeight: 0.9,
-                    letterSpacing: "-0.02em",
-                    color: "hsl(var(--muted-foreground))",
-                  }}
-                >
-                  {heroParts.u}
-                </span>
+                Venue
               </div>
-            )}
-
-            {/* Countdown — supporting context */}
-            {remaining !== null && (
+              {venueNavHref && (
+                <ArrowUpRight
+                  className="h-3.5 w-3.5 shrink-0 -mt-0.5"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                />
+              )}
+            </div>
+            <div
+              className="font-display leading-[1.1] mb-1"
+              style={{
+                fontSize: 20,
+                letterSpacing: "-0.02em",
+                color: "hsl(var(--foreground))",
+              }}
+            >
+              {show.venue_name}
+            </div>
+            {(show.venue_address || show.city) && (
               <div
-                className="mt-2 text-[14px] font-medium leading-[1.2]"
+                className="text-[11.5px] leading-[1.35] line-clamp-2 break-words"
                 style={{ color: "hsl(var(--muted-foreground))" }}
               >
-                {isFuture ? formatRelative(remaining) : "now"}
+                {show.venue_address ?? formatCityState(show.city || "")}
               </div>
             )}
-          </>
+          </a>
         )}
       </div>
 
@@ -146,8 +198,8 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
         </div>
       )}
 
-      {/* Action grid: 2-up DOS + Guest list, then full-width Venue */}
-      <div className="mt-[22px] grid grid-cols-2 gap-2.5">
+      {/* Action stack — venue lives in the hero now, so just contact + guests */}
+      <div className="mt-[22px] space-y-2.5">
         <ActionCard
           icon={Phone}
           eyebrow="Day-of contact"
@@ -160,6 +212,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
               : "Not set"
           }
           href={dosContact?.phone ? `tel:${dosContact.phone}` : undefined}
+          fullWidth
         />
         <ActionCard
           icon={Users}
@@ -167,18 +220,6 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
           title={String(guestCount)}
           sub={guestCount === 0 ? "no guests yet" : "confirmed names"}
           titleMono
-        />
-      </div>
-
-      <div className="mt-2.5">
-        <ActionCard
-          icon={Navigation}
-          eyebrow="Venue"
-          title={show.venue_name}
-          sub={show.venue_address ?? formatCityState(show.city || "")}
-          href={venueNavHref}
-          variant="muted"
-          showNavArrow
           fullWidth
         />
       </div>

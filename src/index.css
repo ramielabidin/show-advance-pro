@@ -35,17 +35,18 @@
   }
 }
 
-/* Day of Show entry chip — blue halo pulse on the dashboard.
-   Distinct from .mic-glow (which is a red icon-level filter for the
-   "tonight" indicator on show cards). This is a chip-level box-shadow halo. */
+/* Day of Show entry chip — red "on air" halo pulse on the dashboard.
+   Distinct from .mic-glow (which is a soft red icon-level filter for the
+   "tonight" indicator on show cards). This is a chip-level box-shadow halo
+   tuned to a more saturated studio red. */
 @keyframes mic-chip-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 hsl(var(--badge-new) / 0.55),
-                0 0 16px 0 hsl(var(--badge-new) / 0.45);
+    box-shadow: 0 0 0 0 hsl(var(--mic-red) / 0.55),
+                0 0 16px 0 hsl(var(--mic-red) / 0.45);
   }
   50% {
-    box-shadow: 0 0 0 6px hsl(var(--badge-new) / 0),
-                0 0 22px 2px hsl(var(--badge-new) / 0.7);
+    box-shadow: 0 0 0 6px hsl(var(--mic-red) / 0),
+                0 0 22px 2px hsl(var(--mic-red) / 0.7);
   }
 }
 
@@ -104,6 +105,10 @@
     --badge-new: 210 80% 52%;
     --badge-new-foreground: 0 0% 100%;
 
+    /* "On air" red — saturated studio cue used for the Day of Show entry chip
+       + halo. Distinct from the soft pastel-red text token. */
+    --mic-red: 0 78% 56%;
+
     /* Muted pastel accent system — desaturated, editorial */
     --pastel-red-bg: #fdebec;
     --pastel-red-fg: #9f2f2d;
@@ -154,7 +159,10 @@
     --badge-new: 210 80% 52%;
     --badge-new-foreground: 0 0% 100%;
 
-    /* Dark mode pastels — deeper tints on warm dark canvas */
+    /* "On air" red used for the Day of Show entry chip + halo (dark mode
+       calibration — slightly lighter than light mode for legibility on the
+       warm dark canvas). */
+    --mic-red: 0 80% 62%;
     --pastel-red-bg: hsla(0, 40%, 22%, 0.5);
     --pastel-red-fg: #f0b4b2;
     --pastel-blue-bg: hsla(205, 50%, 22%, 0.5);

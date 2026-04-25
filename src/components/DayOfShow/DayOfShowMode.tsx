@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Mic, X, Loader2 } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Show } from "@/lib/types";
@@ -60,47 +60,34 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
       role="dialog"
       aria-modal="true"
       aria-label="Day of Show"
-      className="fixed inset-0 z-50 flex flex-col overflow-hidden animate-in fade-in"
+      className="fixed inset-0 z-[60] flex flex-col overflow-hidden animate-in fade-in"
       style={{ background: "hsl(var(--background))" }}
     >
-      {/* Top chrome */}
-      <div className="safe-area-top px-[18px] pt-1 flex items-center justify-between">
-        <div className="inline-flex items-center gap-2">
-          <span
-            className="mic-chip-pulse inline-flex items-center justify-center rounded-full"
-            style={{
-              width: 22,
-              height: 22,
-              background: "hsl(var(--badge-new))",
-              color: "#fff",
-            }}
-          >
-            <Mic className="h-3 w-3" strokeWidth={2.4} />
-          </span>
-          <span
-            className="text-[10.5px] uppercase font-medium leading-none"
-            style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
-          >
-            Day of Show
-          </span>
-        </div>
+      {/* Top chrome — just dismiss. The huge serif typography below makes it
+          immediately obvious we're in a different mode; a "DAY OF SHOW" eyebrow
+          here was redundant with the dashboard mic chip that just got tapped. */}
+      <div className="safe-area-top px-[18px] pt-3 flex items-center justify-end">
         <button
           type="button"
           onClick={onClose}
           aria-label="Dismiss Day of Show"
-          className="inline-flex items-center justify-center rounded-full border h-8 w-8 [transition:transform_160ms_var(--ease-out),background-color_160ms_var(--ease-out)] active:scale-[0.95]"
+          className="inline-flex items-center justify-center rounded-full border h-9 w-9 [transition:transform_160ms_var(--ease-out),background-color_160ms_var(--ease-out)] active:scale-[0.95]"
           style={{
             background: "hsl(var(--secondary))",
             borderColor: "hsl(var(--border))",
             color: "hsl(var(--muted-foreground))",
           }}
         >
-          <X className="h-3.5 w-3.5" strokeWidth={2} />
+          <X className="h-4 w-4" strokeWidth={2} />
         </button>
       </div>
 
-      {/* Body */}
-      <div className="flex-1 overflow-auto flex flex-col">
+      {/* Body — overscroll-contain so swipe-up-then-down doesn't bubble to the
+          dashboard pull-to-refresh underneath. */}
+      <div
+        className="flex-1 overflow-auto flex flex-col"
+        style={{ overscrollBehavior: "contain" }}
+      >
         {show ? (
           <PhasePreShow show={show} nowMin={nowMin} />
         ) : (

@@ -89,7 +89,8 @@ export default function ActionCard({
   );
 
   const sharedClass = cn(
-    "block w-full text-left rounded-[12px] border p-[12px_14px] min-h-[100px]",
+    "block w-full text-left rounded-[12px] border p-[12px_14px]",
+    !fullWidth && "min-h-[100px]",
     interactive &&
       "[transition:transform_160ms_var(--ease-out),background-color_160ms_var(--ease-out)] active:scale-[0.98]",
     className,
