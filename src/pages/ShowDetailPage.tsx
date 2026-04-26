@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, FileText, MoreHorizontal } from "lucide-react";
@@ -286,7 +286,20 @@ export default function ShowDetailPage() {
   const queryClient = useQueryClient();
   const { teamId } = useTeam();
 
-  const [viewTab, setViewTab] = useState<"show" | "deal" | "contacts" | "set-list">("show");
+  // Allow deep-linking to a specific tab (e.g. from Day of Show: tap the
+  // contact card with no phone → land on Contacts tab, not Show Info).
+  const [searchParams] = useSearchParams();
+  const initialTab = (() => {
+    const t = searchParams.get("tab");
+    return t === "show" || t === "deal" || t === "contacts" || t === "set-list" ? t : "show";
+  })();
+  const [viewTab, setViewTab] = useState<"show" | "deal" | "contacts" | "set-list">(initialTab);
+
+  // Allow deep-linking to a specific section within Show Info (e.g. from Day
+  // of Show: tap the Guest list card → scroll to that section instead of
+  // dumping the user at the top of the page). Runs once `show` data loads,
+  // so the section is guaranteed to be in the DOM by then.
+  const focus = searchParams.get("focus");
 
   // When we arrive here from the inbound-email "Review Now" flow, the
   // forwarded email body is handed off via location state. Consume it once,
@@ -380,6 +393,20 @@ export default function ShowDetailPage() {
       return data;
     },
   });
+
+  // Scroll to a focused section once the show has loaded. The section ids
+  // are added inline (e.g. id="guest-list-section"). Smooth scroll feels
+  // intentional rather than jarring after the route change.
+  useEffect(() => {
+    if (!show || !focus) return;
+    const el = document.getElementById(`${focus}-section`);
+    if (!el) return;
+    // requestAnimationFrame so the FieldGroup has rendered + expanded before
+    // we measure the scroll target.
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [show, focus]);
 
   // ── Drive-time: app settings (for home base city) ──
   const { data: appSettings } = useQuery({
@@ -1567,25 +1594,27 @@ export default function ShowDetailPage() {
             <Separator />
 
             {/* Guest List */}
-            <FieldGroup
-              title="Guest List"
-              collapsible
-              defaultOpen={!!(show.guest_list_details || show.artist_comps)}
-              incomplete={!!show.artist_comps && !show.guest_list_details}
-              headerRight={
-                show.guest_list_details || show.artist_comps ? (
-                  <GuestCount
-                    total={guestTotal(parseGuestList(show.guest_list_details))}
-                    compsAllotment={show.artist_comps}
-                  />
-                ) : null
-              }
-            >
-              {renderGuestList()}
-              <div className="pt-1">
-                <CopyGuestLinkButton showId={id!} linkType="guestlist" />
-              </div>
-            </FieldGroup>
+            <div id="guest-list-section">
+              <FieldGroup
+                title="Guest List"
+                collapsible
+                defaultOpen={!!(show.guest_list_details || show.artist_comps) || focus === "guest-list"}
+                incomplete={!!show.artist_comps && !show.guest_list_details}
+                headerRight={
+                  show.guest_list_details || show.artist_comps ? (
+                    <GuestCount
+                      total={guestTotal(parseGuestList(show.guest_list_details))}
+                      compsAllotment={show.artist_comps}
+                    />
+                  ) : null
+                }
+              >
+                {renderGuestList()}
+                <div className="pt-1">
+                  <CopyGuestLinkButton showId={id!} linkType="guestlist" />
+                </div>
+              </FieldGroup>
+            </div>
 
             <Separator />
 

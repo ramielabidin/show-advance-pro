@@ -237,6 +237,11 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
               : "Not set"
           }
           href={dosContact?.phone ? `tel:${dosContact.phone}` : undefined}
+          onClick={
+            dosContact?.phone
+              ? undefined
+              : () => navigate(`/shows/${show.id}?tab=contacts`)
+          }
           fullWidth
         />
         <ActionCard
@@ -246,7 +251,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
           sub={guestCount === 0 ? "no guests yet" : "confirmed names"}
           titleMono
           fullWidth
-          onClick={() => navigate(`/shows/${show.id}`)}
+          onClick={() => navigate(`/shows/${show.id}?focus=guest-list`)}
         />
       </div>
     </div>
