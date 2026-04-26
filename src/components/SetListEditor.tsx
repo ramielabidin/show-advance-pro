@@ -12,8 +12,7 @@ import {
   Search,
   ListMusic,
   GripVertical,
-  ChevronUp,
-  ChevronDown,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -80,11 +79,9 @@ interface SortableRowProps {
   index: number;
   total: number;
   onRemove: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
 }
 
-function SortableRow({ id, entry, number, index, total, onRemove, onMoveUp, onMoveDown }: SortableRowProps) {
+function SortableRow({ id, entry, number, index, total, onRemove }: SortableRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const isNote = entry.kind === "note";
 
@@ -98,21 +95,20 @@ function SortableRow({ id, entry, number, index, total, onRemove, onMoveUp, onMo
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center gap-2 px-2 py-2 bg-card",
+        "flex items-center gap-2 px-2 py-2 bg-card cursor-grab active:cursor-grabbing select-none",
         index < total - 1 && "border-b border-border/60",
         isDragging && "relative z-10 shadow-lg ring-1 ring-foreground/10",
       )}
+      // Whole row is the drag handle. Pointer activation has a 6px distance
+      // constraint and touch has a 200ms hold (set on the sensors), so
+      // taps and short swipes still scroll / click rather than dragging.
+      {...attributes}
+      {...listeners}
     >
-      {/* Drag handle — long-press on touch, immediate on pointer */}
-      <button
-        type="button"
-        aria-label="Drag to reorder"
-        className="touch-none shrink-0 -ml-1 h-8 w-7 flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors cursor-grab active:cursor-grabbing"
-        {...attributes}
-        {...listeners}
-      >
+      {/* Grip — purely a visual affordance now */}
+      <div className="shrink-0 -ml-1 h-8 w-7 flex items-center justify-center text-muted-foreground/60">
         <GripVertical className="h-4 w-4" />
-      </button>
+      </div>
 
       <div className="w-5 shrink-0 text-right">
         {isNote ? (
@@ -131,39 +127,17 @@ function SortableRow({ id, entry, number, index, total, onRemove, onMoveUp, onMo
         {entryTitle(entry)}
       </div>
 
-      <div className="flex items-center gap-0.5 shrink-0">
-        {/* Keyboard / a11y reorder fallback. Hidden on touch where drag is the
-            primary affordance; revealed on focus-visible for keyboard users. */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 hidden sm:inline-flex sm:opacity-0 focus-visible:opacity-100 sm:group-hover:opacity-100"
-          onClick={onMoveUp}
-          disabled={index === 0}
-          aria-label="Move up"
-        >
-          <ChevronUp className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 hidden sm:inline-flex sm:opacity-0 focus-visible:opacity-100 sm:group-hover:opacity-100"
-          onClick={onMoveDown}
-          disabled={index === total - 1}
-          aria-label="Move down"
-        >
-          <ChevronDown className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-          onClick={onRemove}
-          aria-label="Remove"
-        >
-          <X className="h-3.5 w-3.5" />
-        </Button>
-      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+        // Don't let pressing remove start a drag.
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={onRemove}
+        aria-label="Remove"
+      >
+        <X className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 }
@@ -182,6 +156,7 @@ export default function SetListEditor({ show }: Props) {
   const [addingNote, setAddingNote] = useState(false);
   const [randomCount, setRandomCount] = useState(10);
   const [search, setSearch] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
 
   // Re-seed when the saved set list changes (after save / parent refetch).
   useEffect(() => {
@@ -284,12 +259,6 @@ export default function SetListEditor({ show }: Props) {
   const removeAt = (i: number) =>
     setEntries((prev) => prev.filter((_, idx) => idx !== i));
 
-  const moveUp = (i: number) =>
-    setEntries((prev) => (i === 0 ? prev : arrayMove(prev, i, i - 1)));
-
-  const moveDown = (i: number) =>
-    setEntries((prev) => (i >= prev.length - 1 ? prev : arrayMove(prev, i, i + 1)));
-
   const shuffleSelected = () => {
     if (entries.length < 2) {
       toast.info("Add a few songs first, then shuffle.");
@@ -316,6 +285,18 @@ export default function SetListEditor({ show }: Props) {
     const picks = shuffleArr(songs).slice(0, n);
     setEntries(picks.map((s) => ({ kind: "song" as const, song_id: s.id, title: s.title })));
     if (n < wanted) toast.info(`Catalog has ${songs.length} songs — used all.`);
+  };
+
+  const clearAll = () => {
+    if (entries.length === 0) return;
+    if (
+      !window.confirm(
+        `Clear all ${entries.length} ${entries.length === 1 ? "item" : "items"} from the set?`,
+      )
+    ) {
+      return;
+    }
+    setEntries([]);
   };
 
   // Numbering: songs + custom entries get numbered, notes don't.
@@ -351,15 +332,18 @@ export default function SetListEditor({ show }: Props) {
       </div>
 
       {/* ── Add row ──────────────────────────────────────────────
-          Search is pinned at the top. The matching-songs panel only
-          appears while there's a query, so an empty editor stays quiet
-          and Tonight's Set isn't pushed off-screen by a full catalog. */}
+          Search is pinned at the top. The matching-songs panel appears
+          while the input is focused or has a query — so a quick click
+          surfaces the catalog as suggestions, and an unfocused empty
+          editor stays quiet without pushing Tonight's Set off-screen. */}
       <section className="space-y-2">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             placeholder={
               songs.length === 0
                 ? "Add songs in Settings → Song catalog"
@@ -370,7 +354,7 @@ export default function SetListEditor({ show }: Props) {
           />
         </div>
 
-        {search.trim() && (
+        {(searchFocused || search.trim()) && (
           <div className="rounded-lg border bg-card overflow-hidden">
             {songsLoading ? (
               <div className="p-3 space-y-2">
@@ -389,32 +373,34 @@ export default function SetListEditor({ show }: Props) {
                 No songs match "{search}".
               </div>
             ) : (
-              filteredSongs.slice(0, 8).map((s, i, arr) => {
-                const checked = selectedSongIds.has(s.id);
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => toggleSong(s)}
-                    aria-pressed={checked}
-                    className={cn(
-                      "flex items-center justify-between w-full text-left px-3 py-2 hover:bg-muted/60 [transition:background-color_150ms_var(--ease-out)]",
-                      i < arr.length - 1 && "border-b border-border/60",
-                    )}
-                  >
-                    <span className="text-sm text-foreground truncate">{s.title}</span>
-                    {checked ? (
-                      <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-2" />
-                    ) : (
-                      <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-2" />
-                    )}
-                  </button>
-                );
-              })
-            )}
-            {filteredSongs.length > 8 && (
-              <div className="px-3 py-2 text-[11px] text-muted-foreground border-t border-border/60 bg-muted/30">
-                Showing 8 of {filteredSongs.length} — keep typing to narrow down.
+              // ~8 rows visible (≈36px each); the rest is one flick away.
+              <div className="max-h-72 overflow-y-auto overscroll-contain">
+                {filteredSongs.map((s, i, arr) => {
+                  const checked = selectedSongIds.has(s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      // Keep focus on the input so the panel doesn't unmount
+                      // mid-click (blur would hide it before onClick fires) and
+                      // the user can keep tap-tap-tapping songs.
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => toggleSong(s)}
+                      aria-pressed={checked}
+                      className={cn(
+                        "flex items-center justify-between w-full text-left px-3 py-2 hover:bg-muted/60 [transition:background-color_150ms_var(--ease-out)]",
+                        i < arr.length - 1 && "border-b border-border/60",
+                      )}
+                    >
+                      <span className="text-sm text-foreground truncate">{s.title}</span>
+                      {checked ? (
+                        <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-2" />
+                      ) : (
+                        <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-2" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -525,10 +511,21 @@ export default function SetListEditor({ show }: Props) {
               Random
             </Button>
           </div>
+          {entries.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-destructive ml-auto"
+              onClick={clearAll}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Clear
+            </Button>
+          )}
         </div>
 
         {/* Set list entries — drag to reorder */}
-        <div className="rounded-lg border bg-card overflow-hidden group">
+        <div className="rounded-lg border bg-card overflow-hidden">
           {entries.length === 0 ? (
             <div className="text-center py-8 px-4 text-muted-foreground">
               <ListMusic className="h-7 w-7 mx-auto mb-2 opacity-40" />
@@ -547,8 +544,6 @@ export default function SetListEditor({ show }: Props) {
                     index={i}
                     total={entries.length}
                     onRemove={() => removeAt(i)}
-                    onMoveUp={() => moveUp(i)}
-                    onMoveDown={() => moveDown(i)}
                   />
                 ))}
               </SortableContext>
