@@ -12,8 +12,6 @@ import {
   Search,
   ListMusic,
   GripVertical,
-  ChevronUp,
-  ChevronDown,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -81,11 +79,9 @@ interface SortableRowProps {
   index: number;
   total: number;
   onRemove: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
 }
 
-function SortableRow({ id, entry, number, index, total, onRemove, onMoveUp, onMoveDown }: SortableRowProps) {
+function SortableRow({ id, entry, number, index, total, onRemove }: SortableRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const isNote = entry.kind === "note";
 
@@ -99,21 +95,20 @@ function SortableRow({ id, entry, number, index, total, onRemove, onMoveUp, onMo
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center gap-2 px-2 py-2 bg-card",
+        "flex items-center gap-2 px-2 py-2 bg-card cursor-grab active:cursor-grabbing select-none",
         index < total - 1 && "border-b border-border/60",
         isDragging && "relative z-10 shadow-lg ring-1 ring-foreground/10",
       )}
+      // Whole row is the drag handle. Pointer activation has a 6px distance
+      // constraint and touch has a 200ms hold (set on the sensors), so
+      // taps and short swipes still scroll / click rather than dragging.
+      {...attributes}
+      {...listeners}
     >
-      {/* Drag handle — long-press on touch, immediate on pointer */}
-      <button
-        type="button"
-        aria-label="Drag to reorder"
-        className="touch-none shrink-0 -ml-1 h-8 w-7 flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors cursor-grab active:cursor-grabbing"
-        {...attributes}
-        {...listeners}
-      >
+      {/* Grip — purely a visual affordance now */}
+      <div className="shrink-0 -ml-1 h-8 w-7 flex items-center justify-center text-muted-foreground/60">
         <GripVertical className="h-4 w-4" />
-      </button>
+      </div>
 
       <div className="w-5 shrink-0 text-right">
         {isNote ? (
@@ -132,39 +127,17 @@ function SortableRow({ id, entry, number, index, total, onRemove, onMoveUp, onMo
         {entryTitle(entry)}
       </div>
 
-      <div className="flex items-center gap-0.5 shrink-0">
-        {/* Keyboard / a11y reorder fallback. Hidden on touch where drag is the
-            primary affordance; revealed on focus-visible for keyboard users. */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 hidden sm:inline-flex sm:opacity-0 focus-visible:opacity-100 sm:group-hover:opacity-100"
-          onClick={onMoveUp}
-          disabled={index === 0}
-          aria-label="Move up"
-        >
-          <ChevronUp className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 hidden sm:inline-flex sm:opacity-0 focus-visible:opacity-100 sm:group-hover:opacity-100"
-          onClick={onMoveDown}
-          disabled={index === total - 1}
-          aria-label="Move down"
-        >
-          <ChevronDown className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-          onClick={onRemove}
-          aria-label="Remove"
-        >
-          <X className="h-3.5 w-3.5" />
-        </Button>
-      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+        // Don't let pressing remove start a drag.
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={onRemove}
+        aria-label="Remove"
+      >
+        <X className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 }
@@ -285,12 +258,6 @@ export default function SetListEditor({ show }: Props) {
 
   const removeAt = (i: number) =>
     setEntries((prev) => prev.filter((_, idx) => idx !== i));
-
-  const moveUp = (i: number) =>
-    setEntries((prev) => (i === 0 ? prev : arrayMove(prev, i, i - 1)));
-
-  const moveDown = (i: number) =>
-    setEntries((prev) => (i >= prev.length - 1 ? prev : arrayMove(prev, i, i + 1)));
 
   const shuffleSelected = () => {
     if (entries.length < 2) {
@@ -558,7 +525,7 @@ export default function SetListEditor({ show }: Props) {
         </div>
 
         {/* Set list entries — drag to reorder */}
-        <div className="rounded-lg border bg-card overflow-hidden group">
+        <div className="rounded-lg border bg-card overflow-hidden">
           {entries.length === 0 ? (
             <div className="text-center py-8 px-4 text-muted-foreground">
               <ListMusic className="h-7 w-7 mx-auto mb-2 opacity-40" />
@@ -577,8 +544,6 @@ export default function SetListEditor({ show }: Props) {
                     index={i}
                     total={entries.length}
                     onRemove={() => removeAt(i)}
-                    onMoveUp={() => moveUp(i)}
-                    onMoveDown={() => moveDown(i)}
                   />
                 ))}
               </SortableContext>
