@@ -1,0 +1,156 @@
+/* ============================================================
+   Advance — Design tokens
+   Warm monochrome canvas + 4 muted pastel accents. Dark-mode-first.
+   Source: ramielabidin/show-advance-pro — src/index.css, tailwind.config.ts
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500&display=swap");
+
+:root {
+  /* ---------- Canvas (warm monochrome) ---------- */
+  --background: 40 30% 97%;          /* warm off-white, never pure */
+  --foreground: 30 10% 12%;          /* warm near-black */
+  --card: 40 25% 99%;
+  --card-foreground: 30 10% 12%;
+  --popover: 40 25% 99%;
+  --popover-foreground: 30 10% 12%;
+
+  /* ---------- Structural ---------- */
+  --primary: 30 10% 12%;
+  --primary-foreground: 40 30% 97%;
+  --secondary: 35 20% 93%;
+  --secondary-foreground: 30 10% 20%;
+  --muted: 35 15% 94%;
+  --muted-foreground: 30 8% 50%;
+  --accent: 35 20% 93%;
+  --accent-foreground: 30 10% 12%;
+  --border: 35 18% 90%;
+  --input: 35 18% 90%;
+  --ring: 30 10% 12%;
+
+  /* ---------- Semantic ---------- */
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 152 60% 40%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 30 10% 12%;
+  --badge-new: 210 80% 52%;
+  --badge-new-foreground: 0 0% 100%;
+  --surface-elevated: 40 30% 99%;
+  --text-tertiary: 30 6% 62%;
+
+  /* ---------- Muted pastel accent system (the only accent palette) ---------- */
+  --pastel-red-bg:    #fdebec;   --pastel-red-fg:    #9f2f2d;   /* urgent / within-7-days */
+  --pastel-blue-bg:   #e1f3fe;   --pastel-blue-fg:   #1f6c9f;   /* tour chips, info */
+  --pastel-green-bg:  #edf3ec;   --pastel-green-fg:  #346538;   /* settled, success */
+  --pastel-yellow-bg: #fbf3db;   --pastel-yellow-fg: #956400;   /* pending, warn */
+  --pastel-purple-bg: #ece7f7;   --pastel-purple-fg: #5b3aa0;   /* reserved, rare */
+
+  /* ---------- Radius ---------- */
+  --radius: 0.5rem;            /* rounded-md baseline */
+
+  /* ---------- Motion tokens ---------- */
+  --ease-out:        cubic-bezier(0.23, 1, 0.32, 1);     /* default UI */
+  --ease-in-out:     cubic-bezier(0.77, 0, 0.175, 1);    /* morphs */
+  --ease-editorial:  cubic-bezier(0.16, 1, 0.3, 1);      /* page entrance */
+  --ease-drawer:     cubic-bezier(0.32, 0.72, 0, 1);     /* drawers */
+  --ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);  /* pull-to-refresh */
+
+  --dur-press:  160ms;
+  --dur-hover:  150ms;
+  --dur-tip:    180ms;
+  --dur-drop:   220ms;
+  --dur-page:   220ms;
+  --dur-modal:  300ms;
+
+  /* ---------- Type families ---------- */
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-sans:    "DM Sans", system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+
+  /* ---------- Semantic type styles (direct-use) ---------- */
+  --t-page-title:    500 clamp(24px, 3vw, 30px)/1.1 var(--font-sans);
+  --t-eyebrow:       500 12px/1.2 var(--font-sans);           /* uppercase, tracking-widest */
+  --t-section-label: 500 11px/1.2 var(--font-sans);           /* uppercase, tracking-widest */
+  --t-chip:          500 10px/1.2 var(--font-sans);
+  --t-display-num:   400 clamp(28px, 3vw, 36px)/1 var(--font-display);
+  --t-body:          400 14px/1.5 var(--font-sans);
+  --t-body-lg:       400 16px/1.55 var(--font-sans);
+  --t-caption:       400 12px/1.4 var(--font-sans);
+  --t-mono-data:     500 13px/1.4 var(--font-mono);           /* phones, times, money */
+}
+
+.dark {
+  --background: 30 10% 8%;
+  --foreground: 40 20% 92%;
+  --card: 30 10% 10%;
+  --card-foreground: 40 20% 92%;
+  --popover: 30 10% 10%;
+  --popover-foreground: 40 20% 92%;
+  --primary: 40 20% 92%;
+  --primary-foreground: 30 10% 8%;
+  --secondary: 30 8% 16%;
+  --secondary-foreground: 40 20% 92%;
+  --muted: 30 8% 16%;
+  --muted-foreground: 30 8% 55%;
+  --accent: 30 8% 16%;
+  --accent-foreground: 40 20% 92%;
+  --border: 30 8% 18%;
+  --input: 30 8% 18%;
+  --ring: 40 20% 80%;
+  --surface-elevated: 30 10% 12%;
+  --text-tertiary: 30 6% 50%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 40 20% 92%;
+
+  --pastel-red-bg:    hsla(0,   40%, 22%, 0.5);   --pastel-red-fg:    #f0b4b2;
+  --pastel-blue-bg:   hsla(205, 50%, 22%, 0.5);   --pastel-blue-fg:   #aed4ee;
+  --pastel-green-bg:  hsla(125, 25%, 18%, 0.5);   --pastel-green-fg:  #b5d1b0;
+  --pastel-yellow-bg: hsla(40,  40%, 20%, 0.5);   --pastel-yellow-fg: #e8c988;
+  --pastel-purple-bg: hsla(260, 30%, 22%, 0.5);   --pastel-purple-fg: #c6b8ea;
+}
+
+/* ---------- Base element styling ---------- */
+
+html, body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font: var(--t-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 400; letter-spacing: -0.01em; margin: 0; }
+h1 { font-size: clamp(28px, 3.4vw, 36px); line-height: 1.05; letter-spacing: -0.03em; }
+h2 { font-size: clamp(22px, 2.4vw, 28px); line-height: 1.1; letter-spacing: -0.02em; }
+h3 { font-size: 18px; line-height: 1.25; }
+h4 { font-size: 15px; line-height: 1.3; }
+
+p  { margin: 0; font: var(--t-body); color: hsl(var(--foreground)); }
+
+code, kbd, samp { font: var(--t-mono-data); }
+
+.eyebrow, .section-label {
+  font: var(--t-section-label);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: hsl(var(--muted-foreground));
+}
+
+.display-num {
+  font: var(--t-display-num);
+  letter-spacing: -0.03em;
+  color: hsl(var(--foreground));
+}
+
+.mono-data { font: var(--t-mono-data); }
+
+/* convenience color utilities used across the design-system cards */
+.fg    { color: hsl(var(--foreground)); }
+.fg-2  { color: hsl(var(--muted-foreground)); }
+.fg-3  { color: hsl(var(--text-tertiary)); }
+.bg    { background: hsl(var(--background)); }
+.bg-card { background: hsl(var(--card)); }
+.bg-muted { background: hsl(var(--muted)); }
+.bd    { border: 1px solid hsl(var(--border)); }
