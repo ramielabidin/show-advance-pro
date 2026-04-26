@@ -70,7 +70,10 @@ export default function SettleShowDialog({ show, open, onOpenChange, onSettled }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      {/* z-[70] so the dialog renders above the Day of Show overlay (z-[60])
+          when launched from inside Phase 2. Other usages (from ShowDetailPage)
+          aren't inside an overlay, so the bumped z-index is harmless there. */}
+      <DialogContent className="sm:max-w-md z-[70]">
         <DialogHeader>
           <DialogTitle>Settle Show</DialogTitle>
         </DialogHeader>
