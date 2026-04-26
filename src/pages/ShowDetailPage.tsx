@@ -1,6 +1,6 @@
 import { useParams, useNavigate, useLocation, useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, FileText, MoreHorizontal } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
@@ -1802,6 +1802,100 @@ export default function ShowDetailPage() {
 
         <TabsContent value="deal">
           <div className="space-y-6 sm:space-y-8">
+            {/* Settlement card — pinned to top when show is settled */}
+            {show.is_settled && (
+              <Card className="shadow-none">
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground">
+                      Settlement Results
+                    </span>
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                      style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      Settled
+                    </span>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div
+                        className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+                      >
+                        <DollarSign className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground">
+                        Actual Walkout
+                      </span>
+                    </div>
+                    <p className="text-3xl font-display leading-none tracking-[-0.03em] text-[hsl(var(--success))]">
+                      {show.actual_walkout ? formatCurrency(String(show.actual_walkout)) : "—"}
+                    </p>
+                    {show.walkout_potential && (
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        of {formatCurrency(String(show.walkout_potential))} at sellout
+                      </p>
+                    )}
+                  </div>
+
+                  {show.actual_tickets_sold && (
+                    <>
+                      <Separator />
+                      <div>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <div
+                            className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" }}
+                          >
+                            <Ticket className="h-3.5 w-3.5" />
+                          </div>
+                          <span className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground">
+                            Tickets Sold
+                          </span>
+                        </div>
+                        <p className="text-2xl font-display leading-none tracking-[-0.03em]">
+                          {show.actual_tickets_sold}
+                          {show.venue_capacity && (
+                            <span className="text-base font-sans font-normal text-muted-foreground ml-1.5">
+                              / {show.venue_capacity}
+                            </span>
+                          )}
+                        </p>
+                        {(() => {
+                          if (!show.venue_capacity) return null;
+                          const sold = parseInt(String(show.actual_tickets_sold).replace(/,/g, ""), 10);
+                          const cap = parseInt(String(show.venue_capacity).replace(/,/g, ""), 10);
+                          if (isNaN(sold) || isNaN(cap) || cap <= 0) return null;
+                          return (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {Math.round((sold / cap) * 100)}% capacity
+                            </p>
+                          );
+                        })()}
+                      </div>
+                    </>
+                  )}
+
+                  {show.settlement_notes && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground mb-1.5">
+                          Notes
+                        </p>
+                        <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+                          {show.settlement_notes}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Deal — stat tiles for the four primary numerics (click to inline-edit); backend deal + comps below */}
             <FieldGroup title="Deal" incomplete={!show.guarantee && !show.backend_deal && !show.ticket_price && !show.venue_capacity && !show.walkout_potential && !show.artist_comps}>
               {(() => {
@@ -2011,46 +2105,6 @@ export default function ShowDetailPage() {
               );
             })()}
 
-            {/* Settlement Results — shown when settled */}
-            {show.is_settled && (
-              <>
-                <Separator />
-                <FieldGroup title="Settlement Results">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Actual Walkout</p>
-                      <p className="text-lg font-semibold font-mono text-[hsl(var(--success))]">
-                        {show.actual_walkout || "—"}
-                      </p>
-                      {show.walkout_potential && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Projected: {show.walkout_potential}
-                        </p>
-                      )}
-                    </div>
-                    {show.actual_tickets_sold && (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Actual Tickets Sold</p>
-                        <p className="text-lg font-semibold font-mono">
-                          {show.actual_tickets_sold}
-                        </p>
-                        {show.venue_capacity && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            Capacity: {show.venue_capacity}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  {show.settlement_notes && (
-                    <div className="mt-3">
-                      <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
-                      <p className="text-sm whitespace-pre-wrap">{show.settlement_notes}</p>
-                    </div>
-                  )}
-                </FieldGroup>
-              </>
-            )}
           </div>
         </TabsContent>
       </Tabs>
