@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -19,12 +18,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +52,7 @@ import { isLoadInLabel } from "@/lib/scheduleMatch";
 import TimeInput from "@/components/TimeInput";
 import type { Show } from "@/lib/types";
 import RevenueSimulator, { parseDollar } from "@/components/RevenueSimulator";
+import SettleShowDialog from "@/components/SettleShowDialog";
 import { useGroupEditor } from "@/pages/show-detail/useGroupEditor";
 
 /**
@@ -365,11 +359,6 @@ export default function ShowDetailPage() {
   // The user can click "or fill in manually" to bypass the CTA and see the
   // normal field layout without waiting for a parsed advance.
   const [showManualForm, setShowManualForm] = useState(false);
-  const [settleForm, setSettleForm] = useState({
-    actual_tickets_sold: "",
-    actual_walkout: "",
-    settlement_notes: "",
-  });
 
   // Backend deal structured form state
   const [backendDealForm, setBackendDealForm] = useState<{
@@ -625,26 +614,6 @@ export default function ShowDetailPage() {
     },
   });
 
-  const settleMutation = useMutation({
-    mutationFn: async (values: { actual_tickets_sold: string; actual_walkout: string; settlement_notes: string }) => {
-      const { error } = await supabase.from("shows").update({
-        is_settled: true,
-        actual_tickets_sold: values.actual_tickets_sold || null,
-        actual_walkout: values.actual_walkout || null,
-        settlement_notes: values.settlement_notes || null,
-      }).eq("id", id!);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["show", id] });
-      queryClient.invalidateQueries({ queryKey: ["shows"] });
-      queryClient.invalidateQueries({ queryKey: ["tours"] });
-      setSettleOpen(false);
-      toast.success("Show settled");
-    },
-    onError: () => toast.error("Failed to settle show"),
-  });
-
   const toggleAdvancedMutation = useMutation({
     mutationFn: async (nextAdvanced: boolean) => {
       const { error } = await supabase.from("shows").update({
@@ -876,10 +845,8 @@ export default function ShowDetailPage() {
     />
   );
 
-  const openSettleModal = () => {
-    setSettleForm({ actual_tickets_sold: "", actual_walkout: "", settlement_notes: "" });
-    setSettleOpen(true);
-  };
+  // SettleShowDialog resets its own form on close, so we just toggle open.
+  const openSettleModal = () => setSettleOpen(true);
 
   const lookupAddress = async () => {
     if (!show) return;
@@ -2055,59 +2022,9 @@ export default function ShowDetailPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Settle Show Modal */}
-      <Dialog open={settleOpen} onOpenChange={setSettleOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Settle Show</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div className="space-y-2">
-              <Label htmlFor="actual_tickets_sold">Actual Tickets Sold</Label>
-              <Input
-                id="actual_tickets_sold"
-                value={settleForm.actual_tickets_sold}
-                onChange={(e) => setSettleForm((p) => ({ ...p, actual_tickets_sold: e.target.value }))}
-                placeholder={show.venue_capacity ? `Capacity: ${show.venue_capacity}` : "e.g. 450"}
-                className="h-11 sm:h-9"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="actual_walkout">Final Walkout Amount</Label>
-              <Input
-                id="actual_walkout"
-                value={settleForm.actual_walkout}
-                onChange={(e) => setSettleForm((p) => ({ ...p, actual_walkout: e.target.value }))}
-                placeholder={show.walkout_potential ? `Projected: ${show.walkout_potential}` : "e.g. $4,200"}
-                className="h-11 sm:h-9 font-mono"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="settlement_notes">Notes</Label>
-              <Textarea
-                id="settlement_notes"
-                value={settleForm.settlement_notes}
-                onChange={(e) => setSettleForm((p) => ({ ...p, settlement_notes: e.target.value }))}
-                placeholder="Any notes about the settlement…"
-                className="min-h-[80px]"
-              />
-            </div>
-            <div className="flex gap-2 pt-1">
-              <Button variant="ghost" className="flex-1 h-11 sm:h-9" onClick={() => setSettleOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 h-11 sm:h-9 bg-[hsl(var(--success))] hover:bg-[hsl(var(--success)/0.9)] text-[hsl(var(--success-foreground))]"
-                onClick={() => settleMutation.mutate(settleForm)}
-                disabled={settleMutation.isPending}
-              >
-                <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                {settleMutation.isPending ? "Settling…" : "Settle Show"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Settle Show Modal — lifted to its own component so Day of Show
+          Mode (Phase 2) can mount the same flow from inside the overlay. */}
+      <SettleShowDialog show={show} open={settleOpen} onOpenChange={setSettleOpen} />
 
       {/* Delete Show confirmation */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

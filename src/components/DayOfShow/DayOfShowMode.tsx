@@ -4,7 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Show } from "@/lib/types";
 import { useNowMinutes } from "@/hooks/useNowMinutes";
+import { useDayOfShowPhase } from "@/hooks/useDayOfShowPhase";
 import PhasePreShow from "./PhasePreShow";
+import PhaseSettle from "./PhaseSettle";
+import PhasePostSettle from "./PhasePostSettle";
 
 interface DayOfShowModeProps {
   showId: string;
@@ -13,10 +16,15 @@ interface DayOfShowModeProps {
 
 /**
  * Full-screen overlay that takes over the viewport when the user enters Day
- * of Show Mode. Top chrome (small mic + DAY OF SHOW eyebrow + X dismiss) is
- * shared across phases; the body currently renders Phase 1 (Pre-show) only.
- * Phases 2 (Settle) and 3 (Post-settle hotel reveal) land in a follow-up PR
- * along with the phase derivation hook.
+ * of Show Mode. Top chrome is shared across phases (just an X dismiss); the
+ * body swaps between three phase surfaces, deriving phase from `show + now`.
+ *
+ *   Phase 1 — Pre-show
+ *   Phase 2 — Settle (auto-promotes 90 min after band's set time)
+ *   Phase 3 — Post-settle hotel reveal (when `is_settled = true`)
+ *
+ * Phase swap uses a keyed remount + the `phase-morph` CSS animation so
+ * content fades between phases in place, no hard cuts.
  *
  * Fetches the full show by ID on mount so we get show_contacts (the
  * dashboard's list query doesn't include them — joining show_contacts on
@@ -89,13 +97,26 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
         style={{ overscrollBehavior: "contain" }}
       >
         {show ? (
-          <PhasePreShow show={show} nowMin={nowMin} />
+          <PhaseBody show={show} nowMin={nowMin} />
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Inner body — derives the phase and renders the matching surface, keyed so
+ *  React remounts on phase change and our `phase-morph` CSS animation runs. */
+function PhaseBody({ show, nowMin }: { show: Show; nowMin: number }) {
+  const phase = useDayOfShowPhase(show, nowMin);
+  return (
+    <div key={phase} className="phase-morph flex-1 flex flex-col">
+      {phase === 1 && <PhasePreShow show={show} nowMin={nowMin} />}
+      {phase === 2 && <PhaseSettle show={show} />}
+      {phase === 3 && <PhasePostSettle show={show} />}
     </div>
   );
 }

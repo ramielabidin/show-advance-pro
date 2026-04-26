@@ -30,3 +30,11 @@ export function isLoadInLabel(label: string): boolean {
 export function isDoorsLabel(label: string): boolean {
   return /\bdoors?\b/i.test(label);
 }
+
+/**
+ * Matches load-out variants: "Load Out", "Load-out", "LOADOUT", "Load  Out",
+ * "Band Load-Out", "Load Out:". Does NOT match "Load In" or "Loading".
+ */
+export function isLoadOutLabel(label: string): boolean {
+  return /\bload[-\s]*out\b/i.test(label);
+}
