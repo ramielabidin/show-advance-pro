@@ -14,6 +14,7 @@ import {
   GripVertical,
   ChevronUp,
   ChevronDown,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -319,6 +320,18 @@ export default function SetListEditor({ show }: Props) {
     if (n < wanted) toast.info(`Catalog has ${songs.length} songs — used all.`);
   };
 
+  const clearAll = () => {
+    if (entries.length === 0) return;
+    if (
+      !window.confirm(
+        `Clear all ${entries.length} ${entries.length === 1 ? "item" : "items"} from the set?`,
+      )
+    ) {
+      return;
+    }
+    setEntries([]);
+  };
+
   // Numbering: songs + custom entries get numbered, notes don't.
   const visibleNumber = (i: number): number => {
     let n = 0;
@@ -531,6 +544,17 @@ export default function SetListEditor({ show }: Props) {
               Random
             </Button>
           </div>
+          {entries.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-destructive ml-auto"
+              onClick={clearAll}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Clear
+            </Button>
+          )}
         </div>
 
         {/* Set list entries — drag to reorder */}
