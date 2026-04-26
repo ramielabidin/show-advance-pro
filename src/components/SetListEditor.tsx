@@ -182,6 +182,7 @@ export default function SetListEditor({ show }: Props) {
   const [addingNote, setAddingNote] = useState(false);
   const [randomCount, setRandomCount] = useState(10);
   const [search, setSearch] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
 
   // Re-seed when the saved set list changes (after save / parent refetch).
   useEffect(() => {
@@ -351,15 +352,18 @@ export default function SetListEditor({ show }: Props) {
       </div>
 
       {/* ── Add row ──────────────────────────────────────────────
-          Search is pinned at the top. The matching-songs panel only
-          appears while there's a query, so an empty editor stays quiet
-          and Tonight's Set isn't pushed off-screen by a full catalog. */}
+          Search is pinned at the top. The matching-songs panel appears
+          while the input is focused or has a query — so a quick click
+          surfaces the catalog as suggestions, and an unfocused empty
+          editor stays quiet without pushing Tonight's Set off-screen. */}
       <section className="space-y-2">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             placeholder={
               songs.length === 0
                 ? "Add songs in Settings → Song catalog"
@@ -370,7 +374,7 @@ export default function SetListEditor({ show }: Props) {
           />
         </div>
 
-        {search.trim() && (
+        {(searchFocused || search.trim()) && (
           <div className="rounded-lg border bg-card overflow-hidden">
             {songsLoading ? (
               <div className="p-3 space-y-2">
@@ -395,6 +399,10 @@ export default function SetListEditor({ show }: Props) {
                   <button
                     key={s.id}
                     type="button"
+                    // Keep focus on the input so the panel doesn't unmount
+                    // mid-click (blur would hide it before onClick fires) and
+                    // the user can keep tap-tap-tapping songs.
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => toggleSong(s)}
                     aria-pressed={checked}
                     className={cn(
