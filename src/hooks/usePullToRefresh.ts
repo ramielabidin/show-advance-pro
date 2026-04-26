@@ -50,15 +50,25 @@ export function usePullToRefresh(
     onRefreshRef.current = onRefresh;
   }, [onRefresh]);
 
+  // True when a modal / fullscreen overlay (Day of Show, Radix Dialog, etc.)
+  // has locked body scroll. Both Day of Show and Radix set `overflow: hidden`
+  // on body while open. Without this short-circuit, the document-level touch
+  // listeners hijack downward swipes inside an overlay's scroll container —
+  // the user sees their swipe-up-to-scroll-down get stuck because we call
+  // `e.preventDefault()` on it for a pull-to-refresh that should not fire.
+  const isBodyScrollLocked = () =>
+    typeof document !== "undefined" && document.body.style.overflow === "hidden";
+
   const handleTouchStart = useCallback((e: TouchEvent) => {
-    // Only engage when the page is already scrolled to the very top.
-    if (isRefreshingRef.current || window.scrollY > 0) return;
+    // Only engage when the page is already scrolled to the very top, and
+    // never while a modal overlay owns the scroll.
+    if (isRefreshingRef.current || window.scrollY > 0 || isBodyScrollLocked()) return;
     startYRef.current = e.touches[0].clientY;
     isPullingRef.current = false;
   }, []);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (isRefreshingRef.current) return;
+    if (isRefreshingRef.current || isBodyScrollLocked()) return;
 
     const raw = e.touches[0].clientY - startYRef.current;
 

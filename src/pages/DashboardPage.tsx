@@ -34,6 +34,8 @@ import SectionLabel from "@/components/SectionLabel";
 import ShowCard from "@/components/ShowCard";
 import StatusDot from "@/components/StatusDot";
 import StatusLegend from "@/components/StatusLegend";
+import MicChip from "@/components/DayOfShow/MicChip";
+import DayOfShowMode from "@/components/DayOfShow/DayOfShowMode";
 import type { Show, Tour } from "@/lib/types";
 
 type Scope = "tour" | "standalone" | "upcoming";
@@ -111,6 +113,7 @@ export default function DashboardPage() {
   const requestedTourId = searchParams.get("tourId");
   const { session } = useAuth();
   const [revenueCollapsed, setRevenueCollapsed] = useState(false);
+  const [dayOfShowOpen, setDayOfShowOpen] = useState(false);
 
   const { data: shows = [], isLoading: showsLoading } = useQuery<ShowWithTour[]>({
     queryKey: ["shows"],
@@ -412,16 +415,33 @@ export default function DashboardPage() {
     );
   }
 
+  const dateEyebrow = `${format(today, "EEEE")} · ${format(today, "MMM d")}`.toUpperCase();
+
   const header = (
-    <div className="flex items-start justify-between gap-3 md:gap-4">
-      <div className="min-w-0 flex-1">
-        <h1 className="font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
+    <div className="space-y-2">
+      {/* Date eyebrow + utility actions on a compact row */}
+      <div className="flex items-center justify-between gap-3">
+        <span
+          className="text-[11px] uppercase font-medium leading-none truncate"
+          style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
+        >
+          {dateEyebrow}
+        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <BulkUploadDialog triggerClassName="h-9" iconOnlyMobile />
+          <CreateShowDialog triggerClassName="h-9" iconOnlyMobile />
+        </div>
+      </div>
+
+      {/* Greeting + (on a show day) the mic chip, inline. flex-wrap so the
+          chip drops to the next line gracefully on very narrow widths. */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h1 className="min-w-0 flex-1 font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
           {headerLine}
         </h1>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <BulkUploadDialog triggerClassName="h-9" iconOnlyMobile />
-        <CreateShowDialog triggerClassName="h-9" iconOnlyMobile />
+        {showToday && (
+          <MicChip onClick={() => setDayOfShowOpen(true)} />
+        )}
       </div>
     </div>
   );
@@ -551,6 +571,10 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Day of Show overlay — mounts on demand for today's show */}
+      {dayOfShowOpen && showToday && (
+        <DayOfShowMode showId={showToday.id} onClose={() => setDayOfShowOpen(false)} />
+      )}
     </div>
   );
 }
