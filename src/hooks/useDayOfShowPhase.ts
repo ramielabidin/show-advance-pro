@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { format } from "date-fns";
 import type { Show } from "@/lib/types";
 import { showDayMinutes } from "@/components/DayOfShow/timeUtils";
 
@@ -27,8 +28,19 @@ export function useDayOfShowPhase(show: Show, nowMin: number): DayOfShowPhase {
 
     const setEntry = (show.schedule_entries ?? []).find((e) => e.is_band);
     const setMin = setEntry ? showDayMinutes(setEntry.time) : null;
-    if (setMin !== null && nowMin >= setMin + SETTLE_BUFFER_MIN) return 2;
+    if (setMin === null) return 1;
 
+    // If the show is still "tonight" but the wall clock has crossed midnight
+    // (show.date < today, current hour < 4 AM), bump nowMin into the same
+    // show-day coordinate space as setMin (which showDayMinutes already
+    // bumps for early-morning entries). Without this, a 9 PM band set looks
+    // 19 hours in the future at 1 AM next day instead of 4 hours past.
+    const now = new Date();
+    const todayStr = format(now, "yyyy-MM-dd");
+    const isPostMidnightOnShowNight = show.date < todayStr && now.getHours() < 4;
+    const showDayNow = isPostMidnightOnShowNight ? nowMin + 24 * 60 : nowMin;
+
+    if (showDayNow >= setMin + SETTLE_BUFFER_MIN) return 2;
     return 1;
-  }, [show.is_settled, show.schedule_entries, nowMin]);
+  }, [show.is_settled, show.schedule_entries, show.date, nowMin]);
 }
