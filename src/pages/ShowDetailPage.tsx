@@ -2020,11 +2020,11 @@ export default function ShowDetailPage() {
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Actual Walkout</p>
                       <p className="text-lg font-semibold font-mono text-[hsl(var(--success))]">
-                        {show.actual_walkout || "—"}
+                        {show.actual_walkout ? formatCurrency(String(show.actual_walkout)) : "—"}
                       </p>
                       {show.walkout_potential && (
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Projected: {show.walkout_potential}
+                          Projected: {formatCurrency(String(show.walkout_potential))}
                         </p>
                       )}
                     </div>
