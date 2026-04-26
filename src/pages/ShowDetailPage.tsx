@@ -1836,7 +1836,7 @@ export default function ShowDetailPage() {
                     </p>
                     {show.walkout_potential && (
                       <p className="text-xs text-muted-foreground mt-1.5">
-                        vs {formatCurrency(String(show.walkout_potential))} projected
+                        of {formatCurrency(String(show.walkout_potential))} at sellout
                       </p>
                     )}
                   </div>
