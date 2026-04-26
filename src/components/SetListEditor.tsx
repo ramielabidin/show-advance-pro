@@ -393,36 +393,34 @@ export default function SetListEditor({ show }: Props) {
                 No songs match "{search}".
               </div>
             ) : (
-              filteredSongs.slice(0, 8).map((s, i, arr) => {
-                const checked = selectedSongIds.has(s.id);
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    // Keep focus on the input so the panel doesn't unmount
-                    // mid-click (blur would hide it before onClick fires) and
-                    // the user can keep tap-tap-tapping songs.
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => toggleSong(s)}
-                    aria-pressed={checked}
-                    className={cn(
-                      "flex items-center justify-between w-full text-left px-3 py-2 hover:bg-muted/60 [transition:background-color_150ms_var(--ease-out)]",
-                      i < arr.length - 1 && "border-b border-border/60",
-                    )}
-                  >
-                    <span className="text-sm text-foreground truncate">{s.title}</span>
-                    {checked ? (
-                      <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-2" />
-                    ) : (
-                      <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-2" />
-                    )}
-                  </button>
-                );
-              })
-            )}
-            {filteredSongs.length > 8 && (
-              <div className="px-3 py-2 text-[11px] text-muted-foreground border-t border-border/60 bg-muted/30">
-                Showing 8 of {filteredSongs.length} — keep typing to narrow down.
+              // ~8 rows visible (≈36px each); the rest is one flick away.
+              <div className="max-h-72 overflow-y-auto overscroll-contain">
+                {filteredSongs.map((s, i, arr) => {
+                  const checked = selectedSongIds.has(s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      // Keep focus on the input so the panel doesn't unmount
+                      // mid-click (blur would hide it before onClick fires) and
+                      // the user can keep tap-tap-tapping songs.
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => toggleSong(s)}
+                      aria-pressed={checked}
+                      className={cn(
+                        "flex items-center justify-between w-full text-left px-3 py-2 hover:bg-muted/60 [transition:background-color_150ms_var(--ease-out)]",
+                        i < arr.length - 1 && "border-b border-border/60",
+                      )}
+                    >
+                      <span className="text-sm text-foreground truncate">{s.title}</span>
+                      {checked ? (
+                        <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-2" />
+                      ) : (
+                        <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-2" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
