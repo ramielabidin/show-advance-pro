@@ -157,13 +157,18 @@ export default function DashboardPage() {
     // and after-show wind-down run late; the chip should persist past midnight
     // until the show day naturally ends (~4 AM cliff, same as the schedule
     // sort cliff in showDayMinutes).
+    //
+    // Settled shows still match — the user needs to be able to re-enter
+    // Day of Show after settling to see the Phase 3 hotel reveal. The phase
+    // hook routes settled shows to Phase 3 directly. Auto-resolve happens
+    // naturally at the 4 AM cliff.
     const now = new Date();
     if (now.getHours() < 4) {
       const yesterdayStr = format(subDays(now, 1), "yyyy-MM-dd");
-      const yesterdayShow = shows.find((s) => s.date === yesterdayStr && !s.is_settled);
+      const yesterdayShow = shows.find((s) => s.date === yesterdayStr);
       if (yesterdayShow) return yesterdayShow;
     }
-    return shows.find((s) => s.date === todayStr && !s.is_settled) ?? null;
+    return shows.find((s) => s.date === todayStr) ?? null;
   }, [shows, todayStr]);
 
   const headerLine = showToday
