@@ -7,7 +7,6 @@ interface FieldGroupProps {
   children: React.ReactNode;
   className?: string;
   contentClassName?: string;
-  incomplete?: boolean;
   collapsible?: boolean;
   defaultOpen?: boolean;
   headerRight?: React.ReactNode;
@@ -18,7 +17,6 @@ export default function FieldGroup({
   children,
   className,
   contentClassName,
-  incomplete,
   collapsible,
   defaultOpen = true,
   headerRight,
@@ -26,9 +24,8 @@ export default function FieldGroup({
   const [open, setOpen] = useState(defaultOpen);
 
   const header = (
-    <h3 className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+    <h3 className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
       {title}
-      {incomplete && <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--pastel-yellow-fg)]" />}
     </h3>
   );
 

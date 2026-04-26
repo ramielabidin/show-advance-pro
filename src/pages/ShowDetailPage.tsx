@@ -1269,7 +1269,7 @@ export default function ShowDetailPage() {
       </div>
 
       <TabsContent value="show">
-          {!show.advance_imported_at && !showManualForm ? (
+          {!show.advance_imported_at && !showManualForm && scheduleEntries.length === 0 ? (
             <div className="space-y-6 sm:space-y-8">
               <div className="rounded-lg border border-border bg-card p-6 sm:p-8 text-center animate-fade-in">
                 <div className="inline-flex items-center justify-center rounded-full bg-muted p-3 mb-4">
@@ -1328,7 +1328,7 @@ export default function ShowDetailPage() {
           <div className="space-y-6 sm:space-y-8">
             {/* Schedule — full width */}
             <div ref={scheduleRef}>
-              <FieldGroup title="Schedule" incomplete={scheduleEntries.length === 0}>
+              <FieldGroup title="Schedule">
                 <ScheduleEditor
                   key={scheduleKey}
                   initial={scheduleEntries.map((e) => ({ time: e.time, label: e.label, is_band: e.is_band }))}
@@ -1380,7 +1380,6 @@ export default function ShowDetailPage() {
               title="Departure"
               collapsible
               defaultOpen={!!show.departure_time || !!show.departure_notes || (!!recommendedDeparture && !suggestionDismissed)}
-              incomplete={!show.departure_time && !show.departure_notes}
             >
               {departureEditor.isEditing ? (
                 <div ref={inlineRef} className="space-y-3">
@@ -1464,7 +1463,6 @@ export default function ShowDetailPage() {
               title="Arrival"
               collapsible
               defaultOpen={!!(show.load_in_details || show.parking_notes)}
-              incomplete={!show.load_in_details && !show.parking_notes}
             >
               {arrivalEditor.isEditing ? (
                 <div ref={inlineRef} className="space-y-4">
@@ -1599,7 +1597,6 @@ export default function ShowDetailPage() {
                 title="Guest List"
                 collapsible
                 defaultOpen={!!(show.guest_list_details || show.artist_comps) || focus === "guest-list"}
-                incomplete={!!show.artist_comps && !show.guest_list_details}
                 headerRight={
                   show.guest_list_details || show.artist_comps ? (
                     <GuestCount
@@ -1803,7 +1800,7 @@ export default function ShowDetailPage() {
         <TabsContent value="deal">
           <div className="space-y-6 sm:space-y-8">
             {/* Deal — stat tiles for the four primary numerics (click to inline-edit); backend deal + comps below */}
-            <FieldGroup title="Deal" incomplete={!show.guarantee && !show.backend_deal && !show.ticket_price && !show.venue_capacity && !show.walkout_potential && !show.artist_comps}>
+            <FieldGroup title="Deal">
               {(() => {
                 const tiles: Array<{ key: keyof Show; label: string; icon: typeof DollarSign; tone: "blue" | "green" | "yellow"; currency?: boolean; placeholder?: string }> = [
                   { key: "guarantee", label: "Guarantee", icon: DollarSign, tone: "green", currency: true },
