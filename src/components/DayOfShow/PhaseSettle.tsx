@@ -43,43 +43,64 @@ export default function PhaseSettle({ show }: PhaseSettleProps) {
         Show's done.
       </div>
 
-      {/* Big Settle CTA — the dominant moment of the screen */}
+      {/* Settle CTA — spine variant. Quiet card with a glowing green left
+          edge as the visual cue, vs the previous large green tile. The whole
+          card is the tap target; the pill below is a visual affordance, not
+          a separate button. Per the round-2 design handoff. */}
       <button
         type="button"
         onClick={() => setSettleOpen(true)}
-        className="w-full text-left rounded-[18px] [transition:transform_160ms_var(--ease-out)] active:scale-[0.985]"
+        className="relative w-full text-left rounded-[14px] border overflow-hidden [transition:transform_160ms_var(--ease-out)] active:scale-[0.985]"
         style={{
-          background: "hsl(var(--success))",
-          padding: "34px 22px",
-          boxShadow:
-            "0 14px 40px hsl(152 60% 30% / 0.45), inset 0 1px 0 hsl(0 0% 100% / 0.15)",
-          color: "#fff",
+          background: "hsl(var(--card))",
+          borderColor: "hsl(var(--border))",
+          padding: "24px 22px 22px 26px",
         }}
       >
+        {/* Glowing green spine */}
         <div
-          className="text-[11px] uppercase font-medium leading-none mb-3.5"
-          style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.78)" }}
-        >
-          Wrap it up
-        </div>
-        <div
-          className="font-display"
-          style={{ fontSize: 44, lineHeight: 1, letterSpacing: "-0.03em" }}
-        >
-          Settle this show
-        </div>
-        <div
-          className="mt-3.5 text-[13.5px] leading-[1.4]"
-          style={{ color: "rgba(255,255,255,0.85)" }}
-        >
-          Count the door, close the night, save your numbers.
-        </div>
-        <div
-          className="mt-3.5 inline-flex items-center gap-1.5 text-[13px] font-medium"
-          style={{ color: "rgba(255,255,255,0.95)" }}
-        >
-          Open settle
-          <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+          aria-hidden
+          className="absolute left-0 top-0 bottom-0 w-1"
+          style={{
+            background: "hsl(var(--success))",
+            boxShadow: "0 0 24px 0 hsl(var(--success) / 0.55)",
+          }}
+        />
+
+        <div className="flex flex-col gap-3.5">
+          <div
+            className="text-[11px] uppercase font-medium leading-none"
+            style={{ letterSpacing: "0.18em", color: "hsl(var(--success))" }}
+          >
+            Ready
+          </div>
+          <div
+            className="font-display"
+            style={{
+              fontSize: 38,
+              lineHeight: 1,
+              letterSpacing: "-0.03em",
+              color: "hsl(var(--foreground))",
+            }}
+          >
+            Close the night.
+          </div>
+          <div
+            className="text-[13.5px] leading-[1.45]"
+            style={{ color: "hsl(var(--muted-foreground))" }}
+          >
+            Count the door, save your numbers.
+          </div>
+          <div
+            className="self-start mt-1.5 inline-flex items-center gap-1.5 rounded-full border px-4 py-2"
+            style={{
+              borderColor: "hsl(var(--border))",
+              color: "hsl(var(--foreground))",
+            }}
+          >
+            <span className="text-[13px] font-medium">Open settle</span>
+            <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+          </div>
         </div>
       </button>
 
