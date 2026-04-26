@@ -72,7 +72,7 @@ export default function PhaseSettle({ show }: PhaseSettleProps) {
           className="mt-3.5 text-[13.5px] leading-[1.4]"
           style={{ color: "rgba(255,255,255,0.85)" }}
         >
-          Count the door, close the night, save your numbers. Five minutes.
+          Count the door, close the night, save your numbers.
         </div>
         <div
           className="mt-3.5 inline-flex items-center gap-1.5 text-[13px] font-medium"
