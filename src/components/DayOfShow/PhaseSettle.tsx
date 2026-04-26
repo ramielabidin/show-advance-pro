@@ -1,8 +1,10 @@
 import { useState, useMemo } from "react";
 import { ArrowRight, Bed, ChevronRight } from "lucide-react";
+import { to12Hour } from "@/lib/timeFormat";
 import { formatCityState } from "@/lib/utils";
 import SettleShowDialog from "@/components/SettleShowDialog";
-import type { Show } from "@/lib/types";
+import type { Show, ScheduleEntry } from "@/lib/types";
+import { showDayMinutes } from "./timeUtils";
 
 interface PhaseSettleProps {
   show: Show;
@@ -16,6 +18,19 @@ interface PhaseSettleProps {
  */
 export default function PhaseSettle({ show }: PhaseSettleProps) {
   const [settleOpen, setSettleOpen] = useState(false);
+
+  // Schedule entries with parseable times, sorted into show-day order so
+  // a 12:30 AM curfew lands at the end (not the start).
+  const sortedEntries = useMemo<{ entry: ScheduleEntry; min: number }[]>(() => {
+    const entries = (show.schedule_entries ?? [])
+      .map((entry) => ({ entry, min: showDayMinutes(entry.time) }))
+      .filter((row): row is { entry: ScheduleEntry; min: number } => row.min !== null);
+    entries.sort((a, b) => {
+      if (a.min !== b.min) return a.min - b.min;
+      return a.entry.sort_order - b.entry.sort_order;
+    });
+    return entries;
+  }, [show.schedule_entries]);
 
   const hotelNavHref = useMemo(() => {
     if (!show.hotel_address?.trim() && !show.hotel_name?.trim()) return undefined;
@@ -148,7 +163,87 @@ export default function PhaseSettle({ show }: PhaseSettleProps) {
         </a>
       )}
 
+      {/* Night-timeline footer — visual recap of the night. Decorative, not
+          functional: it doesn't change what the user does next, but it
+          anchors the screen and gives the wrap-up moment some weight. The
+          band's set is the haloed dot; everything else is a small dot on
+          the rule. Anchors at the edges show the night's span. */}
+      {sortedEntries.length >= 2 && (
+        <div className="mt-auto pt-7">
+          <div className="flex items-baseline justify-between mb-2.5">
+            <span
+              className="text-[10px] uppercase font-medium leading-none"
+              style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
+            >
+              Tonight, in full
+            </span>
+            <span
+              className="font-mono text-[11px]"
+              style={{ color: "hsl(var(--muted-foreground))" }}
+            >
+              {sortedEntries.length} cues
+            </span>
+          </div>
+          <div className="relative h-8">
+            {/* Horizontal rule */}
+            <div
+              aria-hidden
+              className="absolute left-0 right-0 top-1/2 h-px"
+              style={{
+                background: "hsl(var(--border))",
+                transform: "translateY(-50%)",
+              }}
+            />
+            {/* Dots */}
+            {(() => {
+              const startMin = sortedEntries[0].min;
+              const endMin = sortedEntries[sortedEntries.length - 1].min;
+              const span = Math.max(endMin - startMin, 1);
+              return sortedEntries.map(({ entry, min }) => {
+                const pos = ((min - startMin) / span) * 100;
+                const isBand = !!entry.is_band;
+                const size = isBand ? 10 : 6;
+                const display = to12Hour(entry.time) ?? entry.time;
+                return (
+                  <div
+                    key={entry.id}
+                    title={`${display} — ${entry.label}`}
+                    className="absolute top-1/2 rounded-full"
+                    style={{
+                      left: `${pos}%`,
+                      transform: "translate(-50%, -50%)",
+                      width: size,
+                      height: size,
+                      background: isBand
+                        ? "hsl(var(--badge-new))"
+                        : "hsl(var(--muted-foreground))",
+                      boxShadow: isBand
+                        ? "0 0 0 3px hsl(var(--background)), 0 0 0 4px hsl(var(--badge-new) / 0.5)"
+                        : "0 0 0 3px hsl(var(--background))",
+                    }}
+                  />
+                );
+              });
+            })()}
+          </div>
+          <div
+            className="flex justify-between mt-1.5 font-mono text-[10.5px]"
+            style={{ color: "hsl(var(--muted-foreground))" }}
+          >
+            <span>{compactTime(sortedEntries[0].entry.time)}</span>
+            <span>{compactTime(sortedEntries[sortedEntries.length - 1].entry.time)}</span>
+          </div>
+        </div>
+      )}
+
       <SettleShowDialog show={show} open={settleOpen} onOpenChange={setSettleOpen} />
     </div>
   );
+}
+
+/** "3:00 PM" → "3:00pm" — compact lowercase form for the timeline anchors. */
+function compactTime(raw: string): string {
+  const t = to12Hour(raw);
+  if (!t) return raw;
+  return t.replace(" ", "").toLowerCase();
 }
