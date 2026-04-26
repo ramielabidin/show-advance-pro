@@ -1,10 +1,8 @@
 import { useState, useMemo } from "react";
-import { ArrowRight, Bed, Check, ChevronRight } from "lucide-react";
-import { to12Hour } from "@/lib/timeFormat";
+import { ArrowRight, Bed, ChevronRight } from "lucide-react";
 import { formatCityState } from "@/lib/utils";
 import SettleShowDialog from "@/components/SettleShowDialog";
-import type { Show, ScheduleEntry } from "@/lib/types";
-import { showDayMinutes } from "./timeUtils";
+import type { Show } from "@/lib/types";
 
 interface PhaseSettleProps {
   show: Show;
@@ -12,26 +10,12 @@ interface PhaseSettleProps {
 
 /**
  * Phase 2 surface — the show is done, time to wrap. Single dominant Settle
- * CTA, a small hotel teaser previewing Phase 3, and a "Tonight" footer that
- * recaps the schedule with checkmarks. No financial inputs here — those live
- * in SettleShowDialog (which we mount on demand).
+ * CTA, a small hotel teaser previewing Phase 3, and that's it. Financial
+ * inputs live in SettleShowDialog (which we mount on demand). The screen
+ * intentionally has only one job — settle — so we don't crowd it.
  */
 export default function PhaseSettle({ show }: PhaseSettleProps) {
   const [settleOpen, setSettleOpen] = useState(false);
-
-  const sortedEntries = useMemo<ScheduleEntry[]>(() => {
-    const entries = [...(show.schedule_entries ?? [])];
-    entries.sort((a, b) => {
-      const am = showDayMinutes(a.time);
-      const bm = showDayMinutes(b.time);
-      if (am === null && bm === null) return a.sort_order - b.sort_order;
-      if (am === null) return 1;
-      if (bm === null) return -1;
-      if (am !== bm) return am - bm;
-      return a.sort_order - b.sort_order;
-    });
-    return entries;
-  }, [show.schedule_entries]);
 
   const hotelNavHref = useMemo(() => {
     if (!show.hotel_address?.trim() && !show.hotel_name?.trim()) return undefined;
@@ -99,83 +83,48 @@ export default function PhaseSettle({ show }: PhaseSettleProps) {
         </div>
       </button>
 
-      {/* Hotel teaser — small preview of Phase 3 */}
+      {/* Hotel teaser — quiet preview of Phase 3, no eyebrow needed (the bed
+          icon + name communicate "next thing is your hotel" without a label). */}
       {show.hotel_name && (
-        <div className="mt-[22px]">
+        <a
+          href={hotelNavHref ?? undefined}
+          target={hotelNavHref ? "_blank" : undefined}
+          rel={hotelNavHref ? "noopener noreferrer" : undefined}
+          className="mt-[22px] flex items-center gap-3 rounded-[12px] border p-3 [transition:transform_160ms_var(--ease-out),background-color_160ms_var(--ease-out)] active:scale-[0.985]"
+          style={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
+        >
           <div
-            className="text-[11px] uppercase font-medium leading-none mb-2"
-            style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
+            className="shrink-0 inline-flex items-center justify-center rounded-[10px]"
+            style={{
+              width: 38,
+              height: 38,
+              background: "var(--pastel-blue-bg)",
+              color: "var(--pastel-blue-fg)",
+            }}
           >
-            Up next
+            <Bed className="h-[17px] w-[17px]" strokeWidth={1.75} />
           </div>
-          <a
-            href={hotelNavHref ?? undefined}
-            target={hotelNavHref ? "_blank" : undefined}
-            rel={hotelNavHref ? "noopener noreferrer" : undefined}
-            className="flex items-center gap-3 rounded-[12px] border p-3 [transition:transform_160ms_var(--ease-out),background-color_160ms_var(--ease-out)] active:scale-[0.985]"
-            style={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
-          >
+          <div className="min-w-0 flex-1">
             <div
-              className="shrink-0 inline-flex items-center justify-center rounded-[10px]"
-              style={{
-                width: 38,
-                height: 38,
-                background: "var(--pastel-blue-bg)",
-                color: "var(--pastel-blue-fg)",
-              }}
+              className="text-[14px] font-medium leading-tight truncate"
+              style={{ color: "hsl(var(--foreground))" }}
             >
-              <Bed className="h-[17px] w-[17px]" strokeWidth={1.75} />
+              {show.hotel_name}
             </div>
-            <div className="min-w-0 flex-1">
+            {hotelTeaserSub && (
               <div
-                className="text-[14px] font-medium leading-tight truncate"
-                style={{ color: "hsl(var(--foreground))" }}
+                className="text-[12px] leading-tight mt-0.5 truncate"
+                style={{ color: "hsl(var(--muted-foreground))" }}
               >
-                {show.hotel_name}
+                {hotelTeaserSub}
               </div>
-              {hotelTeaserSub && (
-                <div
-                  className="text-[12px] leading-tight mt-0.5 truncate"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
-                  {hotelTeaserSub}
-                </div>
-              )}
-            </div>
-            <ChevronRight
-              className="h-3.5 w-3.5 shrink-0"
-              style={{ color: "hsl(var(--muted-foreground))" }}
-            />
-          </a>
-        </div>
-      )}
-
-      {/* Tonight footer — compact recap of what's done, pinned to the bottom */}
-      {sortedEntries.length > 0 && (
-        <div className="mt-auto pt-6">
-          <div
-            className="text-[10px] uppercase font-medium leading-none mb-2"
-            style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
-          >
-            Tonight
+            )}
           </div>
-          <div
-            className="font-mono text-[11.5px] leading-[1.6] flex flex-wrap gap-x-4 gap-y-1"
+          <ChevronRight
+            className="h-3.5 w-3.5 shrink-0"
             style={{ color: "hsl(var(--muted-foreground))" }}
-          >
-            {sortedEntries.map((row) => (
-              <div key={row.id} className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                <Check
-                  className="h-[9px] w-[9px] shrink-0"
-                  strokeWidth={2.4}
-                  style={{ color: "var(--pastel-green-fg)" }}
-                />
-                <span>{to12Hour(row.time) ?? row.time}</span>
-                <span>{row.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+          />
+        </a>
       )}
 
       <SettleShowDialog show={show} open={settleOpen} onOpenChange={setSettleOpen} />
