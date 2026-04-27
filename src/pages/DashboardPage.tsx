@@ -8,6 +8,7 @@ import {
   isToday,
   differenceInCalendarDays,
   subMonths,
+  subDays,
 } from "date-fns";
 import {
   Calendar,
@@ -150,10 +151,25 @@ export default function DashboardPage() {
   const userFirstName = userFullName.split(/\s+/)[0] || null;
   const todayStr = format(today, "yyyy-MM-dd");
 
-  const showToday = useMemo(
-    () => shows.find((s) => s.date === todayStr && !s.is_settled) ?? null,
-    [shows, todayStr],
-  );
+  const showToday = useMemo(() => {
+    // "Today's show" — matches today's calendar date, OR yesterday's date if
+    // we're in the post-midnight early-morning window (before 4 AM). Load-outs
+    // and after-show wind-down run late; the chip should persist past midnight
+    // until the show day naturally ends (~4 AM cliff, same as the schedule
+    // sort cliff in showDayMinutes).
+    //
+    // Settled shows still match — the user needs to be able to re-enter
+    // Day of Show after settling to see the Phase 3 hotel reveal. The phase
+    // hook routes settled shows to Phase 3 directly. Auto-resolve happens
+    // naturally at the 4 AM cliff.
+    const now = new Date();
+    if (now.getHours() < 4) {
+      const yesterdayStr = format(subDays(now, 1), "yyyy-MM-dd");
+      const yesterdayShow = shows.find((s) => s.date === yesterdayStr);
+      if (yesterdayShow) return yesterdayShow;
+    }
+    return shows.find((s) => s.date === todayStr) ?? null;
+  }, [shows, todayStr]);
 
   const headerLine = showToday
     ? userFirstName

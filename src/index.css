@@ -51,6 +51,20 @@
   }
 }
 
+/* Day of Show phase morph — fires on each phase swap inside DayOfShowMode.
+   Keyed remount of a `.phase-morph` wrapper replays the animation when the
+   user transitions Phase 1 → 2 → 3. Soft fade + 8px lift, no hard cut. */
+@keyframes phase-morph {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @layer base {
   :root {
     --background: 40 30% 97%;
@@ -252,6 +266,13 @@
     animation: mic-chip-pulse 2.4s ease-in-out infinite;
   }
 
+  /* Day of Show phase swap — used on a keyed wrapper so React's remount on
+     phase change replays the animation. 380ms is fast enough to not feel
+     like a wait, slow enough to register as intentional. */
+  .phase-morph {
+    animation: phase-morph 380ms var(--ease-in-out) both;
+  }
+
   /* Override tailwindcss-animate defaults with our stronger curves */
   [data-state] {
     animation-timing-function: var(--ease-out);
@@ -281,6 +302,10 @@
     }
 
     .mic-chip-pulse {
+      animation: none;
+    }
+
+    .phase-morph {
       animation: none;
     }
 
