@@ -32,6 +32,14 @@ export default function FieldRow({ label, value, mono, compact, noLabel }: Field
 
   if (!value) return null;
 
+  // group-hover styles only activate when an ancestor has the `group` class —
+  // that's how editField wraps its rows, so the affordance shows up only when
+  // the row is interactive. Inert consumers (guest view) are unaffected.
+  const valueClass = cn(
+    "text-sm text-foreground whitespace-pre-line underline decoration-dashed decoration-transparent underline-offset-[3px] [transition:text-decoration-color_150ms_var(--ease-out)] group-hover:decoration-foreground/30",
+    mono && "font-mono text-[13px]",
+  );
+
   if (noLabel) {
     return listItems ? (
       <ol className="text-sm text-foreground list-decimal list-outside pl-4 space-y-1">
@@ -40,7 +48,7 @@ export default function FieldRow({ label, value, mono, compact, noLabel }: Field
         ))}
       </ol>
     ) : (
-      <span className={cn("text-sm text-foreground whitespace-pre-line", mono && "font-mono text-[13px]")}>
+      <span className={valueClass}>
         {value}
       </span>
     );
@@ -48,7 +56,14 @@ export default function FieldRow({ label, value, mono, compact, noLabel }: Field
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-      <span className={cn("text-sm text-muted-foreground sm:shrink-0", compact ? "sm:w-16" : "sm:w-32")}>{label}</span>
+      <span
+        className={cn(
+          "text-sm text-muted-foreground sm:shrink-0 [transition:color_150ms_var(--ease-out)] group-hover:text-foreground/85",
+          compact ? "sm:w-16" : "sm:w-32",
+        )}
+      >
+        {label}
+      </span>
       {listItems ? (
         <ol className="text-sm text-foreground list-decimal list-outside pl-4 space-y-1">
           {listItems.map((item, i) => (
@@ -56,7 +71,7 @@ export default function FieldRow({ label, value, mono, compact, noLabel }: Field
           ))}
         </ol>
       ) : (
-        <span className={cn("text-sm text-foreground whitespace-pre-line", mono && "font-mono text-[13px]")}>
+        <span className={valueClass}>
           {value}
         </span>
       )}
