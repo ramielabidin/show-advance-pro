@@ -523,9 +523,13 @@ function renderHeader(show: RenderShow): string {
   const doors = findScheduleMatch(show, /^doors?\b/);
   const addr = val(show.venue_address) ? stripCountry(show.venue_address!) : "";
 
+  // When the full street address is rendered on its own line below, omit city
+  // from the sub-line so the location isn't repeated (or, in cases where the
+  // city field has been overwritten with the full address, printed verbatim
+  // twice).
   const subParts = [
     dateStr,
-    city,
+    addr ? "" : city,
     doors ? `Doors ${doors}` : "",
   ].filter(Boolean);
   const subHtml = subParts.length

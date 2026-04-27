@@ -1,7 +1,7 @@
 import { useParams, useNavigate, useLocation, useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, Check, Share2, Car, FileText, MoreHorizontal, ChevronDown } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, Check, Share2, Car, FileText, MoreHorizontal, ChevronDown, Pencil } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -1134,82 +1134,162 @@ export default function ShowDetailPage() {
               </div>
             )}
 
-            {/* Desktop meta row — address · drive-time inline */}
-            <div className="hidden sm:flex items-center gap-3 mt-2.5 text-sm text-muted-foreground flex-wrap">
-              {show.venue_address ? (
-                <a
-                  href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 hover:underline hover:text-foreground transition-colors"
-                >
-                  <MapPin className="h-3 w-3 shrink-0" />
-                  {show.venue_address.replace(/,?\s*United States$/i, "")}
-                </a>
-              ) : (
-                <span className="inline-flex items-center gap-1.5">
-                  <MapPin className="h-3 w-3 shrink-0" />
-                  <span>{formatCityState(show.city)}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1 text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
-                    disabled={lookingUpAddress}
-                    onClick={lookupAddress}
-                  >
-                    {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                    Lookup
-                  </Button>
-                </span>
-              )}
-              {driveTimeLabel && departureOrigin && !shouldHideDriveTime && (
-                <>
-                  <span className="w-[3px] h-[3px] rounded-full bg-muted-foreground/50 shrink-0" aria-hidden />
-                  <span className="inline-flex items-center gap-1.5 flex-wrap">
-                    <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} />
-                    <span className="font-mono text-foreground font-medium">{driveTimeLabel}</span>
-                    <span>from {departureOrigin.label}</span>
-                    {driveTime?.distance_text && (
-                      <>
-                        <span className="opacity-60">·</span>
-                        <span className="font-mono">{driveTime.distance_text}</span>
-                      </>
-                    )}
-                  </span>
-                </>
-              )}
-            </div>
-
-            {/* Mobile meta — quiet city line + street address, drive-time as muted strip */}
-            <div className="sm:hidden mt-1.5 text-[13px] text-muted-foreground">
-              {show.venue_address ? (
-                <a
-                  href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block hover:text-foreground transition-colors"
-                >
-                  <span className="block">{formatCityState(show.city)}</span>
-                  <span className="block text-[12px] text-muted-foreground/75 mt-0.5">
-                    {streetFromAddress(show.venue_address)}
-                  </span>
-                </a>
-              ) : (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span>{formatCityState(show.city)}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1 text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
-                    disabled={lookingUpAddress}
-                    onClick={lookupAddress}
-                  >
-                    {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                    Lookup
-                  </Button>
+            {/* Address — inline editable. Used by both desktop and mobile meta rows. */}
+            {inlineField === "venue_address" ? (
+              <div ref={inlineRef} className="mt-2.5">
+                <Input
+                  autoFocus
+                  value={inlineValue}
+                  onChange={(e) => setInlineValue(e.target.value)}
+                  onBlur={() => {
+                    const next = inlineValue.trim();
+                    const prev = (show.venue_address ?? "").trim();
+                    if (next !== prev) {
+                      updateMutation.mutate({ venue_address: next || null });
+                    } else {
+                      setInlineField(null);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      (e.target as HTMLInputElement).blur();
+                    } else if (e.key === "Escape") {
+                      setInlineField(null);
+                    }
+                  }}
+                  placeholder="Venue address"
+                  className="text-sm h-9"
+                />
+              </div>
+            ) : (
+              <>
+                {/* Desktop meta row — address · drive-time inline */}
+                <div className="hidden sm:flex items-center gap-3 mt-2.5 text-sm text-muted-foreground flex-wrap">
+                  {show.venue_address ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <a
+                        href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 hover:underline hover:text-foreground transition-colors"
+                      >
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        {show.venue_address.replace(/,?\s*United States$/i, "")}
+                      </a>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 text-muted-foreground/70 hover:text-foreground"
+                        aria-label="Edit address"
+                        title="Edit address"
+                        onClick={() => {
+                          setInlineField("venue_address");
+                          setInlineValue(show.venue_address ?? "");
+                        }}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5">
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      <span>{formatCityState(show.city)}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1 text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
+                        disabled={lookingUpAddress}
+                        onClick={lookupAddress}
+                      >
+                        {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                        Lookup
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
+                        onClick={() => {
+                          setInlineField("venue_address");
+                          setInlineValue("");
+                        }}
+                      >
+                        Enter manually
+                      </Button>
+                    </span>
+                  )}
+                  {driveTimeLabel && departureOrigin && !shouldHideDriveTime && (
+                    <span className="inline-flex items-center gap-1.5 flex-wrap">
+                      <span className="w-[3px] h-[3px] rounded-full bg-muted-foreground/50 shrink-0" aria-hidden />
+                      <Car className="h-3 w-3 shrink-0 ml-1.5" strokeWidth={1.75} />
+                      <span className="font-mono text-foreground font-medium">{driveTimeLabel}</span>
+                      <span>from {departureOrigin.label}</span>
+                      {driveTime?.distance_text && (
+                        <>
+                          <span className="opacity-60">·</span>
+                          <span className="font-mono">{driveTime.distance_text}</span>
+                        </>
+                      )}
+                    </span>
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* Mobile meta — quiet city line + street address, drive-time as muted strip */}
+                <div className="sm:hidden mt-1.5 text-[13px] text-muted-foreground">
+                  {show.venue_address ? (
+                    <div className="flex items-start gap-1.5">
+                      <a
+                        href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 min-w-0 hover:text-foreground transition-colors"
+                      >
+                        <span className="block">{formatCityState(show.city)}</span>
+                        <span className="block text-[12px] text-muted-foreground/75 mt-0.5">
+                          {streetFromAddress(show.venue_address)}
+                        </span>
+                      </a>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0 text-muted-foreground/70 hover:text-foreground -mt-0.5"
+                        aria-label="Edit address"
+                        onClick={() => {
+                          setInlineField("venue_address");
+                          setInlineValue(show.venue_address ?? "");
+                        }}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span>{formatCityState(show.city)}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1 text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
+                        disabled={lookingUpAddress}
+                        onClick={lookupAddress}
+                      >
+                        {lookingUpAddress ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                        Lookup
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-muted-foreground hover:text-foreground h-5 px-1.5"
+                        onClick={() => {
+                          setInlineField("venue_address");
+                          setInlineValue("");
+                        }}
+                      >
+                        Enter manually
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
             {driveTimeLabel && departureOrigin && !shouldHideDriveTime && (
               <div
                 className="sm:hidden flex items-center gap-2.5 mt-3 px-2.5 py-2 rounded-md text-[12.5px] text-muted-foreground"
