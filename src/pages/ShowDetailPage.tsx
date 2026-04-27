@@ -1219,8 +1219,7 @@ export default function ShowDetailPage() {
                   )}
                   {driveTimeLabel && departureOrigin && !shouldHideDriveTime && (
                     <span className="inline-flex items-center gap-1.5 flex-wrap">
-                      <span className="w-[3px] h-[3px] rounded-full bg-muted-foreground/50 shrink-0" aria-hidden />
-                      <Car className="h-3 w-3 shrink-0 ml-1.5" strokeWidth={1.75} />
+                      <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} />
                       <span className="font-mono text-foreground font-medium">{driveTimeLabel}</span>
                       <span>from {departureOrigin.label}</span>
                       {driveTime?.distance_text && (
