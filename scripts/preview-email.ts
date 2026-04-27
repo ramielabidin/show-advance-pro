@@ -49,7 +49,9 @@ const sampleShow: RenderShow = {
   hotel_address: "1076 Williston Rd, South Burlington, VT 05403",
   hotel_confirmation: "WJ-884213",
   hotel_checkin: "3:00 PM",
+  hotel_checkin_date: "2026-05-03",
   hotel_checkout: "11:00 AM",
+  hotel_checkout_date: "2026-05-04",
   guest_list_details: JSON.stringify([
     { name: "Jamie Rivers", plusOnes: 1 },
     { name: "Sam Cole", plusOnes: 0 },

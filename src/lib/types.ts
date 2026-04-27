@@ -61,7 +61,9 @@ export interface Show {
   hotel_address: string | null;
   hotel_confirmation: string | null;
   hotel_checkin: string | null;
+  hotel_checkin_date: string | null;
   hotel_checkout: string | null;
+  hotel_checkout_date: string | null;
   additional_info: string | null;
   tour_id: string | null;
   venue_capacity: string | null;

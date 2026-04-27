@@ -7,6 +7,7 @@ import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
 import { cn, formatCityState } from "@/lib/utils";
 import { hasData, type SectionKey } from "@/lib/daysheetSections";
+import { formatHotelMoment } from "@/lib/timeFormat";
 import { roleLabel } from "@/lib/contactRoles";
 import type { Show } from "@/lib/types";
 import type { GuestShowPayload } from "@/lib/guestLinks";
@@ -237,38 +238,40 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
                     )}
                   </div>
                 )}
-                {(show.hotel_confirmation || show.hotel_checkin || show.hotel_checkout) && (
-                  <div
-                    className={cn(
-                      "px-4 sm:px-5 pb-4 pt-3 grid gap-4",
-                      (show.hotel_name || show.hotel_address) && "border-t border-dashed border-foreground/15",
-                      [show.hotel_confirmation, show.hotel_checkin, show.hotel_checkout].filter(Boolean).length === 3
-                        ? "grid-cols-3"
-                        : [show.hotel_confirmation, show.hotel_checkin, show.hotel_checkout].filter(Boolean).length === 2
-                          ? "grid-cols-2"
-                          : "grid-cols-1"
-                    )}
-                  >
-                    {show.hotel_confirmation && (
-                      <div>
-                        <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Confirmation #</div>
-                        <div className="font-mono text-[13px] text-foreground mt-1 break-all">{show.hotel_confirmation}</div>
-                      </div>
-                    )}
-                    {show.hotel_checkin && (
-                      <div>
-                        <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check In</div>
-                        <div className="font-mono text-[13px] text-foreground mt-1">{show.hotel_checkin}</div>
-                      </div>
-                    )}
-                    {show.hotel_checkout && (
-                      <div>
-                        <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check Out</div>
-                        <div className="font-mono text-[13px] text-foreground mt-1">{show.hotel_checkout}</div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  const checkInDisplay = formatHotelMoment(show.hotel_checkin_date, show.hotel_checkin);
+                  const checkOutDisplay = formatHotelMoment(show.hotel_checkout_date, show.hotel_checkout);
+                  if (!show.hotel_confirmation && !checkInDisplay && !checkOutDisplay) return null;
+                  const filled = [show.hotel_confirmation, checkInDisplay, checkOutDisplay].filter(Boolean).length;
+                  return (
+                    <div
+                      className={cn(
+                        "px-4 sm:px-5 pb-4 pt-3 grid gap-4 grid-cols-1",
+                        (show.hotel_name || show.hotel_address) && "border-t border-dashed border-foreground/15",
+                        filled === 3 ? "sm:grid-cols-3" : filled === 2 ? "sm:grid-cols-2" : "sm:grid-cols-1",
+                      )}
+                    >
+                      {show.hotel_confirmation && (
+                        <div>
+                          <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Confirmation #</div>
+                          <div className="font-mono text-[13px] text-foreground mt-1 break-all">{show.hotel_confirmation}</div>
+                        </div>
+                      )}
+                      {checkInDisplay && (
+                        <div>
+                          <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check In</div>
+                          <div className="font-mono text-[13px] text-foreground mt-1">{checkInDisplay}</div>
+                        </div>
+                      )}
+                      {checkOutDisplay && (
+                        <div>
+                          <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check Out</div>
+                          <div className="font-mono text-[13px] text-foreground mt-1">{checkOutDisplay}</div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </FieldGroup>
           </>

@@ -46,7 +46,7 @@ import EmptyFieldPrompt from "@/components/EmptyFieldPrompt";
 import InlineEditable, { InlineField } from "@/components/InlineEditable";
 import { toast } from "sonner";
 import { cn, formatCityState, normalizePhone } from "@/lib/utils";
-import { normalizeTime } from "@/lib/timeFormat";
+import { normalizeTime, formatHotelMoment } from "@/lib/timeFormat";
 import { isLoadInLabel } from "@/lib/scheduleMatch";
 import TimeInput from "@/components/TimeInput";
 import type { Show } from "@/lib/types";
@@ -707,12 +707,12 @@ export default function ShowDetailPage() {
 
   const hotelEditor = useGroupEditor({
     groupKey: "hotel_group",
-    keys: ["hotel_name", "hotel_address", "hotel_confirmation", "hotel_checkin", "hotel_checkout"] as const,
+    keys: ["hotel_name", "hotel_address", "hotel_confirmation", "hotel_checkin", "hotel_checkin_date", "hotel_checkout", "hotel_checkout_date"] as const,
     show,
     inlineField,
     setInlineField,
     updateMutation,
-    isEmpty: s => !s.hotel_name && !s.hotel_address && !s.hotel_confirmation && !s.hotel_checkin && !s.hotel_checkout,
+    isEmpty: s => !s.hotel_name && !s.hotel_address && !s.hotel_confirmation && !s.hotel_checkin && !s.hotel_checkin_date && !s.hotel_checkout && !s.hotel_checkout_date,
   });
 
   if (isLoading) {
@@ -1716,7 +1716,7 @@ export default function ShowDetailPage() {
             <FieldGroup
               title="Accommodations"
               collapsible
-              defaultOpen={!!(show.hotel_name || show.hotel_address || show.hotel_confirmation || show.hotel_checkin || show.hotel_checkout)}
+              defaultOpen={!!(show.hotel_name || show.hotel_address || show.hotel_confirmation || show.hotel_checkin || show.hotel_checkin_date || show.hotel_checkout || show.hotel_checkout_date)}
             >
               {hotelEditor.isEditing ? (
                 <div ref={inlineRef} className="space-y-3">
@@ -1732,14 +1732,42 @@ export default function ShowDetailPage() {
                     <Label className="text-xs text-muted-foreground">Confirmation #</Label>
                     <InlineField value={hotelEditor.get("hotel_confirmation")} onChange={(v) => hotelEditor.setField("hotel_confirmation", v)} mono />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Check In</Label>
-                      <InlineField value={hotelEditor.get("hotel_checkin")} onChange={(v) => hotelEditor.setField("hotel_checkin", v)} mono />
+                      <div className="grid grid-cols-2 gap-3">
+                        <InlineField
+                          value={hotelEditor.get("hotel_checkin_date")}
+                          onChange={(v) => hotelEditor.setField("hotel_checkin_date", v)}
+                          type="date"
+                          mono
+                          placeholder="Date"
+                        />
+                        <InlineField
+                          value={hotelEditor.get("hotel_checkin")}
+                          onChange={(v) => hotelEditor.setField("hotel_checkin", v)}
+                          mono
+                          placeholder="Time"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Check Out</Label>
-                      <InlineField value={hotelEditor.get("hotel_checkout")} onChange={(v) => hotelEditor.setField("hotel_checkout", v)} mono />
+                      <div className="grid grid-cols-2 gap-3">
+                        <InlineField
+                          value={hotelEditor.get("hotel_checkout_date")}
+                          onChange={(v) => hotelEditor.setField("hotel_checkout_date", v)}
+                          type="date"
+                          mono
+                          placeholder="Date"
+                        />
+                        <InlineField
+                          value={hotelEditor.get("hotel_checkout")}
+                          onChange={(v) => hotelEditor.setField("hotel_checkout", v)}
+                          mono
+                          placeholder="Time"
+                        />
+                      </div>
                     </div>
                   </div>
                   <InlineActions onSave={hotelEditor.save} onCancel={hotelEditor.cancel} />
@@ -1783,39 +1811,40 @@ export default function ShowDetailPage() {
                       )}
                     </div>
                   )}
-                  {(show.hotel_confirmation || show.hotel_checkin || show.hotel_checkout) && (
-                    <div
-                      className={cn(
-                        "px-4 sm:px-5 pb-4 pt-3 grid gap-4",
-                        (show.hotel_name || show.hotel_address) && "border-t border-dashed border-foreground/15",
-                        // 1, 2, or 3 columns depending on populated fields
-                        [show.hotel_confirmation, show.hotel_checkin, show.hotel_checkout].filter(Boolean).length === 3
-                          ? "grid-cols-3"
-                          : [show.hotel_confirmation, show.hotel_checkin, show.hotel_checkout].filter(Boolean).length === 2
-                            ? "grid-cols-2"
-                            : "grid-cols-1"
-                      )}
-                    >
-                      {show.hotel_confirmation && (
-                        <div>
-                          <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Confirmation #</div>
-                          <div className="font-mono text-[13px] text-foreground mt-1 break-all">{show.hotel_confirmation}</div>
-                        </div>
-                      )}
-                      {show.hotel_checkin && (
-                        <div>
-                          <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check In</div>
-                          <div className="font-mono text-[13px] text-foreground mt-1">{show.hotel_checkin}</div>
-                        </div>
-                      )}
-                      {show.hotel_checkout && (
-                        <div>
-                          <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check Out</div>
-                          <div className="font-mono text-[13px] text-foreground mt-1">{show.hotel_checkout}</div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {(() => {
+                    const checkInDisplay = formatHotelMoment(show.hotel_checkin_date, show.hotel_checkin);
+                    const checkOutDisplay = formatHotelMoment(show.hotel_checkout_date, show.hotel_checkout);
+                    if (!show.hotel_confirmation && !checkInDisplay && !checkOutDisplay) return null;
+                    const filled = [show.hotel_confirmation, checkInDisplay, checkOutDisplay].filter(Boolean).length;
+                    return (
+                      <div
+                        className={cn(
+                          "px-4 sm:px-5 pb-4 pt-3 grid gap-4 grid-cols-1",
+                          (show.hotel_name || show.hotel_address) && "border-t border-dashed border-foreground/15",
+                          filled === 3 ? "sm:grid-cols-3" : filled === 2 ? "sm:grid-cols-2" : "sm:grid-cols-1",
+                        )}
+                      >
+                        {show.hotel_confirmation && (
+                          <div>
+                            <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Confirmation #</div>
+                            <div className="font-mono text-[13px] text-foreground mt-1 break-all">{show.hotel_confirmation}</div>
+                          </div>
+                        )}
+                        {checkInDisplay && (
+                          <div>
+                            <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check In</div>
+                            <div className="font-mono text-[13px] text-foreground mt-1">{checkInDisplay}</div>
+                          </div>
+                        )}
+                        {checkOutDisplay && (
+                          <div>
+                            <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check Out</div>
+                            <div className="font-mono text-[13px] text-foreground mt-1">{checkOutDisplay}</div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </FieldGroup>
