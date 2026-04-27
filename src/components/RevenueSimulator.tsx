@@ -116,20 +116,31 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
   const projected = cappedByWalkout ? walkoutPotential : rawProjected;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-baseline justify-between">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Projected Walkout
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {pct}%{ticketCount !== null && ` · ~${ticketCount.toLocaleString()} tickets`}
-        </p>
+    <div className="space-y-3.5">
+      {/* Editorial walkout line — eyebrow left, big serif right */}
+      <div className="flex items-baseline justify-between gap-3 flex-wrap pb-1">
+        <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          Projected walkout
+        </span>
+        <span className="font-display leading-none tracking-[-0.03em] text-[clamp(26px,4.5vw,32px)]">
+          {formatDollar(projected)}
+        </span>
       </div>
 
-      <p className="text-3xl font-semibold tracking-tight">{formatDollar(projected)}</p>
+      <Slider
+        value={[pct]}
+        onValueChange={([v]) => setPct(v)}
+        min={0}
+        max={100}
+        step={1}
+      />
+
+      <p className="text-[11px] font-mono tracking-tight text-muted-foreground">
+        {pct}%{ticketCount !== null && ` · ~${ticketCount.toLocaleString()} tickets`}
+      </p>
 
       {hasGborData && (
-        <div className="space-y-1 text-sm text-muted-foreground font-mono">
+        <div className="space-y-1 text-[11px] text-muted-foreground font-mono leading-relaxed pt-1">
           <p>~{ticketCount!.toLocaleString()} tickets × {formatDollar(ticketPrice!)} = {formatDollar(gbor!)} GBOR</p>
           {hasBackendCalc && backendBasis === "NBOR" && (
             <p>Est. NBOR: {formatDollar(gbor!)} × {Math.round((1 - NBOR_EXPENSE_RATIO) * 100)}% = {formatDollar(effectiveBor!)}</p>
@@ -143,29 +154,21 @@ export default function RevenueSimulator({ guarantee, walkoutPotential, venueCap
           {hasBackendCalc && !tieredDeal && (
             <p>
               {dealType === "plus"
-                ? `Artist take: ${formatDollar(guarantee)} guarantee + ${backendPct}% × ${formatDollar(effectiveBor!)} = ${formatDollar(artistTake!)}`
-                : `Artist take: max(${formatDollar(guarantee)} guarantee, ${backendPct}% × ${formatDollar(effectiveBor!)}) = ${formatDollar(artistTake!)}`}
+                ? `Take: ${formatDollar(guarantee)} guarantee + ${backendPct}% × ${formatDollar(effectiveBor!)} = ${formatDollar(artistTake!)}`
+                : `Take: max(${formatDollar(guarantee)} guarantee, ${backendPct}% × ${formatDollar(effectiveBor!)}) = ${formatDollar(artistTake!)}`}
             </p>
           )}
           {hasBackendCalc && tieredDeal && (
             <p>
               {dealType === "plus"
-                ? `Artist take: ${formatDollar(guarantee)} guarantee + ${formatDollar(backendTake!)} backend = ${formatDollar(artistTake!)}`
-                : `Artist take: max(${formatDollar(guarantee)} guarantee, ${formatDollar(backendTake!)} backend) = ${formatDollar(artistTake!)}`}
+                ? `Take: ${formatDollar(guarantee)} guarantee + ${formatDollar(backendTake!)} backend = ${formatDollar(artistTake!)}`
+                : `Take: max(${formatDollar(guarantee)} guarantee, ${formatDollar(backendTake!)} backend) = ${formatDollar(artistTake!)}`}
             </p>
           )}
         </div>
       )}
 
-      <Slider
-        value={[pct]}
-        onValueChange={([v]) => setPct(v)}
-        min={0}
-        max={100}
-        step={1}
-      />
-
-      <p className="text-xs text-muted-foreground">
+      <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
         {hasBackendCalc
           ? cappedByWalkout
             ? `${backendBasis} calc (${formatDollar(rawProjected)}) exceeds walkout potential — capped at ${formatDollar(walkoutPotential)}. Likely due to ${backendBasis === "NBOR" ? "actual venue expenses exceeding the 20% estimate" : "deal terms reducing net payout"}.`
