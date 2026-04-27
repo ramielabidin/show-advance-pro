@@ -21,8 +21,16 @@ const SETTLE_BUFFER_MIN = 90;
  *
  * Phase is always derived, never stored — the source of truth is `show` +
  * `nowMin`. This keeps the in-overlay state predictable and avoids drift.
+ *
+ * `isArtist` skips Phase 2 entirely: settle isn't an artist concern, so when
+ * the same time-based trigger would fire, artists land directly on Phase 3
+ * (hotel reveal) regardless of `is_settled`. Their flow is schedule → hotel.
  */
-export function useDayOfShowPhase(show: Show, nowMin: number): DayOfShowPhase {
+export function useDayOfShowPhase(
+  show: Show,
+  nowMin: number,
+  isArtist: boolean = false,
+): DayOfShowPhase {
   return useMemo(() => {
     if (show.is_settled) return 3;
 
@@ -40,7 +48,7 @@ export function useDayOfShowPhase(show: Show, nowMin: number): DayOfShowPhase {
     const isPostMidnightOnShowNight = show.date < todayStr && now.getHours() < 4;
     const showDayNow = isPostMidnightOnShowNight ? nowMin + 24 * 60 : nowMin;
 
-    if (showDayNow >= setMin + SETTLE_BUFFER_MIN) return 2;
+    if (showDayNow >= setMin + SETTLE_BUFFER_MIN) return isArtist ? 3 : 2;
     return 1;
-  }, [show.is_settled, show.schedule_entries, show.date, nowMin]);
+  }, [show.is_settled, show.schedule_entries, show.date, nowMin, isArtist]);
 }

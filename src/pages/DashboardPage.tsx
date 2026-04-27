@@ -30,6 +30,7 @@ import CreateShowDialog from "@/components/CreateShowDialog";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
 import TourPicker from "@/components/TourPicker";
 import { useAuth } from "@/components/AuthProvider";
+import { useTeam } from "@/components/TeamProvider";
 import { parseDollar } from "@/components/RevenueSimulator";
 import SectionLabel from "@/components/SectionLabel";
 import ShowCard from "@/components/ShowCard";
@@ -113,6 +114,7 @@ export default function DashboardPage() {
   const requestedScope = parseScope(searchParams.get("scope"));
   const requestedTourId = searchParams.get("tourId");
   const { session } = useAuth();
+  const { isArtist } = useTeam();
   const [revenueCollapsed, setRevenueCollapsed] = useState(false);
   const [dayOfShowOpen, setDayOfShowOpen] = useState(false);
 
@@ -443,10 +445,12 @@ export default function DashboardPage() {
         >
           {dateEyebrow}
         </span>
-        <div className="flex items-center gap-2 shrink-0">
-          <BulkUploadDialog triggerClassName="h-9" iconOnlyMobile />
-          <CreateShowDialog triggerClassName="h-9" iconOnlyMobile />
-        </div>
+        {!isArtist && (
+          <div className="flex items-center gap-2 shrink-0">
+            <BulkUploadDialog triggerClassName="h-9" iconOnlyMobile />
+            <CreateShowDialog triggerClassName="h-9" iconOnlyMobile />
+          </div>
+        )}
       </div>
 
       {/* Greeting + (on a show day) the mic chip, inline. flex-wrap so the
@@ -509,14 +513,19 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Progress + Revenue cards */}
+      {/* Progress + Revenue cards. Artists never see Revenue, and the Progress
+          card collapses to a single completion bar (settled / total) — see
+          ProgressCard's `simple` mode. PastTourCard hides its financial line. */}
       <div key={`stats:${scopeKey}`}>
         {dashCards.kind === "pastTour" ? (
           <PastTourCard
             totalShows={dashCards.totalShows}
             totalEarned={dashCards.totalEarned}
             totalGuarantee={dashCards.totalGuarantee}
+            hideFinancials={isArtist}
           />
+        ) : isArtist ? (
+          <ProgressCard data={dashCards} simple />
         ) : revenueCollapsed ? (
           <div className="space-y-3">
             <ProgressCard data={dashCards} />
@@ -602,9 +611,14 @@ type ProgressRevenueData = Extract<DashCards, { kind: "progressRevenue" }>;
 function ProgressCard({
   data,
   className,
+  simple = false,
 }: {
   data: ProgressRevenueData;
   className?: string;
+  /** Artist view: collapse to a single completion bar (settled / total). No
+   *  earned-money tooltip, no Advanced row. The card is just a visualization
+   *  of how far along the tour is. */
+  simple?: boolean;
 }) {
   const {
     progressLabel,
@@ -631,11 +645,16 @@ function ProgressCard({
       ? "All caught up"
       : `${remaining} shows still to advance`;
 
-  const settledTooltip = noRecent
-    ? "No recent shows"
-    : scopeKind === "tour"
-      ? `${fmtMoney(settled.earned)} earned`
-      : `${fmtMoney(settled.earned)} earned · last 12 months`;
+  // Earned-money detail is admin-only; artists get a count-only tooltip.
+  const settledTooltip = simple
+    ? settled.total === 0
+      ? "No shows yet"
+      : `${settled.n} of ${settled.total} settled`
+    : noRecent
+      ? "No recent shows"
+      : scopeKind === "tour"
+        ? `${fmtMoney(settled.earned)} earned`
+        : `${fmtMoney(settled.earned)} earned · last 12 months`;
 
   return (
     <Card className={cn("overflow-hidden shadow-none", className)}>
@@ -665,29 +684,31 @@ function ProgressCard({
         </div>
 
         <div className="space-y-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="space-y-1 cursor-help hover:brightness-105 [transition:filter_150ms_var(--ease-out)]">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-muted-foreground uppercase tracking-wide font-medium">Advanced</span>
-                  <span className="text-foreground tabular-nums">
-                    {advanced.n} of {advanced.total} · {advancedPct}%
-                  </span>
+          {!simple && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="space-y-1 cursor-help hover:brightness-105 [transition:filter_150ms_var(--ease-out)]">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground uppercase tracking-wide font-medium">Advanced</span>
+                    <span className="text-foreground tabular-nums">
+                      {advanced.n} of {advanced.total} · {advancedPct}%
+                    </span>
+                  </div>
+                  <Progress
+                    value={advancedPct}
+                    className="h-1.5 [&>div]:bg-[var(--pastel-purple-fg)] [&>div]:[transition:transform_200ms_var(--ease-out),filter_150ms_var(--ease-out)]"
+                  />
                 </div>
-                <Progress
-                  value={advancedPct}
-                  className="h-1.5 [&>div]:bg-[var(--pastel-purple-fg)] [&>div]:[transition:transform_200ms_var(--ease-out),filter_150ms_var(--ease-out)]"
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>{advancedTooltip}</TooltipContent>
-          </Tooltip>
+              </TooltipTrigger>
+              <TooltipContent>{advancedTooltip}</TooltipContent>
+            </Tooltip>
+          )}
 
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-1 cursor-help hover:brightness-105 [transition:filter_150ms_var(--ease-out)]">
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-muted-foreground uppercase tracking-wide font-medium">Settled</span>
+                  <span className="text-muted-foreground uppercase tracking-wide font-medium">{simple ? "Complete" : "Settled"}</span>
                   <span className="text-foreground tabular-nums">
                     {settled.n} of {settled.total}
                   </span>
@@ -854,10 +875,12 @@ function PastTourCard({
   totalShows,
   totalEarned,
   totalGuarantee,
+  hideFinancials = false,
 }: {
   totalShows: number;
   totalEarned: number;
   totalGuarantee: number;
+  hideFinancials?: boolean;
 }) {
   return (
     <Card className="overflow-hidden shadow-none">
@@ -875,10 +898,14 @@ function PastTourCard({
         </div>
         <p className="text-sm text-foreground">
           {totalShows} shows
-          <span className="text-muted-foreground"> · </span>
-          {fmtMoney(totalEarned)} earned
-          <span className="text-muted-foreground"> · </span>
-          {fmtMoney(totalGuarantee)} guaranteed
+          {!hideFinancials && (
+            <>
+              <span className="text-muted-foreground"> · </span>
+              {fmtMoney(totalEarned)} earned
+              <span className="text-muted-foreground"> · </span>
+              {fmtMoney(totalGuarantee)} guaranteed
+            </>
+          )}
         </p>
       </CardContent>
     </Card>

@@ -53,7 +53,7 @@ export function usePendingEmails() {
 }
 
 export function PendingEmailsProvider({ children }: { children: ReactNode }) {
-  const { teamId } = useTeam();
+  const { teamId, isArtist } = useTeam();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -75,7 +75,10 @@ export function PendingEmailsProvider({ children }: { children: ReactNode }) {
         match_confidence: (row.match_confidence as MatchConfidence) ?? null,
       })) as PendingInboundEvent[];
     },
-    enabled: !!teamId,
+    // Inbound advance review is admin-only — forwarded promoter emails surface
+    // financial fields (guarantee, backend deal, walkout). Skip the query
+    // entirely for artists so the modal never has anything to show.
+    enabled: !!teamId && !isArtist,
     refetchOnWindowFocus: false,
   });
 
@@ -232,7 +235,7 @@ export function PendingEmailsProvider({ children }: { children: ReactNode }) {
   return (
     <PendingEmailsContext.Provider value={contextValue}>
       {children}
-      <PendingEmailsModal />
+      {!isArtist && <PendingEmailsModal />}
     </PendingEmailsContext.Provider>
   );
 }

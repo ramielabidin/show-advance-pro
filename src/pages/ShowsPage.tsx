@@ -13,6 +13,7 @@ import PageTitle from "@/components/PageTitle";
 import TourPicker from "@/components/TourPicker";
 import TourScopedHeader from "@/components/TourScopedHeader";
 import TourRevenueSimulator from "@/components/TourRevenueSimulator";
+import { useTeam } from "@/components/TeamProvider";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -43,6 +44,7 @@ export default function ShowsPage() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingRemoveFromTourId, setPendingRemoveFromTourId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { isArtist } = useTeam();
 
   const setView = (next: View) => {
     const params = new URLSearchParams(searchParams);
@@ -177,12 +179,14 @@ export default function ShowsPage() {
           <PageTitle subline={`${upcoming.length} upcoming · ${past.length} past`}>
             All shows
           </PageTitle>
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="hidden sm:flex items-center gap-2">
-              <BulkUploadDialog />
+          {!isArtist && (
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="hidden sm:flex items-center gap-2">
+                <BulkUploadDialog />
+              </div>
+              <CreateShowDialog />
             </div>
-            <CreateShowDialog />
-          </div>
+          )}
         </div>
       )}
 
@@ -226,8 +230,8 @@ export default function ShowsPage() {
         </div>
       </div>
 
-      {/* Tour financials panel */}
-      {isTourScoped && tour && filtered.length > 0 && (
+      {/* Tour financials panel — admin only */}
+      {!isArtist && isTourScoped && tour && filtered.length > 0 && (
         <div className="mb-5">
           <TourRevenueSimulator tourId={tour.id} shows={filtered} />
         </div>
@@ -269,13 +273,15 @@ export default function ShowsPage() {
               }
               description={
                 tab === "upcoming"
-                  ? isTourScoped
-                    ? "Add a show to this tour to get started."
-                    : "Add a show manually or paste an advance email to get started."
+                  ? isArtist
+                    ? "Shows will appear here once your team adds them."
+                    : isTourScoped
+                      ? "Add a show to this tour to get started."
+                      : "Add a show manually or paste an advance email to get started."
                   : "Past shows will appear here after their date passes."
               }
               action={
-                tab === "upcoming"
+                tab === "upcoming" && !isArtist
                   ? isTourScoped
                     ? <CreateShowDialog defaultTourId={tourId!} />
                     : <CreateShowDialog />

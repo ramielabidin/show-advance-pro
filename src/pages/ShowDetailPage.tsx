@@ -86,8 +86,14 @@ interface ShareMenuContentProps {
   onOpenDelete: () => void;
 }
 
+// All items in this menu are admin-only (outbound shares, magic-link mint,
+// destructive show delete). The Share button itself is hidden for artists at
+// the call site, so this component is never rendered for them — the
+// short-circuit here is defensive only.
 function ShareMenuContent({ show, showId, onOpenDelete }: ShareMenuContentProps) {
   const { copyOrCreate: copyMagicLink, isPending: isCopyPending } = useGuestLink(showId, "daysheet");
+  const { isArtist } = useTeam();
+  if (isArtist) return null;
   return (
     <>
       <EmailBandDialog show={show} trigger={<DropdownMenuItem onSelect={(e) => e.preventDefault()}>Email day sheet</DropdownMenuItem>} />
@@ -131,7 +137,12 @@ function HeaderActions({
   onParseUpdated,
 }: HeaderActionsProps) {
   const { copyOrCreate: copyMagicLink, isPending: isCopyPending } = useGuestLink(showId, "daysheet");
+  const { isArtist } = useTeam();
   const isSettled = !!show.is_settled;
+
+  // Every header action — Settle, Import advance, Email/Slack/magic-link share,
+  // Delete — is admin-only, so the entire row is hidden for artists.
+  if (isArtist) return null;
 
   return (
     <>
@@ -277,13 +288,14 @@ export default function ShowDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { teamId } = useTeam();
+  const { teamId, isArtist } = useTeam();
 
   // Allow deep-linking to a specific tab (e.g. from Day of Show: tap the
   // contact card with no phone → land on Contacts tab, not Show Info).
   const [searchParams] = useSearchParams();
   const initialTab = (() => {
     const t = searchParams.get("tab");
+    if (t === "deal" && isArtist) return "show";
     return t === "show" || t === "deal" || t === "contacts" || t === "set-list" ? t : "show";
   })();
   const [viewTab, setViewTab] = useState<"show" | "deal" | "contacts" | "set-list">(initialTab);
@@ -909,42 +921,46 @@ export default function ShowDetailPage() {
         >
           Advance
         </Link>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="secondary"
-              className="h-8 px-3 rounded-md gap-1.5 text-xs font-medium shrink-0"
-              tabIndex={headerCollapsed ? 0 : -1}
-              aria-label="Share"
-            >
-              <Share2 className="h-3.5 w-3.5" />
-              <span>Share</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <ShareMenuContent show={show as Show} showId={id!} onOpenDelete={() => setDeleteOpen(true)} />
-          </DropdownMenuContent>
-        </DropdownMenu>
-        {show.is_settled ? (
-          <Button
-            variant="outline"
-            disabled
-            className="h-8 px-3 rounded-md gap-1.5 text-xs font-medium opacity-100 shrink-0"
-            style={{ color: "var(--pastel-green-fg)" }}
-            tabIndex={-1}
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Settled
-          </Button>
-        ) : (
-          <Button
-            onClick={openSettleModal}
-            className="h-8 px-3 rounded-md gap-1.5 text-xs font-medium bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:bg-[hsl(var(--success))]/90 shrink-0"
-            tabIndex={headerCollapsed ? 0 : -1}
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Settle
-          </Button>
+        {!isArtist && (
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="secondary"
+                  className="h-8 px-3 rounded-md gap-1.5 text-xs font-medium shrink-0"
+                  tabIndex={headerCollapsed ? 0 : -1}
+                  aria-label="Share"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  <span>Share</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <ShareMenuContent show={show as Show} showId={id!} onOpenDelete={() => setDeleteOpen(true)} />
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {show.is_settled ? (
+              <Button
+                variant="outline"
+                disabled
+                className="h-8 px-3 rounded-md gap-1.5 text-xs font-medium opacity-100 shrink-0"
+                style={{ color: "var(--pastel-green-fg)" }}
+                tabIndex={-1}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Settled
+              </Button>
+            ) : (
+              <Button
+                onClick={openSettleModal}
+                className="h-8 px-3 rounded-md gap-1.5 text-xs font-medium bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:bg-[hsl(var(--success))]/90 shrink-0"
+                tabIndex={headerCollapsed ? 0 : -1}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Settle
+              </Button>
+            )}
+          </>
         )}
       </div>
 
@@ -1297,15 +1313,17 @@ export default function ShowDetailPage() {
             >
               Show Info
             </TabsTrigger>
-            <TabsTrigger
-              value="deal"
-              className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
-            >
-              Deal Info
-              {!dealTabSeen && hasDealData && (
-                <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" aria-hidden />
-              )}
-            </TabsTrigger>
+            {!isArtist && (
+              <TabsTrigger
+                value="deal"
+                className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
+              >
+                Deal Info
+                {!dealTabSeen && hasDealData && (
+                  <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" aria-hidden />
+                )}
+              </TabsTrigger>
+            )}
             <TabsTrigger
               value="contacts"
               className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
@@ -1669,9 +1687,11 @@ export default function ShowDetailPage() {
                 }
               >
                 {renderGuestList()}
-                <div className="pt-1">
-                  <CopyGuestLinkButton showId={id!} linkType="guestlist" />
-                </div>
+                {!isArtist && (
+                  <div className="pt-1">
+                    <CopyGuestLinkButton showId={id!} linkType="guestlist" />
+                  </div>
+                )}
               </FieldGroup>
             </div>
 
@@ -1860,7 +1880,7 @@ export default function ShowDetailPage() {
         </TabsContent>
 
         <TabsContent value="deal">
-          {(() => {
+          {!isArtist && (() => {
             // Settlement hero numbers
             const soldNum = show.actual_tickets_sold
               ? parseInt(String(show.actual_tickets_sold).replace(/,/g, ""), 10)
@@ -2411,7 +2431,8 @@ export default function ShowDetailPage() {
                 )}
               </div>
             );
-          })()}
+          })()
+          }
         </TabsContent>
       </Tabs>
 
