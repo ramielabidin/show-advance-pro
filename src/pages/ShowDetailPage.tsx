@@ -1865,18 +1865,26 @@ export default function ShowDetailPage() {
               label,
               hint,
               accent,
+              onEdit,
+              isEditing = false,
               children,
             }: {
               label: string;
               hint?: string;
               accent?: boolean;
+              onEdit?: () => void;
+              isEditing?: boolean;
               children: React.ReactNode;
-            }) => (
-              <div className="grid grid-cols-[1fr_auto] items-baseline gap-3 py-2 border-b border-dotted border-border/80 last:border-b-0">
+            }) => {
+              const interactive = !!onEdit && !isEditing;
+              const rowClass =
+                "group grid grid-cols-[1fr_auto] items-baseline gap-3 py-2 border-b border-dotted border-border/80 last:border-b-0";
+              const labelEl = (
                 <span
                   className={cn(
-                    "text-[13px] leading-snug",
+                    "text-[13px] leading-snug [transition:color_150ms_var(--ease-out)]",
                     accent ? "text-foreground font-medium" : "text-muted-foreground",
+                    interactive && !accent && "group-hover:text-foreground/85",
                   )}
                 >
                   {label}
@@ -1884,9 +1892,28 @@ export default function ShowDetailPage() {
                     <span className="ml-2 text-[11px] text-muted-foreground/70">{hint}</span>
                   )}
                 </span>
-                <span className="text-right tabular-nums">{children}</span>
-              </div>
-            );
+              );
+              const valueEl = <span className="text-right tabular-nums">{children}</span>;
+
+              if (interactive) {
+                return (
+                  <button
+                    type="button"
+                    onClick={onEdit}
+                    className={cn(rowClass, "w-full text-left")}
+                  >
+                    {labelEl}
+                    {valueEl}
+                  </button>
+                );
+              }
+              return (
+                <div className={rowClass}>
+                  {labelEl}
+                  {valueEl}
+                </div>
+              );
+            };
 
             // Tap-to-edit value cell. The input inherits the row's mono type
             // style so the swap is visually quiet. Saves on blur or Enter,
@@ -1957,32 +1984,28 @@ export default function ShowDetailPage() {
               const hasValue = value != null && String(value).trim() !== "";
               if (!hasValue) {
                 return (
-                  <button
-                    type="button"
-                    onClick={() => startInlineEdit(fieldKey as string)}
+                  <span
                     className={cn(
-                      "font-mono tracking-tight text-muted-foreground/55 hover:text-foreground/60 transition-colors leading-tight",
+                      "font-mono tracking-tight text-muted-foreground/55 [transition:color_150ms_var(--ease-out)] group-hover:text-foreground/70 leading-tight",
                       sizeClass,
                     )}
                   >
                     {placeholder}
-                  </button>
+                  </span>
                 );
               }
 
               const displayValue = currency ? formatCurrency(String(value)) : String(value);
               return (
-                <button
-                  type="button"
-                  onClick={() => startInlineEdit(fieldKey as string)}
+                <span
                   className={cn(
-                    "font-mono tracking-tight text-foreground leading-tight inline-block border-b border-transparent hover:border-foreground/15 transition-colors",
+                    "font-mono tracking-tight text-foreground leading-tight inline-block border-b border-dashed border-transparent [transition:border-color_150ms_var(--ease-out)] group-hover:border-foreground/30",
                     accent && "font-medium",
                     sizeClass,
                   )}
                 >
                   {displayValue}
-                </button>
+                </span>
               );
             };
 
@@ -2076,7 +2099,12 @@ export default function ShowDetailPage() {
                 <div>
                   <LedgerRule>Deal</LedgerRule>
 
-                  <LedgerRow label="Guarantee" accent>
+                  <LedgerRow
+                    label="Guarantee"
+                    accent
+                    onEdit={() => startInlineEdit("guarantee")}
+                    isEditing={inlineField === "guarantee"}
+                  >
                     <LedgerValue
                       fieldKey="guarantee"
                       value={show.guarantee}
@@ -2087,7 +2115,11 @@ export default function ShowDetailPage() {
                     />
                   </LedgerRow>
 
-                  <LedgerRow label="Ticket price">
+                  <LedgerRow
+                    label="Ticket price"
+                    onEdit={() => startInlineEdit("ticket_price")}
+                    isEditing={inlineField === "ticket_price"}
+                  >
                     <LedgerValue
                       fieldKey="ticket_price"
                       value={show.ticket_price}
@@ -2097,7 +2129,11 @@ export default function ShowDetailPage() {
                     />
                   </LedgerRow>
 
-                  <LedgerRow label="Capacity">
+                  <LedgerRow
+                    label="Capacity"
+                    onEdit={() => startInlineEdit("venue_capacity")}
+                    isEditing={inlineField === "venue_capacity"}
+                  >
                     <LedgerValue
                       fieldKey="venue_capacity"
                       value={show.venue_capacity}
@@ -2238,32 +2274,33 @@ export default function ShowDetailPage() {
                       <InlineActions onSave={saveBackendDeal} onCancel={cancelInline} />
                     </div>
                   ) : (
-                    <LedgerRow label="Backend">
+                    <LedgerRow label="Backend" onEdit={startBackendDealEdit}>
                       {show.backend_deal ? (
-                        <button
-                          type="button"
-                          onClick={startBackendDealEdit}
-                          className="font-mono tracking-tight text-foreground text-[14px] leading-tight inline-block border-b border-transparent hover:border-foreground/15 transition-colors"
-                        >
+                        <span className="font-mono tracking-tight text-foreground text-[14px] leading-tight inline-block border-b border-dashed border-transparent [transition:border-color_150ms_var(--ease-out)] group-hover:border-foreground/30">
                           {show.backend_deal}
-                        </button>
+                        </span>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={startBackendDealEdit}
-                          className="font-mono tracking-tight text-muted-foreground/55 hover:text-foreground/60 transition-colors text-[14px] leading-tight"
-                        >
+                        <span className="font-mono tracking-tight text-muted-foreground/55 [transition:color_150ms_var(--ease-out)] group-hover:text-foreground/70 text-[14px] leading-tight">
                           —
-                        </button>
+                        </span>
                       )}
                     </LedgerRow>
                   )}
 
-                  <LedgerRow label="Artist comps">
+                  <LedgerRow
+                    label="Artist comps"
+                    onEdit={() => startInlineEdit("artist_comps")}
+                    isEditing={inlineField === "artist_comps"}
+                  >
                     <LedgerValue fieldKey="artist_comps" value={show.artist_comps} />
                   </LedgerRow>
 
-                  <LedgerRow label="Walkout potential" hint="@ sellout">
+                  <LedgerRow
+                    label="Walkout potential"
+                    hint="@ sellout"
+                    onEdit={() => startInlineEdit("walkout_potential")}
+                    isEditing={inlineField === "walkout_potential"}
+                  >
                     <LedgerValue
                       fieldKey="walkout_potential"
                       value={show.walkout_potential}
