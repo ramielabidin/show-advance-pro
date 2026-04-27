@@ -362,9 +362,16 @@ export default function ShowDetailPage() {
     headerObserverRef.current = observer;
   }, []);
   // When the advance hasn't been imported, the Show Info tab shows a CTA card.
-  // The user can click "or fill in manually" to bypass the CTA and see the
-  // normal field layout without waiting for a parsed advance.
-  const [showManualForm, setShowManualForm] = useState(false);
+  // The user can dismiss it (X or "fill in manually") to see the normal field
+  // layout. Persist via localStorage so it stays gone across reloads even
+  // before any schedule entries exist (e.g. user only entered backline info).
+  const [importAdvanceDismissed, setImportAdvanceDismissed] = useState(() =>
+    id ? localStorage.getItem(`import-advance-dismissed-${id}`) === "true" : false
+  );
+  const dismissImportAdvance = () => {
+    if (id) localStorage.setItem(`import-advance-dismissed-${id}`, "true");
+    setImportAdvanceDismissed(true);
+  };
   const [settleForm, setSettleForm] = useState({
     actual_tickets_sold: "",
     actual_walkout: "",
@@ -1269,9 +1276,17 @@ export default function ShowDetailPage() {
       </div>
 
       <TabsContent value="show">
-          {!show.advance_imported_at && !showManualForm && scheduleEntries.length === 0 ? (
+          {!show.advance_imported_at && !importAdvanceDismissed && scheduleEntries.length === 0 ? (
             <div className="space-y-6 sm:space-y-8">
-              <div className="rounded-lg border border-border bg-card p-6 sm:p-8 text-center animate-fade-in">
+              <div className="relative rounded-lg border border-border bg-card p-6 sm:p-8 text-center animate-fade-in">
+                <button
+                  type="button"
+                  onClick={dismissImportAdvance}
+                  className="absolute top-3 right-3 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="h-4 w-4" />
+                </button>
                 <div className="inline-flex items-center justify-center rounded-full bg-muted p-3 mb-4">
                   <Sparkles className="h-5 w-5 text-muted-foreground" />
                 </div>
@@ -1303,7 +1318,7 @@ export default function ShowDetailPage() {
                 <div className="mt-3">
                   <button
                     type="button"
-                    onClick={() => setShowManualForm(true)}
+                    onClick={dismissImportAdvance}
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
                   >
                     or fill in manually

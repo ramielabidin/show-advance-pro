@@ -67,7 +67,7 @@ These inform every decision downstream. When in doubt, refer back here.
 - Custom HTML email templates via SendGrid (match app's type system, color palette, spacing; test across Gmail, Apple Mail, Outlook, iOS Mail)
   - [x] Day sheet email (`send-daysheet-email`)
   - [x] Team invite email (`send-team-invite-email`, Dispatch design variant, auto-accept via existing signup trigger)
-  - [ ] Tour invite email — tour-scoped invite (Crew Pass design variant is parked in `docs/design_handoff_invite_email/`, ready to adapt once tour-level invite flow is built)
+  - [ ] Tour invite email — tour-scoped invite (Crew Pass design variant is parked in `docs/handoffs/invite_email/`, ready to adapt once tour-level invite flow is built)
   - [ ] Show update email
   - [ ] Guest list confirmation email
 - [ ] Team invite landing page (`/invite/:code`)
