@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isPast, isToday, parseISO } from "date-fns";
-import { Calendar } from "lucide-react";
+import { Calendar, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ShowCard from "@/components/ShowCard";
@@ -13,6 +13,7 @@ import PageTitle from "@/components/PageTitle";
 import TourPicker from "@/components/TourPicker";
 import TourScopedHeader from "@/components/TourScopedHeader";
 import TourRevenueSimulator from "@/components/TourRevenueSimulator";
+import { Input } from "@/components/ui/input";
 import { useTeam } from "@/components/TeamProvider";
 import { cn } from "@/lib/utils";
 import {
@@ -39,12 +40,20 @@ export default function ShowsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const view = parseView(searchParams.get("view"));
   const tourId = searchParams.get("tourId");
+  const searchQuery = searchParams.get("q") ?? "";
 
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingRemoveFromTourId, setPendingRemoveFromTourId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { isArtist } = useTeam();
+
+  const setSearchQuery = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (next) params.set("q", next);
+    else params.delete("q");
+    setSearchParams(params, { replace: true });
+  };
 
   const setView = (next: View) => {
     const params = new URLSearchParams(searchParams);
@@ -73,20 +82,49 @@ export default function ShowsPage() {
     setSearchParams(params, { replace: true });
   };
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
+  const deleteWithUndo = (id: string) => {
+    const snapshot = queryClient
+      .getQueryData<ShowWithTour[]>(["shows"])
+      ?.find((s) => s.id === id);
+    if (!snapshot) return;
+
+    queryClient.setQueryData<ShowWithTour[]>(["shows"], (old) =>
+      old ? old.filter((s) => s.id !== id) : [],
+    );
+
+    const restore = () => {
+      queryClient.setQueryData<ShowWithTour[]>(["shows"], (old) => {
+        const base = old ?? [];
+        if (base.some((s) => s.id === snapshot.id)) return base;
+        return [...base, snapshot].sort((a, b) => a.date.localeCompare(b.date));
+      });
+    };
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      if (cancelled) return;
       const { error } = await supabase.from("shows").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Show deleted");
+      if (error) {
+        toast.error("Couldn't delete: " + error.message);
+        restore();
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["shows"] });
       queryClient.invalidateQueries({ queryKey: ["tours"] });
-    },
-    onError: (err: Error) => {
-      toast.error("Failed to delete show: " + err.message);
-    },
-  });
+    }, 5000);
+
+    toast("Show deleted", {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          cancelled = true;
+          window.clearTimeout(timer);
+          restore();
+        },
+      },
+    });
+  };
 
   const removeFromTourMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -149,7 +187,18 @@ export default function ShowsPage() {
     .slice()
     .reverse();
 
-  const displayed = tab === "upcoming" ? upcoming : past;
+  const tabbed = tab === "upcoming" ? upcoming : past;
+
+  const trimmedQuery = searchQuery.trim();
+  const displayed = useMemo(() => {
+    const q = trimmedQuery.toLowerCase();
+    if (!q) return tabbed;
+    return tabbed.filter(
+      (s) =>
+        s.venue_name?.toLowerCase().includes(q) ||
+        s.city?.toLowerCase().includes(q),
+    );
+  }, [tabbed, trimmedQuery]);
 
   const isTourScoped = view === "tour" && !!tourId && !!tour;
   const isTourPickerEmpty = view === "tour" && !tourId;
@@ -189,6 +238,31 @@ export default function ShowsPage() {
           )}
         </div>
       )}
+
+      {/* Search */}
+      <div className="mb-4 max-w-md">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search venue or city"
+            aria-label="Search shows"
+            className="pl-9 pr-9"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Upcoming/past tabs + view pills */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
@@ -256,6 +330,13 @@ export default function ShowsPage() {
               ))}
             </div>
           ) : displayed.length === 0 ? (
+            trimmedQuery ? (
+              <EmptyState
+                icon={Search}
+                title="No matching shows"
+                description={`Nothing matched “${trimmedQuery}”. Try another venue or city.`}
+              />
+            ) : (
             <EmptyState
               icon={Calendar}
               title={
@@ -288,6 +369,7 @@ export default function ShowsPage() {
                   : undefined
               }
             />
+            )
           ) : (
             <div className="space-y-2 stagger-list">
               {displayed.map((show) => (
@@ -319,7 +401,7 @@ export default function ShowsPage() {
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
-                if (pendingDeleteId) deleteMutation.mutate(pendingDeleteId);
+                if (pendingDeleteId) deleteWithUndo(pendingDeleteId);
                 setPendingDeleteId(null);
               }}
             >
