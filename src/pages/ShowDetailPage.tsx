@@ -992,8 +992,10 @@ export default function ShowDetailPage() {
       >
       {/* Header */}
       <div className="mb-5">
-        {/* Not-advanced banner — silent on the happy path */}
-        {!show.advanced_at && (
+        {/* Not-advanced banner — silent on the happy path. Hidden from artists:
+            advancing is an admin workflow they can't act on, so the CTA reads
+            as noise. */}
+        {!show.advanced_at && !isArtist && (
           <div
             className="mb-4 flex items-center gap-2.5 px-4 py-2.5 text-[12.5px] font-medium border-y sm:border sm:rounded-md -mx-4 sm:mx-0"
             style={{ background: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }}
@@ -1102,18 +1104,28 @@ export default function ShowDetailPage() {
                   {show.venue_name}
                 </h1>
                 {show.advanced_at && (
-                  <button
-                    type="button"
-                    onClick={() => toggleAdvancedMutation.mutate(false)}
-                    disabled={toggleAdvancedMutation.isPending}
-                    aria-label="Unmark advanced"
-                    title="Click to unmark as advanced"
-                    className="hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium leading-none transition-opacity hover:opacity-80 disabled:opacity-50"
-                    style={{ background: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
-                  >
-                    <Check className="h-3 w-3" />
-                    Advanced
-                  </button>
+                  isArtist ? (
+                    <span
+                      className="hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium leading-none"
+                      style={{ background: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+                    >
+                      <Check className="h-3 w-3" />
+                      Advanced
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => toggleAdvancedMutation.mutate(false)}
+                      disabled={toggleAdvancedMutation.isPending}
+                      aria-label="Unmark advanced"
+                      title="Click to unmark as advanced"
+                      className="hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium leading-none transition-opacity hover:opacity-80 disabled:opacity-50"
+                      style={{ background: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+                    >
+                      <Check className="h-3 w-3" />
+                      Advanced
+                    </button>
+                  )
                 )}
               </div>
             )}
