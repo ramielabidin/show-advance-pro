@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Show } from "@/lib/types";
 import { useNowMinutes } from "@/hooks/useNowMinutes";
 import { useDayOfShowPhase } from "@/hooks/useDayOfShowPhase";
+import { useTeam } from "@/components/TeamProvider";
 import PhasePreShow from "./PhasePreShow";
 import PhaseSettle from "./PhaseSettle";
 import PhasePostSettle from "./PhasePostSettle";
@@ -109,9 +110,12 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
 }
 
 /** Inner body — derives the phase and renders the matching surface, keyed so
- *  React remounts on phase change and our `phase-morph` CSS animation runs. */
+ *  React remounts on phase change and our `phase-morph` CSS animation runs.
+ *  Artists skip Phase 2 (Settle) and land on Phase 3 once the same time-based
+ *  trigger fires — see `useDayOfShowPhase`. */
 function PhaseBody({ show, nowMin }: { show: Show; nowMin: number }) {
-  const phase = useDayOfShowPhase(show, nowMin);
+  const { isArtist } = useTeam();
+  const phase = useDayOfShowPhase(show, nowMin, isArtist);
   return (
     <div key={phase} className="phase-morph flex-1 flex flex-col">
       {phase === 1 && <PhasePreShow show={show} nowMin={nowMin} />}

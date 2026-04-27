@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import CreateShowDialog from "@/components/CreateShowDialog";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
+import { useTeam } from "@/components/TeamProvider";
 import { formatCityState } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Show, Tour } from "@/lib/types";
@@ -44,6 +45,7 @@ interface TourScopedHeaderProps {
 
 export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: TourScopedHeaderProps) {
   const queryClient = useQueryClient();
+  const { isArtist } = useTeam();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<{ name: string; notes: string; startDate: string; endDate: string }>({
     name: tour.name,
@@ -171,59 +173,61 @@ export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: Tou
             {settledCount > 0 && <> · {settledCount} settled</>}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {editing ? (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditing(false)}
-                className="h-11 sm:h-9"
-              >
-                <X className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Cancel</span>
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => updateMutation.mutate(form)}
-                disabled={!form.name.trim() || updateMutation.isPending}
-                className="h-11 sm:h-9"
-              >
-                <Save className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Save</span>
-              </Button>
-            </>
-          ) : (
-            <>
-              <CreateShowDialog defaultTourId={tour.id} />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-11 w-11 sm:h-9 sm:w-9">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={startEdit}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit tour
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setLinkingOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Link existing show
-                  </DropdownMenuItem>
-                  <BulkImportMenuItem tourId={tour.id} />
-                  <DropdownMenuItem
-                    onSelect={() => setDeleteConfirmOpen(true)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete tour
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          )}
-        </div>
+        {!isArtist && (
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {editing ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditing(false)}
+                  className="h-11 sm:h-9"
+                >
+                  <X className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Cancel</span>
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => updateMutation.mutate(form)}
+                  disabled={!form.name.trim() || updateMutation.isPending}
+                  className="h-11 sm:h-9"
+                >
+                  <Save className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Save</span>
+                </Button>
+              </>
+            ) : (
+              <>
+                <CreateShowDialog defaultTourId={tour.id} />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-11 w-11 sm:h-9 sm:w-9">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={startEdit}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit tour
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLinkingOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Link existing show
+                    </DropdownMenuItem>
+                    <BulkImportMenuItem tourId={tour.id} />
+                    <DropdownMenuItem
+                      onSelect={() => setDeleteConfirmOpen(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete tour
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {editing && (
