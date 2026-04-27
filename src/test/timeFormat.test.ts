@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeTime, to12Hour, to24Hour } from "@/lib/timeFormat";
+import { formatHotelMoment, normalizeTime, to12Hour, to24Hour } from "@/lib/timeFormat";
 
 describe("normalizeTime", () => {
   it("passes through already-normalized time", () => {
@@ -144,5 +144,39 @@ describe("to12Hour", () => {
     expect(to12Hour("")).toBeNull();
     expect(to12Hour(null)).toBeNull();
     expect(to12Hour("around 7ish")).toBeNull();
+  });
+});
+
+describe("formatHotelMoment", () => {
+  it("combines date and time with a middle dot", () => {
+    expect(formatHotelMoment("2026-05-03", "3:00 PM")).toBe("Sun May 3 · 3:00 PM");
+  });
+
+  it("normalizes raw time strings via to12Hour", () => {
+    expect(formatHotelMoment("2026-05-03", "15:00")).toBe("Sun May 3 · 3:00 PM");
+  });
+
+  it("returns date alone when time is missing", () => {
+    expect(formatHotelMoment("2026-05-03", null)).toBe("Sun May 3");
+    expect(formatHotelMoment("2026-05-03", "")).toBe("Sun May 3");
+  });
+
+  it("returns time alone when date is missing", () => {
+    expect(formatHotelMoment(null, "3:00 PM")).toBe("3:00 PM");
+    expect(formatHotelMoment("", "3:00 PM")).toBe("3:00 PM");
+  });
+
+  it("returns empty string when both are missing", () => {
+    expect(formatHotelMoment(null, null)).toBe("");
+    expect(formatHotelMoment("", "")).toBe("");
+  });
+
+  it("ignores invalid date formats but keeps time", () => {
+    expect(formatHotelMoment("not-a-date", "3:00 PM")).toBe("3:00 PM");
+  });
+
+  it("parses dates as local-day to avoid timezone drift", () => {
+    // "2026-05-03" should always render as May 3, never May 2.
+    expect(formatHotelMoment("2026-05-03", null)).toBe("Sun May 3");
   });
 });

@@ -70,7 +70,9 @@ export interface RenderShow extends ShowLike {
   set_length?: string | null;
   additional_info?: string | null;
   hotel_checkin?: string | null;
+  hotel_checkin_date?: string | null;
   hotel_checkout?: string | null;
+  hotel_checkout_date?: string | null;
 }
 
 export interface RenderOptions {
@@ -103,6 +105,28 @@ function nl2br(raw: string): string {
 
 function stripCountry(addr: string): string {
   return addr.replace(/,?\s*United States$/i, "");
+}
+
+/** "Tue May 3" — short day-of-week + month + day (no year). */
+function formatShortDate(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return "";
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  const weekday = d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+  const month = d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+  return `${weekday} ${month} ${d.getUTCDate()}`;
+}
+
+/** Combine a hotel check-in/out date and time for display ("Tue May 3 · 3:00 PM"). */
+export function formatHotelMoment(
+  date: string | null | undefined,
+  time: string | null | undefined,
+): string {
+  const t = (time ?? "").trim();
+  const d = formatShortDate(date);
+  if (d && t) return `${d} · ${t}`;
+  return d || t;
 }
 
 /** "Wednesday, April 22, 2026" — matches DaysheetGuestView via date-fns `EEEE, MMMM d, yyyy`. */
@@ -413,8 +437,8 @@ function renderHotel(show: RenderShow): string {
     ? `https://maps.google.com/?q=${encodeURIComponent(addrStripped)}`
     : "";
   const confirmation = val(show.hotel_confirmation);
-  const checkIn = val(show.hotel_checkin);
-  const checkOut = val(show.hotel_checkout);
+  const checkIn = formatHotelMoment(show.hotel_checkin_date, show.hotel_checkin);
+  const checkOut = formatHotelMoment(show.hotel_checkout_date, show.hotel_checkout);
 
   const nameHtml = name
     ? `<div style="font-family:${T.serif};font-size:22px;letter-spacing:-0.02em;color:${T.fg};line-height:1.15;">${escapeHtml(name)}</div>`
@@ -654,8 +678,8 @@ function renderPlainText(show: RenderShow, opts: RenderOptions): string {
         plainField("Name", show.hotel_name),
         plainField("Address", show.hotel_address),
         plainField("Confirmation #", show.hotel_confirmation),
-        plainField("Check In", show.hotel_checkin),
-        plainField("Check Out", show.hotel_checkout),
+        plainField("Check In", formatHotelMoment(show.hotel_checkin_date, show.hotel_checkin)),
+        plainField("Check Out", formatHotelMoment(show.hotel_checkout_date, show.hotel_checkout)),
       ]),
     );
   }

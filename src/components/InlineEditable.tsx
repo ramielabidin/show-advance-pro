@@ -19,6 +19,7 @@ interface InlineFieldProps {
   autoFocus?: boolean;
   placeholder?: string;
   inputMode?: "text" | "numeric" | "tel" | "decimal" | "email" | "url";
+  type?: "text" | "date";
   className?: string;
 }
 
@@ -36,6 +37,7 @@ export function InlineField({
   autoFocus,
   placeholder,
   inputMode,
+  type = "text",
   className,
 }: InlineFieldProps) {
   const cls = cn(
@@ -44,24 +46,27 @@ export function InlineField({
     multiline && "min-h-[72px] resize-y",
     className,
   );
-  return multiline ? (
-    <textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      autoFocus={autoFocus}
-      placeholder={placeholder}
-      enterKeyHint="done"
-      className={cls}
-    />
-  ) : (
+  if (multiline) {
+    return (
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        autoFocus={autoFocus}
+        placeholder={placeholder}
+        enterKeyHint="done"
+        className={cls}
+      />
+    );
+  }
+  return (
     <input
-      type="text"
+      type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       autoFocus={autoFocus}
       placeholder={placeholder}
       enterKeyHint="done"
-      inputMode={inputMode}
+      inputMode={type === "date" ? undefined : inputMode}
       className={cls}
     />
   );

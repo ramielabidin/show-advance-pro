@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Navigation, ArrowUpRight } from "lucide-react";
-import { to12Hour } from "@/lib/timeFormat";
+import { formatHotelMoment } from "@/lib/timeFormat";
 import { formatCityState } from "@/lib/utils";
 import type { Show } from "@/lib/types";
 
@@ -39,11 +39,10 @@ export default function PhasePostSettle({ show }: PhasePostSettleProps) {
     return fallback ? [fallback] : [];
   }, [show.hotel_address, show.city]);
 
-  const checkInDisplay = show.hotel_checkin
-    ? to12Hour(show.hotel_checkin) ?? show.hotel_checkin
-    : null;
+  const checkInDisplay = formatHotelMoment(show.hotel_checkin_date, show.hotel_checkin) || null;
+  const checkOutDisplay = formatHotelMoment(show.hotel_checkout_date, show.hotel_checkout) || null;
 
-  const hasBookingDetail = !!(checkInDisplay || show.hotel_confirmation || show.hotel_checkout);
+  const hasBookingDetail = !!(checkInDisplay || show.hotel_confirmation || checkOutDisplay);
 
   // No hotel info at all — show a graceful "drive safe" sign-off rather than
   // an empty hero. Most shows will have at least a name; this is the edge.
@@ -130,12 +129,8 @@ export default function PhasePostSettle({ show }: PhasePostSettleProps) {
               {checkInDisplay && (
                 <BookingRow label="Check-in" value={checkInDisplay} mono />
               )}
-              {show.hotel_checkout && (
-                <BookingRow
-                  label="Check-out"
-                  value={to12Hour(show.hotel_checkout) ?? show.hotel_checkout}
-                  mono
-                />
+              {checkOutDisplay && (
+                <BookingRow label="Check-out" value={checkOutDisplay} mono />
               )}
               {show.hotel_confirmation && (
                 <BookingRow label="Confirmation" value={show.hotel_confirmation} mono />

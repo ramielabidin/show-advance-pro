@@ -117,3 +117,38 @@ export function normalizeTime(raw: string): string {
   const base = `${hours}:${minutes.toString().padStart(2, "0")}`;
   return ampm ? `${base} ${ampm}` : base;
 }
+
+/**
+ * Format a hotel check-in / check-out moment for display. Combines an ISO
+ * `date` (e.g. `"2026-05-03"`) with a free-text `time` (e.g. `"3:00 PM"`).
+ *
+ *   "2026-05-03" + "3:00 PM" → "Tue May 3 · 3:00 PM"
+ *   "2026-05-03" + null      → "Tue May 3"
+ *   null         + "3:00 PM" → "3:00 PM"
+ *   null         + null      → ""
+ *
+ * Mirrors the (deliberately simple) format used by the email template and
+ * guest day sheet so output stays consistent across surfaces.
+ */
+export function formatHotelMoment(
+  date: string | null | undefined,
+  time: string | null | undefined,
+): string {
+  const cleanTime = time?.trim() ? to12Hour(time) ?? time.trim() : "";
+  const cleanDate = formatHotelDate(date);
+  if (cleanDate && cleanTime) return `${cleanDate} · ${cleanTime}`;
+  return cleanDate || cleanTime;
+}
+
+/** Format an ISO date string as `"Tue May 3"`. Returns `""` for invalid input. */
+export function formatHotelDate(date: string | null | undefined): string {
+  if (!date) return "";
+  // Parse as a local date (YYYY-MM-DD) to avoid timezone drift on display.
+  const m = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return "";
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  if (Number.isNaN(d.getTime())) return "";
+  const weekday = d.toLocaleDateString("en-US", { weekday: "short" });
+  const month = d.toLocaleDateString("en-US", { month: "short" });
+  return `${weekday} ${month} ${d.getDate()}`;
+}
