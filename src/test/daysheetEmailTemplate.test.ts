@@ -66,6 +66,26 @@ describe("renderDaysheetEmail", () => {
     expect(html).toContain("815 V St NW, Washington, DC 20001");
   });
 
+  it("omits city from the sub-line when the full address is shown", () => {
+    const { html } = renderDaysheetEmail(baseShow());
+    // The address row carries the city already; the sub-line shouldn't repeat it.
+    expect(html).not.toMatch(/April 22, 2026 · Washington, DC/);
+  });
+
+  it("falls back to city in the sub-line when no venue address is set", () => {
+    const { html } = renderDaysheetEmail(baseShow({ venue_address: null }));
+    expect(html).toContain("April 22, 2026 · Washington, DC");
+  });
+
+  it("does not repeat the address when the city field has been overwritten with the full address", () => {
+    const fullAddr = "815 V St NW, Washington, DC 20001";
+    const { html } = renderDaysheetEmail(
+      baseShow({ city: fullAddr, venue_address: `${fullAddr}, United States` }),
+    );
+    // The sub-line ("date · ...") should not list the address, only the date.
+    expect(html).not.toMatch(new RegExp(`April 22, 2026 · ${fullAddr.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+  });
+
   it("applies the pastel-green accent to the band's schedule row", () => {
     const { html } = renderDaysheetEmail(baseShow());
     const bandIdx = html.indexOf("Band (60 min)");
