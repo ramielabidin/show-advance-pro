@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Save, UserPlus, Trash2, Crown, Plus, Pencil, X, Users, Loader2, Music, Copy, Mail } from "lucide-react";
+import { Save, UserPlus, Trash2, Crown, Plus, Pencil, X, Users, Loader2, Music, Copy, Mail, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import PageTitle from "@/components/PageTitle";
 import SectionLabel from "@/components/SectionLabel";
 import Eyebrow from "@/components/Eyebrow";
@@ -354,7 +355,12 @@ export default function SettingsPage() {
       if (!existing) return;
       const { error } = await supabase
         .from("app_settings")
-        .update({ slack_webhook_url: null, slack_channel_name: null, slack_team_name: null })
+        .update({
+          slack_webhook_url: null,
+          slack_channel_name: null,
+          slack_team_name: null,
+          slack_auto_daysheet_enabled: false,
+        })
         .eq("id", existing.id);
       if (error) throw error;
     },
@@ -363,6 +369,36 @@ export default function SettingsPage() {
       toast.success("Slack disconnected");
     },
     onError: () => toast.error("Failed to disconnect Slack"),
+  });
+
+  // Auto-push day sheet automation. Toggle + time are persisted immediately on
+  // change so the Integrations panel feels like the rest of Settings
+  // (connect/disconnect actions, no save button).
+  const autoPushEnabled = !!appSettings?.slack_auto_daysheet_enabled;
+  const autoPushTime = appSettings?.slack_auto_daysheet_time ?? "08:00";
+
+  const updateAutoPushMutation = useMutation({
+    mutationFn: async (patch: { enabled?: boolean; time?: string }) => {
+      const { data: existing } = await supabase
+        .from("app_settings")
+        .select("id")
+        .eq("team_id", teamId!)
+        .limit(1)
+        .single();
+      if (!existing) throw new Error("App settings not found");
+      const update: Record<string, unknown> = {};
+      if (patch.enabled !== undefined) update.slack_auto_daysheet_enabled = patch.enabled;
+      if (patch.time !== undefined) update.slack_auto_daysheet_time = patch.time;
+      const { error } = await supabase
+        .from("app_settings")
+        .update(update)
+        .eq("id", existing.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["app-settings", teamId] });
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to update auto-push"),
   });
 
   // ── Touring Party ──
@@ -768,32 +804,91 @@ export default function SettingsPage() {
             {settingsLoading ? (
               <div className="h-10 rounded-md bg-muted animate-pulse" />
             ) : appSettings?.slack_webhook_url ? (
-              <div className="flex items-center justify-between rounded-md border border-pastel-green/60 bg-pastel-green px-3 py-2.5">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="h-2 w-2 rounded-full bg-[hsl(var(--success))] shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-pastel-green-foreground leading-tight">
-                      {appSettings.slack_channel_name ?? "Slack"} connected
-                    </p>
-                    {appSettings.slack_team_name && (
-                      <p className="text-xs text-muted-foreground">{appSettings.slack_team_name}</p>
-                    )}
+              <>
+                <div className="flex items-center justify-between rounded-md border border-pastel-green/60 bg-pastel-green px-3 py-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="h-2 w-2 rounded-full bg-[hsl(var(--success))] shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-pastel-green-foreground leading-tight">
+                        {appSettings.slack_channel_name ?? "Slack"} connected
+                      </p>
+                      {appSettings.slack_team_name && (
+                        <p className="text-xs text-muted-foreground">{appSettings.slack_team_name}</p>
+                      )}
+                    </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                    disabled={disconnectSlackMutation.isPending}
+                    onClick={() => setSlackDisconnectOpen(true)}
+                  >
+                    {disconnectSlackMutation.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      "Disconnect"
+                    )}
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                  disabled={disconnectSlackMutation.isPending}
-                  onClick={() => setSlackDisconnectOpen(true)}
-                >
-                  {disconnectSlackMutation.isPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    "Disconnect"
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <Label
+                        htmlFor="slack-auto-daysheet"
+                        className="text-sm font-medium text-foreground cursor-pointer"
+                      >
+                        Auto-push day sheet
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Post the day sheet to Slack on the morning of each show.
+                      </p>
+                    </div>
+                    <Switch
+                      id="slack-auto-daysheet"
+                      checked={autoPushEnabled}
+                      disabled={updateAutoPushMutation.isPending}
+                      onCheckedChange={(checked) =>
+                        updateAutoPushMutation.mutate({ enabled: checked })
+                      }
+                    />
+                  </div>
+
+                  {autoPushEnabled && (
+                    <div className="flex items-center justify-between gap-3 pl-0">
+                      <div className="min-w-0">
+                        <Label
+                          htmlFor="slack-auto-daysheet-time"
+                          className="text-sm text-foreground cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                          Push time
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Uses each show's local timezone.
+                        </p>
+                      </div>
+                      <Input
+                        id="slack-auto-daysheet-time"
+                        type="time"
+                        step={300}
+                        defaultValue={autoPushTime}
+                        disabled={updateAutoPushMutation.isPending}
+                        onBlur={(e) => {
+                          const next = e.target.value;
+                          if (next && /^\d{2}:\d{2}$/.test(next) && next !== autoPushTime) {
+                            updateAutoPushMutation.mutate({ time: next });
+                          }
+                        }}
+                        className="w-auto h-9"
+                      />
+                    </div>
                   )}
-                </Button>
-              </div>
+                </div>
+              </>
             ) : (
               <Button
                 onClick={handleConnectSlack}

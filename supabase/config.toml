@@ -78,3 +78,15 @@ verify_jwt = false
 # JWT; the token itself is unguessable and single-use.
 [functions.decline-team-invite]
 verify_jwt = false
+
+# run-scheduled-slack-pushes is dispatched by pg_cron via pg_net.http_post
+# and authenticates via an X-Cron-Secret header. Disable gateway verify_jwt
+# so the cron dispatch reaches the function without a user JWT.
+[functions.run-scheduled-slack-pushes]
+verify_jwt = false
+
+# resolve-timezone self-validates the caller's JWT via supabase.auth.getUser()
+# before hitting Google. Disable gateway verify_jwt for the same ES256 reason
+# as the other authenticated functions above.
+[functions.resolve-timezone]
+verify_jwt = false

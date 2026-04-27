@@ -27,6 +27,7 @@ import { useTeam } from "@/components/TeamProvider";
 import { toast } from "sonner";
 import { extractTextFromPdf } from "@/lib/pdfExtract";
 import { saveParsedShow } from "@/lib/saveParsedShow";
+import { resolveShowTimezoneInBackground } from "@/lib/resolveShowTimezone";
 import { cn } from "@/lib/utils";
 
 interface CreateShowDialogProps {
@@ -99,6 +100,11 @@ export default function CreateShowDialog({ defaultTourId, triggerClassName, icon
       toast.error("Failed to create show");
       return;
     }
+    resolveShowTimezoneInBackground({
+      showId: data.id,
+      city,
+      venue_name: venue,
+    });
     setOpen(false);
     resetAll();
     toast.success("Show created");

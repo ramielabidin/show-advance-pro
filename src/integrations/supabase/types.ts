@@ -20,6 +20,8 @@ export type Database = {
           home_base_city: string | null
           id: string
           inbound_email_token: string | null
+          slack_auto_daysheet_enabled: boolean
+          slack_auto_daysheet_time: string
           slack_channel_name: string | null
           slack_team_name: string | null
           slack_webhook_url: string | null
@@ -31,6 +33,8 @@ export type Database = {
           home_base_city?: string | null
           id?: string
           inbound_email_token?: string | null
+          slack_auto_daysheet_enabled?: boolean
+          slack_auto_daysheet_time?: string
           slack_channel_name?: string | null
           slack_team_name?: string | null
           slack_webhook_url?: string | null
@@ -42,6 +46,8 @@ export type Database = {
           home_base_city?: string | null
           id?: string
           inbound_email_token?: string | null
+          slack_auto_daysheet_enabled?: boolean
+          slack_auto_daysheet_time?: string
           slack_channel_name?: string | null
           slack_team_name?: string | null
           slack_webhook_url?: string | null
@@ -462,6 +468,7 @@ export type Database = {
           settlement_guarantee: string | null
           settlement_method: string | null
           settlement_notes: string | null
+          slack_daysheet_pushed_at: string | null
           support_act: string | null
           support_pay: string | null
           team_id: string
@@ -471,6 +478,7 @@ export type Database = {
           venue_address: string | null
           venue_capacity: string | null
           venue_name: string
+          venue_timezone: string | null
           walkout_potential: string | null
           wifi_network: string | null
           wifi_password: string | null
@@ -510,6 +518,7 @@ export type Database = {
           settlement_guarantee?: string | null
           settlement_method?: string | null
           settlement_notes?: string | null
+          slack_daysheet_pushed_at?: string | null
           support_act?: string | null
           support_pay?: string | null
           team_id: string
@@ -519,6 +528,7 @@ export type Database = {
           venue_address?: string | null
           venue_capacity?: string | null
           venue_name: string
+          venue_timezone?: string | null
           walkout_potential?: string | null
           wifi_network?: string | null
           wifi_password?: string | null
@@ -558,6 +568,7 @@ export type Database = {
           settlement_guarantee?: string | null
           settlement_method?: string | null
           settlement_notes?: string | null
+          slack_daysheet_pushed_at?: string | null
           support_act?: string | null
           support_pay?: string | null
           team_id?: string
@@ -567,6 +578,7 @@ export type Database = {
           venue_address?: string | null
           venue_capacity?: string | null
           venue_name?: string
+          venue_timezone?: string | null
           walkout_potential?: string | null
           wifi_network?: string | null
           wifi_password?: string | null
@@ -799,6 +811,7 @@ export type Database = {
         Args: { _name: string; _team_id: string; _user_id: string }
         Returns: undefined
       }
+      dispatch_scheduled_slack_pushes: { Args: never; Returns: number }
       generate_inbound_email_token: { Args: never; Returns: string }
       get_guest_show: { Args: { p_token: string }; Returns: Json }
       get_team_member_emails: {

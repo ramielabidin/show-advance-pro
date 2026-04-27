@@ -1,7 +1,7 @@
 import { useParams, useNavigate, useLocation, useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, DollarSign, Ticket, Users, TrendingUp, Check, Share2, Car, FileText, MoreHorizontal } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, Check, Share2, Car, FileText, MoreHorizontal, ChevronDown } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -31,7 +31,6 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
-import StatTile from "@/components/StatTile";
 import SlackPushDialog from "@/components/SlackPushDialog";
 import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
@@ -335,6 +334,7 @@ export default function ShowDetailPage() {
   const [settleOpen, setSettleOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [clearSettleOpen, setClearSettleOpen] = useState(false);
+  const [projectionOpen, setProjectionOpen] = useState(false);
 
   // Sticky collapsed header on mobile — flips on once the page header has
   // scrolled out of view, so the back nav and primary action stay reachable.
@@ -356,9 +356,17 @@ export default function ShowDetailPage() {
     headerObserverRef.current = observer;
   }, []);
   // When the advance hasn't been imported, the Show Info tab shows a CTA card.
-  // The user can click "or fill in manually" to bypass the CTA and see the
-  // normal field layout without waiting for a parsed advance.
-  const [showManualForm, setShowManualForm] = useState(false);
+  // When the advance hasn't been imported, the Show Info tab shows a CTA card.
+  // The user can dismiss it (X or "fill in manually") to see the normal field
+  // layout. Persist via localStorage so it stays gone across reloads even
+  // before any schedule entries exist (e.g. user only entered backline info).
+  const [importAdvanceDismissed, setImportAdvanceDismissed] = useState(() =>
+    id ? localStorage.getItem(`import-advance-dismissed-${id}`) === "true" : false
+  );
+  const dismissImportAdvance = () => {
+    if (id) localStorage.setItem(`import-advance-dismissed-${id}`, "true");
+    setImportAdvanceDismissed(true);
+  };
 
   // Backend deal structured form state
   const [backendDealForm, setBackendDealForm] = useState<{
@@ -1236,9 +1244,17 @@ export default function ShowDetailPage() {
       </div>
 
       <TabsContent value="show">
-          {!show.advance_imported_at && !showManualForm && scheduleEntries.length === 0 ? (
+          {!show.advance_imported_at && !importAdvanceDismissed && scheduleEntries.length === 0 ? (
             <div className="space-y-6 sm:space-y-8">
-              <div className="rounded-lg border border-border bg-card p-6 sm:p-8 text-center animate-fade-in">
+              <div className="relative rounded-lg border border-border bg-card p-6 sm:p-8 text-center animate-fade-in">
+                <button
+                  type="button"
+                  onClick={dismissImportAdvance}
+                  className="absolute top-3 right-3 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="h-4 w-4" />
+                </button>
                 <div className="inline-flex items-center justify-center rounded-full bg-muted p-3 mb-4">
                   <Sparkles className="h-5 w-5 text-muted-foreground" />
                 </div>
@@ -1270,7 +1286,7 @@ export default function ShowDetailPage() {
                 <div className="mt-3">
                   <button
                     type="button"
-                    onClick={() => setShowManualForm(true)}
+                    onClick={dismissImportAdvance}
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
                   >
                     or fill in manually
@@ -1765,311 +1781,521 @@ export default function ShowDetailPage() {
         </TabsContent>
 
         <TabsContent value="deal">
-          <div className="space-y-6 sm:space-y-8">
-            {/* Settlement card — pinned to top when show is settled */}
-            {show.is_settled && (
-              <Card className="shadow-none">
-                <CardContent className="p-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground">
-                      Settlement Results
-                    </span>
-                    <span
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
-                      style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
-                    >
-                      <CheckCircle2 className="h-3 w-3" />
-                      Settled
-                    </span>
-                  </div>
+          {(() => {
+            // Settlement hero numbers
+            const soldNum = show.actual_tickets_sold
+              ? parseInt(String(show.actual_tickets_sold).replace(/,/g, ""), 10)
+              : null;
+            const capNum = show.venue_capacity
+              ? parseInt(String(show.venue_capacity).replace(/,/g, ""), 10)
+              : null;
+            const validSold = soldNum != null && !isNaN(soldNum) ? soldNum : null;
+            const validCap = capNum != null && !isNaN(capNum) ? capNum : null;
+            const capPct =
+              validSold != null && validCap && validCap > 0
+                ? Math.round((validSold / validCap) * 100)
+                : null;
+            const actualWalkoutNum = parseDollar(show.actual_walkout) ?? 0;
+            const walkoutPotentialNum = parseDollar(show.walkout_potential) ?? 0;
+            const selloutPct =
+              walkoutPotentialNum > 0
+                ? Math.round((actualWalkoutNum / walkoutPotentialNum) * 100)
+                : null;
+            const selloutBarPct =
+              walkoutPotentialNum > 0
+                ? Math.max(0, Math.min(100, (actualWalkoutNum / walkoutPotentialNum) * 100))
+                : 0;
 
+            // Revenue simulator gating
+            const wp = parseDollar(show.walkout_potential);
+            const tp = parseDollar(show.ticket_price);
+            const g = parseDollar(show.guarantee) ?? 0;
+            const canSimulate = wp !== null || (tp != null && tp > 0 && validCap != null);
+            const showSimulator = !(g === 0 && !canSimulate);
+
+            // Local helpers — ledger row + rule label
+            const LedgerRule = ({
+              children,
+              right,
+            }: {
+              children: React.ReactNode;
+              right?: React.ReactNode;
+            }) => (
+              <div className="flex items-center gap-2 pb-1.5 mb-2.5 border-b border-foreground/80">
+                <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-foreground">
+                  {children}
+                </span>
+                {right && <span className="ml-auto">{right}</span>}
+              </div>
+            );
+
+            const LedgerRow = ({
+              label,
+              hint,
+              accent,
+              children,
+            }: {
+              label: string;
+              hint?: string;
+              accent?: boolean;
+              children: React.ReactNode;
+            }) => (
+              <div className="grid grid-cols-[1fr_auto] items-baseline gap-3 py-2 border-b border-dotted border-border/80 last:border-b-0">
+                <span
+                  className={cn(
+                    "text-[13px] leading-snug",
+                    accent ? "text-foreground font-medium" : "text-muted-foreground",
+                  )}
+                >
+                  {label}
+                  {hint && (
+                    <span className="ml-2 text-[11px] text-muted-foreground/70">{hint}</span>
+                  )}
+                </span>
+                <span className="text-right tabular-nums">{children}</span>
+              </div>
+            );
+
+            // Tap-to-edit value cell. The input inherits the row's mono type
+            // style so the swap is visually quiet. Saves on blur or Enter,
+            // cancels on Escape.
+            const LedgerValue = ({
+              fieldKey,
+              value,
+              prefix = "",
+              accent = false,
+              currency = false,
+              inputMode = "text",
+              placeholder = "—",
+            }: {
+              fieldKey: keyof Show;
+              value: string | null | undefined;
+              prefix?: string;
+              accent?: boolean;
+              currency?: boolean;
+              inputMode?: "text" | "numeric" | "decimal";
+              placeholder?: string;
+            }) => {
+              const isEditing = inlineField === fieldKey;
+              const sizeClass = accent ? "text-[15px]" : "text-[14px]";
+
+              if (isEditing) {
+                const handleSave = () => {
+                  if (!inlineField) return;
+                  let val = inlineValue.trim();
+                  if (currency && val) val = formatCurrency(val);
+                  updateMutation.mutate({ [inlineField]: val || null } as Partial<Show>);
+                };
+                return (
+                  <span className="inline-flex items-baseline">
+                    {prefix && (
+                      <span className={cn("font-mono tracking-tight text-foreground", sizeClass)}>
+                        {prefix}
+                      </span>
+                    )}
+                    <input
+                      autoFocus
+                      type="text"
+                      inputMode={inputMode}
+                      value={inlineValue}
+                      onChange={(e) => setInlineValue(e.target.value)}
+                      onBlur={handleSave}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleSave();
+                        } else if (e.key === "Escape") {
+                          e.preventDefault();
+                          cancelInline();
+                        }
+                      }}
+                      className={cn(
+                        "bg-transparent border-0 border-b border-dashed border-foreground/45 outline-none focus:border-foreground/70 px-0.5 py-0 text-right text-foreground font-mono tracking-tight leading-tight",
+                        sizeClass,
+                      )}
+                      style={{
+                        width: `${Math.max(2, inlineValue.length + 1)}ch`,
+                        minWidth: "2ch",
+                      }}
+                    />
+                  </span>
+                );
+              }
+
+              const hasValue = value != null && String(value).trim() !== "";
+              if (!hasValue) {
+                return (
+                  <button
+                    type="button"
+                    onClick={() => startInlineEdit(fieldKey as string)}
+                    className={cn(
+                      "font-mono tracking-tight text-muted-foreground/55 hover:text-foreground/60 transition-colors leading-tight",
+                      sizeClass,
+                    )}
+                  >
+                    {placeholder}
+                  </button>
+                );
+              }
+
+              const displayValue = currency ? formatCurrency(String(value)) : String(value);
+              return (
+                <button
+                  type="button"
+                  onClick={() => startInlineEdit(fieldKey as string)}
+                  className={cn(
+                    "font-mono tracking-tight text-foreground leading-tight inline-block border-b border-transparent hover:border-foreground/15 transition-colors",
+                    accent && "font-medium",
+                    sizeClass,
+                  )}
+                >
+                  {displayValue}
+                </button>
+              );
+            };
+
+            return (
+              <div className="space-y-7 sm:space-y-9">
+                {/* Settlement editorial hero — only when settled */}
+                {show.is_settled && (
                   <div>
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <div
-                        className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
-                      >
-                        <DollarSign className="h-3.5 w-3.5" />
-                      </div>
-                      <span className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground">
-                        Actual Walkout
+                    <LedgerRule
+                      right={
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-[1px] text-[10px] font-medium"
+                          style={{
+                            backgroundColor: "var(--pastel-green-bg)",
+                            color: "var(--pastel-green-fg)",
+                          }}
+                        >
+                          <CheckCircle2 className="h-2.5 w-2.5" />
+                          Settled
+                        </span>
+                      }
+                    >
+                      Settlement
+                    </LedgerRule>
+
+                    {/* Walkout — one editorial line */}
+                    <div className="flex items-baseline justify-between gap-3 flex-wrap pb-2.5 border-b border-dotted border-border/80">
+                      <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                        Walkout
+                      </span>
+                      <span className="inline-flex items-baseline gap-2.5 flex-wrap">
+                        <span
+                          className="font-display leading-none tracking-[-0.035em] text-[clamp(32px,6vw,40px)]"
+                          style={{ color: "var(--pastel-green-fg)" }}
+                        >
+                          {show.actual_walkout ? formatCurrency(String(show.actual_walkout)) : "—"}
+                        </span>
+                        {selloutPct != null && (
+                          <span className="text-[12px] font-mono text-muted-foreground tracking-tight">
+                            {selloutPct}% of sellout
+                          </span>
+                        )}
                       </span>
                     </div>
-                    <p className="text-3xl font-display leading-none tracking-[-0.03em] text-[hsl(var(--success))]">
-                      {show.actual_walkout ? formatCurrency(String(show.actual_walkout)) : "—"}
-                    </p>
-                    {show.walkout_potential && (
-                      <p className="text-xs text-muted-foreground mt-1.5">
-                        of {formatCurrency(String(show.walkout_potential))} at sellout
-                      </p>
-                    )}
-                  </div>
 
-                  {show.actual_tickets_sold && (
-                    <>
-                      <Separator />
-                      <div>
-                        <div className="flex items-center gap-2 mb-1.5">
+                    {walkoutPotentialNum > 0 && (
+                      <div className="pt-2.5 pb-1">
+                        <div className="relative h-[3px] rounded-full bg-muted overflow-hidden">
                           <div
-                            className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
-                            style={{ backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" }}
-                          >
-                            <Ticket className="h-3.5 w-3.5" />
-                          </div>
-                          <span className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground">
-                            Tickets Sold
-                          </span>
+                            className="absolute inset-y-0 left-0 rounded-full [transition:width_240ms_var(--ease-out)]"
+                            style={{
+                              width: `${selloutBarPct}%`,
+                              background: "var(--pastel-green-fg)",
+                            }}
+                          />
                         </div>
-                        <p className="text-2xl font-display leading-none tracking-[-0.03em]">
-                          {show.actual_tickets_sold}
+                      </div>
+                    )}
+
+                    {(validSold != null || show.actual_tickets_sold) && (
+                      <div className="flex items-baseline justify-between gap-3 py-2 border-b border-dotted border-border/80">
+                        <span className="text-[13px] text-muted-foreground">Tickets sold</span>
+                        <span className="font-mono text-[14px] tracking-tight tabular-nums">
+                          {show.actual_tickets_sold ?? "—"}
                           {show.venue_capacity && (
-                            <span className="text-base font-sans font-normal text-muted-foreground ml-1.5">
-                              / {show.venue_capacity}
+                            <span className="text-muted-foreground"> / {show.venue_capacity}</span>
+                          )}
+                          {capPct != null && (
+                            <span className="ml-2.5 text-muted-foreground text-[12px]">
+                              {capPct}% capacity
                             </span>
                           )}
-                        </p>
-                        {(() => {
-                          if (!show.venue_capacity) return null;
-                          const sold = parseInt(String(show.actual_tickets_sold).replace(/,/g, ""), 10);
-                          const cap = parseInt(String(show.venue_capacity).replace(/,/g, ""), 10);
-                          if (isNaN(sold) || isNaN(cap) || cap <= 0) return null;
-                          return (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {Math.round((sold / cap) * 100)}% capacity
-                            </p>
-                          );
-                        })()}
+                        </span>
                       </div>
-                    </>
-                  )}
+                    )}
 
-                  {show.settlement_notes && (
-                    <>
-                      <Separator />
-                      <div>
-                        <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground mb-1.5">
+                    {show.settlement_notes && (
+                      <div className="pt-3">
+                        <p className="text-[10px] uppercase tracking-[0.16em] font-medium text-muted-foreground mb-1.5">
                           Notes
                         </p>
-                        <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+                        <p className="text-sm whitespace-pre-wrap text-muted-foreground leading-relaxed">
                           {show.settlement_notes}
                         </p>
                       </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Deal — stat tiles for the four primary numerics (click to inline-edit); backend deal + comps below */}
-            <FieldGroup title="Deal">
-              {(() => {
-                const tiles: Array<{ key: keyof Show; label: string; icon: typeof DollarSign; tone: "blue" | "green" | "yellow"; currency?: boolean; placeholder?: string }> = [
-                  { key: "guarantee", label: "Guarantee", icon: DollarSign, tone: "green", currency: true },
-                  { key: "ticket_price", label: "Ticket Price", icon: Ticket, tone: "blue", currency: true, placeholder: "e.g. $20 or $18/$20/$25" },
-                  { key: "venue_capacity", label: "Capacity", icon: Users, tone: "blue" },
-                  { key: "walkout_potential", label: "Walkout Potential", icon: TrendingUp, tone: "yellow", currency: true },
-                ];
-                const anyEditing = tiles.some(({ key }) => inlineField === key);
-                if (anyEditing) {
-                  // Single editing field spans full width; other fields continue as tiles below it would crowd the edit — keep it focused.
-                  const editing = tiles.find(({ key }) => inlineField === key)!;
-                  return (
-                    <div>
-                      {editField(editing.key, editing.label, { mono: true, alwaysShow: true, currency: editing.currency, placeholder: editing.placeholder })}
-                    </div>
-                  );
-                }
-                return (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {tiles.map(({ key, label, icon, tone, currency }) => {
-                      const raw = show[key as keyof typeof show] as string | null;
-                      if (!raw) {
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => startInlineEdit(key as string)}
-                            className="rounded-[10px] border border-dashed border-border px-4 py-3.5 text-left hover:border-foreground/30 transition-colors"
-                          >
-                            <span className="text-sm italic text-muted-foreground/60">Tap to add {label.toLowerCase()}</span>
-                          </button>
-                        );
-                      }
-                      return (
-                        <StatTile
-                          key={key}
-                          icon={icon}
-                          tone={tone}
-                          label={label}
-                          value={currency ? formatCurrency(String(raw)) : String(raw)}
-                          onClick={() => startInlineEdit(key as string)}
-                        />
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                {/* Backend Deal — spans full width when editing */}
-                <div className={cn(inlineField === "backend_deal" && "sm:col-span-2")}>
-                  {(() => {
-                    if (inlineField === "backend_deal") {
-                      const hasTier = backendDealForm.showTierRow;
-                      return (
-                        <div ref={inlineRef} className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Backend Deal</Label>
-
-                          {/* Row 1: percentage + GBOR/NBOR + vs/plus */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <div className="flex items-center gap-1.5">
-                              <Input
-                                type="number"
-                                min={1}
-                                max={100}
-                                step={0.5}
-                                value={backendDealForm.pct}
-                                onChange={(e) => setBackendDealForm(p => ({ ...p, pct: e.target.value }))}
-                                className="text-sm h-9 w-20 font-mono text-right ring-1 ring-ring/40"
-                                placeholder="70"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") { e.preventDefault(); saveBackendDeal(); }
-                                  if (e.key === "Escape") { e.preventDefault(); cancelInline(); }
-                                }}
-                              />
-                              <span className="text-sm text-muted-foreground">% of</span>
-                            </div>
-                            <div className="flex rounded-md bg-muted p-0.5 text-sm gap-0.5">
-                              {(["GBOR", "NBOR"] as const).map((opt) => (
-                                <button
-                                  key={opt}
-                                  type="button"
-                                  onClick={() => setBackendDealForm(p => ({ ...p, basis: opt }))}
-                                  className={cn(
-                                    "px-3 py-1 rounded-sm font-medium [transition:background-color_150ms_var(--ease-out),color_150ms_var(--ease-out)]",
-                                    backendDealForm.basis === opt
-                                      ? "bg-background text-foreground shadow-sm"
-                                      : "text-muted-foreground hover:text-foreground"
-                                  )}
-                                >
-                                  {opt}
-                                </button>
-                              ))}
-                            </div>
-                            <div className="flex rounded-md bg-muted p-0.5 text-sm gap-0.5">
-                              {(["vs", "plus"] as const).map((opt) => (
-                                <button
-                                  key={opt}
-                                  type="button"
-                                  onClick={() => setBackendDealForm(p => ({ ...p, dealType: opt }))}
-                                  className={cn(
-                                    "px-3 py-1 rounded-sm font-medium [transition:background-color_150ms_var(--ease-out),color_150ms_var(--ease-out)]",
-                                    backendDealForm.dealType === opt
-                                      ? "bg-background text-foreground shadow-sm"
-                                      : "text-muted-foreground hover:text-foreground"
-                                  )}
-                                >
-                                  {opt}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Row 2: optional escalating tier */}
-                          {hasTier ? (
-                            <div className="flex items-center gap-1.5 flex-wrap text-sm text-muted-foreground">
-                              <span>then</span>
-                              <Input
-                                type="number"
-                                min={1}
-                                max={100}
-                                step={0.5}
-                                value={backendDealForm.tier2Pct}
-                                onChange={(e) => setBackendDealForm(p => ({ ...p, tier2Pct: e.target.value }))}
-                                className="text-sm h-8 w-16 font-mono text-right"
-                                placeholder="75"
-                              />
-                              <span>% above</span>
-                              <Input
-                                type="number"
-                                min={1}
-                                step={1}
-                                value={backendDealForm.tier2Threshold}
-                                onChange={(e) => setBackendDealForm(p => ({ ...p, tier2Threshold: e.target.value }))}
-                                className="text-sm h-8 w-24 font-mono text-right"
-                                placeholder="200"
-                              />
-                              <span>tickets</span>
-                              <button
-                                type="button"
-                                onClick={() => setBackendDealForm(p => ({ ...p, tier2Pct: "", tier2Threshold: "", showTierRow: false }))}
-                                className="text-xs text-muted-foreground hover:text-destructive ml-1"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setBackendDealForm(p => ({ ...p, showTierRow: true }))}
-                              className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-                            >
-                              + Add escalating tier
-                            </button>
-                          )}
-
-                          <InlineActions onSave={saveBackendDeal} onCancel={cancelInline} />
-                        </div>
-                      );
-                    }
-                    if (show.backend_deal) {
-                      return (
-                        <button onClick={startBackendDealEdit} className="w-full text-left group">
-                          <FieldRow label="Backend Deal" value={show.backend_deal} />
-                        </button>
-                      );
-                    }
-                    return <EmptyFieldPrompt label="backend deal" onClick={startBackendDealEdit} />;
-                  })()}
-                </div>
-                <div>{editField("artist_comps", "Artist Comps", { alwaysShow: true })}</div>
-              </div>
-            </FieldGroup>
-
-            {/* Revenue Simulator */}
-            {(() => {
-              const wp = parseDollar(show.walkout_potential);
-              const tp = parseDollar(show.ticket_price);
-              const g = parseDollar(show.guarantee) ?? 0;
-              // Strip commas only (not dots), so parseInt naturally truncates at the decimal point
-              // e.g. "430.0" → parseInt → 430, not 4300
-              const cap = show.venue_capacity ? parseInt(show.venue_capacity.replace(/,/g, ""), 10) : null;
-              const validCap = cap != null && !isNaN(cap) ? cap : null;
-              const canSimulate = wp !== null || (tp != null && tp > 0 && validCap != null);
-              if (g === 0 && !canSimulate) return null;
-              return (
-                <>
-                  <Separator />
-                  <FieldGroup title="Revenue Simulator">
-                    {canSimulate ? (
-                      <RevenueSimulator
-                        guarantee={g}
-                        walkoutPotential={wp ?? 0}
-                        venueCapacity={validCap}
-                        ticketPrice={tp}
-                        backendDeal={show.backend_deal}
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Add a <span className="font-medium text-foreground">walkout potential</span> or both <span className="font-medium text-foreground">ticket price</span> and <span className="font-medium text-foreground">capacity</span> to simulate projected revenue.
-                      </p>
                     )}
-                  </FieldGroup>
-                </>
-              );
-            })()}
+                  </div>
+                )}
 
-          </div>
+                {/* Deal — ledger rows */}
+                <div>
+                  <LedgerRule>Deal</LedgerRule>
+
+                  <LedgerRow label="Guarantee" accent>
+                    <LedgerValue
+                      fieldKey="guarantee"
+                      value={show.guarantee}
+                      prefix="$"
+                      currency
+                      accent
+                      inputMode="decimal"
+                    />
+                  </LedgerRow>
+
+                  <LedgerRow label="Ticket price">
+                    <LedgerValue
+                      fieldKey="ticket_price"
+                      value={show.ticket_price}
+                      prefix="$"
+                      currency
+                      inputMode="decimal"
+                    />
+                  </LedgerRow>
+
+                  <LedgerRow label="Capacity">
+                    <LedgerValue
+                      fieldKey="venue_capacity"
+                      value={show.venue_capacity}
+                      inputMode="numeric"
+                    />
+                  </LedgerRow>
+
+                  {/* Backend — structured editor expands the row when editing */}
+                  {inlineField === "backend_deal" ? (
+                    <div
+                      ref={inlineRef}
+                      className="py-2.5 border-b border-dotted border-border/80 space-y-2"
+                    >
+                      <span className="text-[13px] text-muted-foreground">Backend</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="number"
+                            min={1}
+                            max={100}
+                            step={0.5}
+                            value={backendDealForm.pct}
+                            onChange={(e) =>
+                              setBackendDealForm((p) => ({ ...p, pct: e.target.value }))
+                            }
+                            className="text-sm h-9 w-20 font-mono text-right ring-1 ring-ring/40"
+                            placeholder="70"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                saveBackendDeal();
+                              }
+                              if (e.key === "Escape") {
+                                e.preventDefault();
+                                cancelInline();
+                              }
+                            }}
+                          />
+                          <span className="text-sm text-muted-foreground">% of</span>
+                        </div>
+                        <div className="flex rounded-md bg-muted p-0.5 text-sm gap-0.5">
+                          {(["GBOR", "NBOR"] as const).map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => setBackendDealForm((p) => ({ ...p, basis: opt }))}
+                              className={cn(
+                                "px-3 py-1 rounded-sm font-medium [transition:background-color_150ms_var(--ease-out),color_150ms_var(--ease-out)]",
+                                backendDealForm.basis === opt
+                                  ? "bg-background text-foreground shadow-sm"
+                                  : "text-muted-foreground hover:text-foreground",
+                              )}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex rounded-md bg-muted p-0.5 text-sm gap-0.5">
+                          {(["vs", "plus"] as const).map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() =>
+                                setBackendDealForm((p) => ({ ...p, dealType: opt }))
+                              }
+                              className={cn(
+                                "px-3 py-1 rounded-sm font-medium [transition:background-color_150ms_var(--ease-out),color_150ms_var(--ease-out)]",
+                                backendDealForm.dealType === opt
+                                  ? "bg-background text-foreground shadow-sm"
+                                  : "text-muted-foreground hover:text-foreground",
+                              )}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {backendDealForm.showTierRow ? (
+                        <div className="flex items-center gap-1.5 flex-wrap text-sm text-muted-foreground">
+                          <span>then</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={100}
+                            step={0.5}
+                            value={backendDealForm.tier2Pct}
+                            onChange={(e) =>
+                              setBackendDealForm((p) => ({ ...p, tier2Pct: e.target.value }))
+                            }
+                            className="text-sm h-8 w-16 font-mono text-right"
+                            placeholder="75"
+                          />
+                          <span>% above</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={backendDealForm.tier2Threshold}
+                            onChange={(e) =>
+                              setBackendDealForm((p) => ({
+                                ...p,
+                                tier2Threshold: e.target.value,
+                              }))
+                            }
+                            className="text-sm h-8 w-24 font-mono text-right"
+                            placeholder="200"
+                          />
+                          <span>tickets</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setBackendDealForm((p) => ({
+                                ...p,
+                                tier2Pct: "",
+                                tier2Threshold: "",
+                                showTierRow: false,
+                              }))
+                            }
+                            className="text-xs text-muted-foreground hover:text-destructive ml-1"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setBackendDealForm((p) => ({ ...p, showTierRow: true }))
+                          }
+                          className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                        >
+                          + Add escalating tier
+                        </button>
+                      )}
+
+                      <InlineActions onSave={saveBackendDeal} onCancel={cancelInline} />
+                    </div>
+                  ) : (
+                    <LedgerRow label="Backend">
+                      {show.backend_deal ? (
+                        <button
+                          type="button"
+                          onClick={startBackendDealEdit}
+                          className="font-mono tracking-tight text-foreground text-[14px] leading-tight inline-block border-b border-transparent hover:border-foreground/15 transition-colors"
+                        >
+                          {show.backend_deal}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={startBackendDealEdit}
+                          className="font-mono tracking-tight text-muted-foreground/55 hover:text-foreground/60 transition-colors text-[14px] leading-tight"
+                        >
+                          —
+                        </button>
+                      )}
+                    </LedgerRow>
+                  )}
+
+                  <LedgerRow label="Artist comps">
+                    <LedgerValue fieldKey="artist_comps" value={show.artist_comps} />
+                  </LedgerRow>
+
+                  <LedgerRow label="Walkout potential" hint="@ sellout">
+                    <LedgerValue
+                      fieldKey="walkout_potential"
+                      value={show.walkout_potential}
+                      prefix="$"
+                      currency
+                      inputMode="decimal"
+                    />
+                  </LedgerRow>
+                </div>
+
+                {/* Revenue Simulator — collapsible, ledger rule */}
+                {showSimulator && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setProjectionOpen((v) => !v)}
+                      aria-expanded={projectionOpen}
+                      className="w-full flex items-center gap-2 pb-1.5 mb-2.5 border-b border-foreground/80 group text-left"
+                    >
+                      <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-foreground">
+                        Projection
+                      </span>
+                      <ChevronDown
+                        aria-hidden
+                        className={cn(
+                          "ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:text-foreground/80",
+                          projectionOpen && "rotate-180",
+                        )}
+                      />
+                    </button>
+                    <div
+                      className={cn(
+                        "grid [transition:grid-template-rows_220ms_var(--ease-out),opacity_180ms_var(--ease-out)]",
+                        projectionOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+                      )}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="pt-1">
+                          {canSimulate ? (
+                            <RevenueSimulator
+                              guarantee={g}
+                              walkoutPotential={wp ?? 0}
+                              venueCapacity={validCap}
+                              ticketPrice={tp}
+                              backendDeal={show.backend_deal}
+                            />
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Add a{" "}
+                              <span className="font-medium text-foreground">walkout potential</span>{" "}
+                              or both{" "}
+                              <span className="font-medium text-foreground">ticket price</span> and{" "}
+                              <span className="font-medium text-foreground">capacity</span> to
+                              simulate projected revenue.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </TabsContent>
       </Tabs>
 
