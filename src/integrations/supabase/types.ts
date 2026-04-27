@@ -811,6 +811,7 @@ export type Database = {
         Args: { _name: string; _team_id: string; _user_id: string }
         Returns: undefined
       }
+      dispatch_scheduled_slack_pushes: { Args: never; Returns: number }
       generate_inbound_email_token: { Args: never; Returns: string }
       get_guest_show: { Args: { p_token: string }; Returns: Json }
       get_team_member_emails: {
