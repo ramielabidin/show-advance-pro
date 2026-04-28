@@ -31,6 +31,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
+import { LedgerRule } from "@/components/Ledger";
 import SlackPushDialog from "@/components/SlackPushDialog";
 import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
@@ -1861,13 +1862,17 @@ export default function ShowDetailPage() {
 
         <TabsContent value="contacts">
           <div className="space-y-6 sm:space-y-8">
-            <Card className="p-5 sm:p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <h2 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Contacts</h2>
-                {(show.show_contacts?.length ?? 0) === 0 && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" aria-hidden />
-                )}
-              </div>
+            <FieldGroup
+              title="Contacts"
+              headerRight={
+                (show.show_contacts?.length ?? 0) === 0 ? (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60"
+                    aria-hidden
+                  />
+                ) : null
+              }
+            >
               <ContactsEditor
                 key={(show.show_contacts ?? []).map((c) => c.id).join(",") || "empty"}
                 initial={(show.show_contacts ?? [])
@@ -1908,7 +1913,7 @@ export default function ShowDetailPage() {
                   }
                 }}
               />
-            </Card>
+            </FieldGroup>
           </div>
         </TabsContent>
 
@@ -1953,22 +1958,8 @@ export default function ShowDetailPage() {
             const canSimulate = wp !== null || (tp != null && tp > 0 && validCap != null);
             const showSimulator = !(g === 0 && !canSimulate);
 
-            // Local helpers — ledger row + rule label
-            const LedgerRule = ({
-              children,
-              right,
-            }: {
-              children: React.ReactNode;
-              right?: React.ReactNode;
-            }) => (
-              <div className="flex items-center gap-2 pb-1.5 mb-2.5 border-b border-foreground/80">
-                <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-foreground">
-                  {children}
-                </span>
-                {right && <span className="ml-auto">{right}</span>}
-              </div>
-            );
-
+            // Local helpers — ledger row (LedgerRule lives in @/components/Ledger
+            // so it can be shared with FieldGroup)
             const LedgerRow = ({
               label,
               hint,
