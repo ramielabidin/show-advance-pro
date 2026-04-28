@@ -14,10 +14,15 @@ const MIN_SPINNER_DURATION = 500;
  * Rubber-band resistance: the indicator moves quickly at first and
  * increasingly resists the further the user pulls.
  * Approaches ~MAX_VISUAL asymptotically — never quite reaches it.
+ *
+ * The denominator constant (MAX_VISUAL * k) controls stiffness.
+ * k=0.5 means the THRESHOLD (52px visual) is hit at ~94px of raw touch
+ * movement — a natural single-finger swipe. k=1.4 (the original value)
+ * required ~262px, making the gesture practically unreachable.
  */
 const MAX_VISUAL = 72;
 function resist(rawDelta: number): number {
-  return (rawDelta * MAX_VISUAL) / (rawDelta + MAX_VISUAL * 1.4);
+  return (rawDelta * MAX_VISUAL) / (rawDelta + MAX_VISUAL * 0.5);
 }
 
 export interface PullToRefreshState {
