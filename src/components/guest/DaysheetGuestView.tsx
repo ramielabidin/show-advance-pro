@@ -1,16 +1,17 @@
+import { useState } from "react";
 import { format, parseISO } from "date-fns";
-import { MapPin } from "lucide-react";
+import { FileText, Loader2, MapPin } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
 import { cn, formatCityState } from "@/lib/utils";
 import { hasData, type SectionKey } from "@/lib/daysheetSections";
 import { formatHotelMoment } from "@/lib/timeFormat";
 import { roleLabel } from "@/lib/contactRoles";
+import { supabase } from "@/integrations/supabase/client";
 import type { Show } from "@/lib/types";
-import type { GuestShowPayload } from "@/lib/guestLinks";
+import type { GuestAttachment, GuestShowPayload } from "@/lib/guestLinks";
 import GuestGuestList from "./GuestGuestList";
 
 interface DaysheetGuestViewProps {
@@ -64,6 +65,58 @@ function Schedule({ show }: { show: GuestShowPayload }) {
         );
       })}
     </Card>
+  );
+}
+
+function formatSize(bytes: number | null | undefined): string {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function AttachmentRow({ att, token }: { att: GuestAttachment; token: string }) {
+  const [opening, setOpening] = useState(false);
+
+  const open = async () => {
+    setOpening(true);
+    // Open tab synchronously — mobile browsers block window.open() after await.
+    const win = window.open("", "_blank");
+    try {
+      const { data, error } = await supabase.functions.invoke("guest-attachment-url", {
+        body: { token, attachment_id: att.id },
+      });
+      if (error || !data?.url) {
+        win?.close();
+        return;
+      }
+      if (win) win.location.href = data.url;
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={open}
+      disabled={opening}
+      className="flex items-center gap-2.5 w-full text-left group/att"
+    >
+      {opening ? (
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+      ) : (
+        <FileText className="h-4 w-4 shrink-0 text-muted-foreground group-hover/att:text-foreground transition-colors" />
+      )}
+      <div className="min-w-0">
+        <p className="text-sm text-foreground group-hover/att:underline truncate">
+          {att.original_filename}
+        </p>
+        {att.size_bytes ? (
+          <p className="text-xs text-muted-foreground">{formatSize(att.size_bytes)}</p>
+        ) : null}
+      </div>
+    </button>
   );
 }
 
@@ -126,7 +179,6 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
           const others = contacts.filter((c) => c !== dos);
           return (
             <>
-              {has("schedule") && <Separator />}
               {dos && (
                 <FieldGroup title="Day of Show Contact" contentClassName="space-y-2">
                   <FieldRow label="Name" value={dos.name} />
@@ -136,7 +188,6 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
               )}
               {others.length > 0 && (
                 <>
-                  {dos && <Separator />}
                   <FieldGroup title="Other Contacts" contentClassName="space-y-3">
                     {others.map((c) => (
                       <div key={c.id} className="space-y-1">
@@ -156,29 +207,21 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
         })()}
 
         {has("departure") && (
-          <>
-            <Separator />
-            <FieldGroup title="Departure" contentClassName="space-y-2">
-              <FieldRow label="Time" value={show.departure_time} mono />
-              <FieldRow label="Notes" value={show.departure_notes} />
-            </FieldGroup>
-          </>
+          <FieldGroup title="Departure" contentClassName="space-y-2">
+            <FieldRow label="Time" value={show.departure_time} mono />
+            <FieldRow label="Notes" value={show.departure_notes} />
+          </FieldGroup>
         )}
 
         {hasArrival && (
-          <>
-            <Separator />
-            <FieldGroup title="Arrival" contentClassName="space-y-2">
-              {has("loadIn") && <FieldRow label="Load In" value={show.load_in_details} />}
-              {has("parking") && <FieldRow label="Parking" value={show.parking_notes} />}
-            </FieldGroup>
-          </>
+          <FieldGroup title="Arrival" contentClassName="space-y-2">
+            {has("loadIn") && <FieldRow label="Load In" value={show.load_in_details} />}
+            {has("parking") && <FieldRow label="Parking" value={show.parking_notes} />}
+          </FieldGroup>
         )}
 
         {hasAtVenue && (
-          <>
-            <Separator />
-            <FieldGroup title="At The Venue" contentClassName="space-y-2">
+          <FieldGroup title="At The Venue" contentClassName="space-y-2">
               {has("greenRoom") && <FieldRow label="Green Room" value={show.green_room_info} />}
               {has("wifi") && (
                 <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
@@ -197,10 +240,7 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
                 </div>
               )}
             </FieldGroup>
-          </>
         )}
-
-        <Separator />
 
         <FieldGroup title="Guest List">
           <GuestGuestList
@@ -211,9 +251,7 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
         </FieldGroup>
 
         {has("hotel") && (
-          <>
-            <Separator />
-            <FieldGroup title="Accommodations">
+          <FieldGroup title="Accommodations">
               <div className="rounded-lg border border-dashed border-foreground/20 bg-background/40">
                 {(show.hotel_name || show.hotel_address) && (
                   <div className="px-4 sm:px-5 pt-4 pb-3">
@@ -274,16 +312,20 @@ export default function DaysheetGuestView({ show, token }: DaysheetGuestViewProp
                 })()}
               </div>
             </FieldGroup>
-          </>
         )}
 
         {show.additional_info && (
-          <>
-            <Separator />
-            <FieldGroup title="Notes">
-              <FieldRow label="" value={show.additional_info} noLabel />
-            </FieldGroup>
-          </>
+          <FieldGroup title="Notes">
+            <FieldRow label="" value={show.additional_info} noLabel />
+          </FieldGroup>
+        )}
+
+        {show.attachments?.length > 0 && (
+          <FieldGroup title="Attachments" contentClassName="space-y-3">
+            {show.attachments.map((att) => (
+              <AttachmentRow key={att.id} att={att} token={token} />
+            ))}
+          </FieldGroup>
         )}
       </div>
     </div>

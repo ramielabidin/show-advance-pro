@@ -40,6 +40,13 @@ export interface GuestContact {
   sort_order: number | null;
 }
 
+export interface GuestAttachment {
+  id: string;
+  original_filename: string;
+  size_bytes: number | null;
+  content_type: string | null;
+}
+
 // Payload returned by the `get_guest_show` RPC. Deal / financial fields are
 // deliberately omitted server-side so they never reach the client.
 export interface GuestShowPayload {
@@ -72,6 +79,7 @@ export interface GuestShowPayload {
   additional_info: string | null;
   schedule_entries: GuestScheduleEntry[];
   contacts: GuestContact[];
+  attachments: GuestAttachment[];
 }
 
 const TOKEN_LENGTH = 17;
