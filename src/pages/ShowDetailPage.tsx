@@ -716,7 +716,38 @@ export default function ShowDetailPage() {
   });
 
   if (isLoading) {
-    return <div className="space-y-4 animate-pulse"><div className="h-8 w-48 bg-muted rounded" /><div className="h-64 bg-muted rounded-lg" /></div>;
+    // Layout-faithful skeleton: mirrors the page header (eyebrow + title +
+    // subline), the underlined tab strip, and three ledger-style sections so
+    // first-navigation users see the shape of what's loading instead of a
+    // generic block.
+    return (
+      <div className="animate-fade-in max-w-3xl space-y-7 pb-8">
+        <div className="space-y-2 animate-pulse">
+          <div className="h-3 w-16 bg-muted rounded" />
+          <div className="h-8 w-2/3 bg-muted rounded" />
+          <div className="h-3.5 w-1/3 bg-muted rounded" />
+        </div>
+        <div className="flex gap-5 pt-3 border-b border-border pb-2 animate-pulse">
+          <div className="h-4 w-20 bg-muted rounded" />
+          <div className="h-4 w-16 bg-muted rounded" />
+          <div className="h-4 w-20 bg-muted rounded" />
+          <div className="h-4 w-16 bg-muted rounded" />
+        </div>
+        <div className="space-y-7 animate-pulse">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="space-y-2.5">
+              <div className="flex items-center pb-1.5 border-b border-foreground/80">
+                <div className="h-2.5 w-20 bg-muted rounded" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-full bg-muted/60 rounded" />
+                <div className="h-4 w-5/6 bg-muted/60 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (!show) {
@@ -1402,24 +1433,22 @@ export default function ShowDetailPage() {
                   <button
                     type="button"
                     onClick={dismissImportAdvance}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+                    className="text-xs text-muted-foreground hover:text-foreground [transition:color_150ms_var(--ease-out)] underline underline-offset-2"
                   >
                     or fill in manually
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-2 opacity-50 pointer-events-none select-none">
-                <div className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground border-l-2 border-border pl-2">
-                  Schedule
-                </div>
-                <div className="text-sm text-muted-foreground pl-2">Awaiting advance</div>
+              <div className="opacity-50 pointer-events-none select-none">
+                <FieldGroup title="Schedule">
+                  <p className="text-sm text-muted-foreground">Awaiting advance</p>
+                </FieldGroup>
               </div>
-              <div className="space-y-2 opacity-50 pointer-events-none select-none">
-                <div className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground border-l-2 border-border pl-2">
-                  Contacts
-                </div>
-                <div className="text-sm text-muted-foreground pl-2">Awaiting advance</div>
+              <div className="opacity-50 pointer-events-none select-none">
+                <FieldGroup title="Contacts">
+                  <p className="text-sm text-muted-foreground">Awaiting advance</p>
+                </FieldGroup>
               </div>
             </div>
           ) : (
@@ -1460,17 +1489,9 @@ export default function ShowDetailPage() {
               </FieldGroup>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="w-0.5 h-3.5 rounded-full bg-foreground/25" />
-                <h3 className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-                  Set Length
-                </h3>
-              </div>
-              <div className="flex-1 min-w-0">
-                {editField("set_length", "Set Length", { alwaysShow: true, labelHidden: true, placeholder: "e.g. 75 min" })}
-              </div>
-            </div>
+            <FieldGroup title="Set Length">
+              {editField("set_length", "Set Length", { alwaysShow: true, labelHidden: true, placeholder: "e.g. 75 min" })}
+            </FieldGroup>
 
             <FieldGroup
               title="Departure"
@@ -2116,7 +2137,7 @@ export default function ShowDetailPage() {
 
                     {/* Walkout — one editorial line */}
                     <div className="flex items-baseline justify-between gap-3 flex-wrap pb-2.5 border-b border-dotted border-border/80">
-                      <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
                         Walkout
                       </span>
                       <span className="inline-flex items-baseline gap-2.5 flex-wrap">
@@ -2167,7 +2188,7 @@ export default function ShowDetailPage() {
 
                     {show.settlement_notes && (
                       <div className="pt-3">
-                        <p className="text-[10px] uppercase tracking-[0.16em] font-medium text-muted-foreground mb-1.5">
+                        <p className="text-[10px] uppercase tracking-[0.18em] font-medium text-muted-foreground mb-1.5">
                           Notes
                         </p>
                         <p className="text-sm whitespace-pre-wrap text-muted-foreground leading-relaxed">
