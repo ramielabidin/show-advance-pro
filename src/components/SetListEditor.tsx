@@ -180,8 +180,6 @@ export default function SetListEditor({ show }: Props) {
     if (!saveMutation.isPending) setEntries(seed);
   }, [seed, saveMutation.isPending]);
 
-  const dirty = useMemo(() => !entriesEqual(entries, seed), [entries, seed]);
-
   const { data: songs = [], isLoading: songsLoading } = useQuery({
     queryKey: ["songs"],
     queryFn: async (): Promise<Song[]> => {
