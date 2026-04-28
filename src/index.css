@@ -319,3 +319,11 @@
     }
   }
 }
+
+/* iOS Safari auto-zooms when a focused input has font-size < 16px.
+   Using max() keeps larger inherited sizes intact on both platforms. */
+@media (max-width: 767px) {
+  input, textarea, select {
+    font-size: max(16px, 1em);
+  }
+}
