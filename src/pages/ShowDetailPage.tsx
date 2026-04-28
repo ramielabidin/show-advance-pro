@@ -72,13 +72,6 @@ function formatCurrency(raw: string): string {
   }).format(num);
 }
 
-// Strip country + city/state tail from a Google-formatted address so the
-// mobile header can show just the street line beneath the city row.
-function streetFromAddress(addr: string): string {
-  const cleaned = addr.replace(/,?\s*United States$/i, "").trim();
-  const firstComma = cleaned.indexOf(",");
-  return firstComma > 0 ? cleaned.slice(0, firstComma).trim() : cleaned;
-}
 
 interface ShareMenuContentProps {
   show: Show;
@@ -1265,25 +1258,22 @@ export default function ShowDetailPage() {
                   )}
                 </div>
 
-                {/* Mobile meta — quiet city line + street address, drive-time as muted strip */}
+                {/* Mobile meta — address as single maps link, matching desktop behaviour */}
                 <div className="sm:hidden mt-1.5 text-[13px] text-muted-foreground">
                   {show.venue_address ? (
-                    <div className="flex items-start gap-1.5">
+                    <div className="flex items-center gap-1.5">
                       <a
                         href={`https://maps.google.com/?q=${encodeURIComponent(show.venue_address)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex-1 min-w-0 hover:text-foreground transition-colors"
                       >
-                        <span className="block">{formatCityState(show.city)}</span>
-                        <span className="block text-[12px] text-muted-foreground/75 mt-0.5">
-                          {streetFromAddress(show.venue_address)}
-                        </span>
+                        {show.venue_address.replace(/,?\s*United States$/i, "")}
                       </a>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 shrink-0 text-muted-foreground/70 hover:text-foreground -mt-0.5"
+                        className="h-6 w-6 shrink-0 text-muted-foreground/70 hover:text-foreground"
                         aria-label="Edit address"
                         onClick={() => {
                           setInlineField("venue_address");
