@@ -10,7 +10,6 @@ import { useTeam } from "@/components/TeamProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -844,11 +843,17 @@ export default function ShowDetailPage() {
 
     const displayValue = opts?.currency ? formatCurrency(value) : value;
 
-    // Clickable value to enter inline edit
+    // Clickable value to enter inline edit. Multi-line text fields (Backline,
+    // Notes) get a dashed-border container so the editable region reads as a
+    // block rather than loose text — mirrors the Hotel card affordance.
     return (
       <button
         onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat, structuredTime: opts?.structuredTime })}
-        className="w-full text-left group"
+        className={cn(
+          "w-full text-left group",
+          opts?.multiline &&
+            "rounded-lg border border-dashed border-foreground/20 bg-background/40 hover:bg-foreground/[0.02] transition-colors px-4 py-3",
+        )}
       >
         <FieldRow label={label} value={displayValue} mono={opts?.mono} compact={opts?.compact} noLabel={opts?.labelHidden} />
       </button>
@@ -1467,8 +1472,6 @@ export default function ShowDetailPage() {
               </div>
             </div>
 
-            <Separator />
-
             <FieldGroup
               title="Departure"
               collapsible
@@ -1536,20 +1539,11 @@ export default function ShowDetailPage() {
                   }}
                   className="w-full text-left space-y-2 card-pressable cursor-pointer"
                 >
-                  <FieldRow label="Time" value={show.departure_time} mono />
-                  {show.departure_notes ? (
-                    <FieldRow label="Notes" value={show.departure_notes} />
-                  ) : (
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                      <span className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">Notes</span>
-                      <span className="text-sm text-muted-foreground/50">Add notes…</span>
-                    </div>
-                  )}
+                  <FieldRow label="Time" value={show.departure_time} mono placeholder="Add departure time…" />
+                  <FieldRow label="Notes" value={show.departure_notes} placeholder="Add notes…" />
                 </div>
               )}
             </FieldGroup>
-
-            <Separator />
 
             {/* Arrival — full width */}
             <FieldGroup
@@ -1590,13 +1584,11 @@ export default function ShowDetailPage() {
                   }}
                   className="w-full text-left space-y-4 card-pressable cursor-pointer"
                 >
-                  <FieldRow label="Load In" value={show.load_in_details} />
-                  <FieldRow label="Parking" value={show.parking_notes} />
+                  <FieldRow label="Load In" value={show.load_in_details} placeholder="Add load in details…" />
+                  <FieldRow label="Parking" value={show.parking_notes} placeholder="Add parking info…" />
                 </div>
               )}
             </FieldGroup>
-
-            <Separator />
 
             <FieldGroup
               title="At The Venue"
@@ -1654,7 +1646,7 @@ export default function ShowDetailPage() {
                   }}
                   className="w-full text-left space-y-2 card-pressable cursor-pointer"
                 >
-                  <FieldRow label="Green Room" value={show.green_room_info} />
+                  <FieldRow label="Green Room" value={show.green_room_info} placeholder="Add green room info…" />
                   {(show.wifi_network || show.wifi_password) ? (
                     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
                       <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">WiFi</span>
@@ -1670,19 +1662,17 @@ export default function ShowDetailPage() {
                         )}
                       </div>
                     </div>
-                  ) : null}
-                  <FieldRow label="Hospitality" value={show.hospitality} />
+                  ) : (
+                    <FieldRow label="WiFi" value={null} placeholder="Add WiFi network and password…" />
+                  )}
+                  <FieldRow label="Hospitality" value={show.hospitality} placeholder="Add hospitality info…" />
                 </div>
               )}
             </FieldGroup>
 
-            <Separator />
-
             <FieldGroup title="Backline" collapsible defaultOpen={!!show.backline_provided}>
               {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add backline notes" })}
             </FieldGroup>
-
-            <Separator />
 
             {/* Guest List */}
             <div id="guest-list-section">
@@ -1707,12 +1697,6 @@ export default function ShowDetailPage() {
                 )}
               </FieldGroup>
             </div>
-
-            <Separator />
-
-            <ShowAttachments showId={show.id} />
-
-            <Separator />
 
             <FieldGroup
               title="Accommodations"
@@ -1850,12 +1834,12 @@ export default function ShowDetailPage() {
               )}
             </FieldGroup>
 
-            <Separator />
-
             {/* Notes — collapsed by default on fresh shows */}
             <FieldGroup title="Notes" collapsible defaultOpen={!!show.additional_info}>
               {editField("additional_info", "Notes", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add notes" })}
             </FieldGroup>
+
+            <ShowAttachments showId={show.id} />
           </div>
           )}
         </TabsContent>
