@@ -50,9 +50,10 @@ export default function PhaseSettle({ show }: PhaseSettleProps) {
 
   return (
     <div className="px-[22px] pt-2 pb-7 flex-1 flex flex-col">
-      {/* Eyebrow */}
+      {/* Eyebrow — aligned to Phase 1's pt-[14px] hero rhythm so the phase
+          morph reads as a content swap, not a layout shift. */}
       <div
-        className="text-[11px] uppercase font-medium leading-none mt-6 mb-[18px]"
+        className="text-[11px] uppercase font-medium leading-none pt-[14px] mb-3.5"
         style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
       >
         Show's done.
