@@ -157,6 +157,23 @@ export default function SetListEditor({ show }: Props) {
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
 
+  const saveMutation = useMutation({
+    mutationFn: async (entriesToSave: SetListEntry[]) => {
+      const { error } = await supabase
+        .from("shows")
+        .update({ set_list: entriesToSave })
+        .eq("id", show.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["show", show.id] });
+      queryClient.invalidateQueries({ queryKey: ["shows"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Re-seed when the saved set list changes, but not while a save is in flight
   // (that would clobber edits made during the network round-trip).
   useEffect(() => {
@@ -185,23 +202,6 @@ export default function SetListEditor({ show }: Props) {
     for (const e of entries) if (e.kind === "song") s.add(e.song_id);
     return s;
   }, [entries]);
-
-  const saveMutation = useMutation({
-    mutationFn: async (entriesToSave: SetListEntry[]) => {
-      const { error } = await supabase
-        .from("shows")
-        .update({ set_list: entriesToSave })
-        .eq("id", show.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["show", show.id] });
-      queryClient.invalidateQueries({ queryKey: ["shows"] });
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounced auto-save: fires 800ms after the last change.
   useEffect(() => {
