@@ -16,10 +16,11 @@ interface PhasePreShowProps {
 }
 
 /**
- * Phase 1 surface — pre-show. Hero is the next schedule moment, with the
- * clock time as the typographic flex and the countdown demoted to a subtitle
- * (per the design feedback round). Schedule list, then a 2-up DOS contact +
- * guest list count, then a full-width venue navigate row.
+ * Phase 1 surface — pre-show. Two-column hero (Up next on the left, Venue
+ * mirrored on the right), then the schedule list as the operative artifact,
+ * then a single day-of contact action. Guest-list management lives on the
+ * show detail page; this surface stays focused on what the user needs in
+ * the moment.
  */
 export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
   const navigate = useNavigate();
@@ -205,11 +206,12 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
         )}
       </div>
 
-      {/* Schedule list */}
+      {/* Schedule — the operative artifact on this screen. Given the most
+          vertical space; the user is here to read it. */}
       {sortedEntries.length > 0 && (
-        <div className="mt-6">
+        <div className="mt-8" data-stagger="2">
           <div
-            className="text-[11px] uppercase font-medium leading-none mb-2"
+            className="text-[11px] uppercase font-medium leading-none mb-3"
             style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
           >
             Schedule

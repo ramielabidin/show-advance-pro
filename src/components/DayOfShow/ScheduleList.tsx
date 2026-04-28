@@ -22,7 +22,7 @@ export default function ScheduleList({ entries, nowMin, heroIndex }: ScheduleLis
 
   return (
     <div
-      className="rounded-[12px] border px-3 py-1"
+      className="rounded-[12px] border px-3.5 py-1.5"
       style={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
     >
       {entries.map((row, i) => {
@@ -37,8 +37,8 @@ export default function ScheduleList({ entries, nowMin, heroIndex }: ScheduleLis
           <div
             key={row.id}
             className={cn(
-              "grid items-center gap-2.5 py-[9px]",
-              "[grid-template-columns:62px_1fr_auto]",
+              "grid items-center gap-3 py-[13px]",
+              "[grid-template-columns:68px_1fr_auto]",
               i < entries.length - 1 && "border-b",
             )}
             style={{
@@ -48,7 +48,7 @@ export default function ScheduleList({ entries, nowMin, heroIndex }: ScheduleLis
           >
             <span
               className={cn(
-                "font-mono text-[12px]",
+                "font-mono text-[13.5px]",
                 isPast && "line-through",
               )}
               style={{
@@ -59,7 +59,7 @@ export default function ScheduleList({ entries, nowMin, heroIndex }: ScheduleLis
               {display}
             </span>
             <span
-              className="text-[13.5px] flex items-center gap-1.5 min-w-0"
+              className="text-[14.5px] flex items-center gap-1.5 min-w-0"
               style={{
                 color: isHero ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
                 fontWeight: isHero ? 500 : 400,
@@ -67,7 +67,7 @@ export default function ScheduleList({ entries, nowMin, heroIndex }: ScheduleLis
             >
               {row.is_band && (
                 <Mic
-                  className="h-[11px] w-[11px] shrink-0"
+                  className="h-[12px] w-[12px] shrink-0"
                   style={{ color: "hsl(var(--badge-new))" }}
                   strokeWidth={2}
                 />
