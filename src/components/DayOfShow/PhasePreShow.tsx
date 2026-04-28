@@ -1,10 +1,9 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Phone, Users, ArrowUpRight } from "lucide-react";
+import { Phone, ArrowUpRight } from "lucide-react";
 import { to24Hour } from "@/lib/timeFormat";
 import { roleLabel } from "@/lib/contactRoles";
 import { normalizePhone, formatCityState } from "@/lib/utils";
-import { parseGuestList, guestTotal } from "@/components/GuestListEditor";
 import type { Show, ScheduleEntry } from "@/lib/types";
 import ActionCard from "./ActionCard";
 import ScheduleList from "./ScheduleList";
@@ -63,11 +62,6 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
   const dosContact = useMemo(
     () => (show.show_contacts ?? []).find((c) => c.role === "day_of_show") ?? null,
     [show.show_contacts],
-  );
-
-  const guestCount = useMemo(
-    () => guestTotal(parseGuestList(show.guest_list_details)),
-    [show.guest_list_details],
   );
 
   const venueNavHref = useMemo(() => {
@@ -224,8 +218,10 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
         </div>
       )}
 
-      {/* Action stack — venue lives in the hero now, so just contact + guests */}
-      <div className="mt-[22px] space-y-2.5">
+      {/* Single action — day-of contact. Guest list, set list, etc. live on
+          the show detail page; this surface stays focused on the in-the-moment
+          ask: "who do I call right now". */}
+      <div className="mt-[22px]" data-stagger="3">
         <ActionCard
           icon={Phone}
           eyebrow="Day-of contact"
@@ -244,15 +240,6 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
               : () => navigate(`/shows/${show.id}?tab=contacts`)
           }
           fullWidth
-        />
-        <ActionCard
-          icon={Users}
-          eyebrow="Guest list"
-          title={String(guestCount)}
-          sub={guestCount === 0 ? "no guests yet" : "confirmed names"}
-          titleMono
-          fullWidth
-          onClick={() => navigate(`/shows/${show.id}?focus=guest-list`)}
         />
       </div>
     </div>
