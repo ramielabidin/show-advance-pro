@@ -58,8 +58,13 @@ export default function FieldGroup({
         </button>
         <div
           className={cn(
-            "grid [transition:grid-template-rows_220ms_var(--ease-out),opacity_180ms_var(--ease-out)]",
-            open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+            "grid",
+            // Asymmetric timing: expand is deliberate (220ms — user wants
+            // to see content reveal), collapse is responsive (160ms — user
+            // has decided to hide it).
+            open
+              ? "grid-rows-[1fr] opacity-100 [transition:grid-template-rows_220ms_var(--ease-out),opacity_180ms_var(--ease-out)]"
+              : "grid-rows-[0fr] opacity-0 [transition:grid-template-rows_160ms_var(--ease-out),opacity_120ms_var(--ease-out)]",
           )}
         >
           <div className="overflow-hidden">

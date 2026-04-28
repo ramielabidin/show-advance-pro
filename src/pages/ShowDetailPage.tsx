@@ -852,7 +852,7 @@ export default function ShowDetailPage() {
         className={cn(
           "w-full text-left group",
           opts?.multiline &&
-            "rounded-lg border border-dashed border-foreground/20 bg-background/40 hover:bg-foreground/[0.02] transition-colors px-4 py-3",
+            "rounded-lg border border-dashed border-foreground/20 bg-background/40 hover:bg-foreground/[0.02] [transition:background-color_150ms_var(--ease-out)] px-4 py-3",
         )}
       >
         <FieldRow label={label} value={displayValue} mono={opts?.mono} compact={opts?.compact} noLabel={opts?.labelHidden} />

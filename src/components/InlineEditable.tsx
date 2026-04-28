@@ -11,6 +11,16 @@ const INLINE_CHROME_CLASS = cn(
   "py-1 px-0 leading-[1.55] text-[13px] text-foreground placeholder:text-muted-foreground/60",
 );
 
+/** Resize a textarea to fit its content. Reset to "auto" first so it can
+ *  shrink as well as grow. Cap at the viewport so very long values still
+ *  scroll inside the textarea instead of pushing the page. */
+function autosizeTextarea(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.height = "auto";
+  const max = typeof window !== "undefined" ? window.innerHeight * 0.7 : Infinity;
+  el.style.height = `${Math.min(el.scrollHeight, max)}px`;
+}
+
 interface InlineFieldProps {
   value: string;
   onChange: (val: string) => void;
@@ -40,15 +50,22 @@ export function InlineField({
   type = "text",
   className,
 }: InlineFieldProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const cls = cn(
     INLINE_CHROME_CLASS,
     mono ? "font-mono" : "font-sans",
-    multiline && "min-h-[72px] resize-y",
+    multiline && "min-h-[72px] resize-y overflow-hidden",
     className,
   );
+  // Match the textarea's height to its content so the user sees what they're
+  // editing on tap-to-edit instead of a collapsed 72px box.
+  useEffect(() => {
+    if (multiline) autosizeTextarea(textareaRef.current);
+  }, [multiline, value]);
   if (multiline) {
     return (
       <textarea
+        ref={textareaRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoFocus={autoFocus}
@@ -119,6 +136,14 @@ export default function InlineEditable({
     if ("select" in el && typeof el.select === "function") el.select();
   }, [autoFocus]);
 
+  // Match the textarea's height to its content so long values open at full
+  // size instead of collapsing to the 72px floor.
+  useEffect(() => {
+    if (!multiline) return;
+    const el = ref.current;
+    if (el instanceof HTMLTextAreaElement) autosizeTextarea(el);
+  }, [multiline, value]);
+
   const commit = () => {
     if (didSettle.current) return;
     didSettle.current = true;
@@ -151,7 +176,7 @@ export default function InlineEditable({
   const inputClassName = cn(
     INLINE_CHROME_CLASS,
     mono ? "font-mono" : "font-sans",
-    multiline && "min-h-[72px] resize-y",
+    multiline && "min-h-[72px] resize-y overflow-hidden",
     className,
   );
 
