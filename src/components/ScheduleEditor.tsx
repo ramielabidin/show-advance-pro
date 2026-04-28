@@ -13,6 +13,8 @@ export interface ScheduleRow {
 interface ScheduleEditorProps {
   initial: ScheduleRow[];
   onSave: (rows: ScheduleRow[]) => void;
+  setLength?: string | null;
+  onSetLengthChange?: (val: string | null) => void;
 }
 
 const INLINE_CHROME =
@@ -28,10 +30,28 @@ function chronoSort(rows: ScheduleRow[]): ScheduleRow[] {
   });
 }
 
-export default function ScheduleEditor({ initial, onSave }: ScheduleEditorProps) {
+export default function ScheduleEditor({ initial, onSave, setLength, onSetLengthChange }: ScheduleEditorProps) {
   const [rows, setRows] = useState<ScheduleRow[]>(() => (initial.length > 0 ? initial : []));
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [draft, setDraft] = useState<ScheduleRow | null>(null);
+  const [editingSetLength, setEditingSetLength] = useState(false);
+  const [setLengthDraft, setSetLengthDraft] = useState("");
+
+  const startSetLengthEdit = () => {
+    setSetLengthDraft(setLength ?? "");
+    setEditingSetLength(true);
+  };
+  const commitSetLength = () => {
+    const val = setLengthDraft.trim();
+    if (val !== (setLength ?? "")) {
+      onSetLengthChange?.(val || null);
+    }
+    setEditingSetLength(false);
+  };
+  const cancelSetLengthEdit = () => {
+    setEditingSetLength(false);
+    setSetLengthDraft("");
+  };
 
   const startEdit = (idx: number) => {
     setEditingIdx(idx);
@@ -139,11 +159,17 @@ export default function ScheduleEditor({ initial, onSave }: ScheduleEditorProps)
           </div>
         ) : (
           // ── Read row ──────────────────────────────────────────────────────
-          <button
+          // Outer is a div (not button) so the band row's set-length cell can
+          // host its own click target without nesting interactives.
+          <div
             key={i}
-            type="button"
+            role="button"
+            tabIndex={0}
             onClick={() => startEdit(i)}
-            className="w-full grid grid-cols-[92px_1fr_auto] gap-3 items-center py-2.5 px-2 rounded-md hover:bg-muted/30 transition-colors text-left group"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(i); }
+            }}
+            className="w-full grid grid-cols-[92px_1fr_auto] gap-3 items-center py-2.5 px-2 rounded-md hover:bg-muted/30 transition-colors text-left group cursor-pointer"
           >
             <span
               className={cn(
@@ -165,13 +191,43 @@ export default function ScheduleEditor({ initial, onSave }: ScheduleEditorProps)
               {row.label || <span className="text-muted-foreground/50 font-normal">Activity</span>}
             </span>
             {row.is_band ? (
-              <span className="text-[10px] font-mono text-muted-foreground/70 tracking-[0.1em] uppercase">
-                SET
-              </span>
+              editingSetLength ? (
+                <input
+                  autoFocus
+                  type="text"
+                  value={setLengthDraft}
+                  onChange={(e) => setSetLengthDraft(e.target.value)}
+                  onBlur={commitSetLength}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
+                    else if (e.key === "Escape") { e.preventDefault(); cancelSetLengthEdit(); }
+                  }}
+                  placeholder="e.g. 75 min"
+                  className="w-24 bg-transparent border-0 border-b border-dashed border-foreground/40 focus:outline-none focus:border-foreground/60 font-mono text-sm text-right text-foreground placeholder:text-muted-foreground/50 py-0.5"
+                />
+              ) : (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); startSetLengthEdit(); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); startSetLengthEdit(); }
+                  }}
+                  className={cn(
+                    "cursor-text rounded-sm px-1 -mx-1 transition-colors hover:bg-foreground/[0.04] underline decoration-dashed decoration-transparent underline-offset-[3px] [transition:text-decoration-color_150ms_var(--ease-out)] hover:decoration-foreground/30",
+                    setLength
+                      ? "font-mono text-sm text-foreground"
+                      : "text-xs text-muted-foreground/60 italic",
+                  )}
+                >
+                  {setLength || "Add set length…"}
+                </span>
+              )
             ) : (
               <span />
             )}
-          </button>
+          </div>
         )
       )}
 

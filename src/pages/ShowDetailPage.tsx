@@ -867,17 +867,10 @@ export default function ShowDetailPage() {
 
     const displayValue = opts?.currency ? formatCurrency(value) : value;
 
-    // Clickable value to enter inline edit. Multi-line text fields (Backline,
-    // Notes) get a dashed-border container so the editable region reads as a
-    // block rather than loose text — mirrors the Hotel card affordance.
     return (
       <button
         onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat, structuredTime: opts?.structuredTime })}
-        className={cn(
-          "w-full text-left group",
-          opts?.multiline &&
-            "rounded-lg border border-dashed border-foreground/20 bg-background/40 hover:bg-foreground/[0.02] [transition:background-color_150ms_var(--ease-out)] px-4 py-3",
-        )}
+        className="w-full text-left group"
       >
         <FieldRow label={label} value={displayValue} mono={opts?.mono} compact={opts?.compact} noLabel={opts?.labelHidden} />
       </button>
@@ -1449,6 +1442,8 @@ export default function ShowDetailPage() {
                 <ScheduleEditor
                   key={scheduleKey}
                   initial={scheduleEntries.map((e) => ({ time: e.time, label: e.label, is_band: e.is_band }))}
+                  setLength={show.set_length}
+                  onSetLengthChange={(val) => updateMutation.mutate({ set_length: val })}
                   onSave={async (rows) => {
                     try {
                       await supabase.from("schedule_entries").delete().eq("show_id", id!);
@@ -1478,32 +1473,6 @@ export default function ShowDetailPage() {
                 </div>
               </FieldGroup>
             </div>
-
-            <FieldGroup title="Set Length">
-              {inlineField === "set_length" ? (
-                <div ref={inlineRef}>
-                  <InlineEditable
-                    value={inlineValue}
-                    onChange={setInlineValue}
-                    onSave={saveInline}
-                    onCancel={cancelInline}
-                    placeholder="e.g. 75 min"
-                    saving={updateMutation.isPending}
-                    className="font-display text-[28px] leading-none tracking-[-0.02em] py-0"
-                  />
-                </div>
-              ) : show.set_length ? (
-                <button
-                  type="button"
-                  onClick={() => startInlineEdit("set_length")}
-                  className="text-left font-display text-[28px] leading-none tracking-[-0.02em] text-foreground hover:text-primary/80 transition-colors py-1"
-                >
-                  {show.set_length}
-                </button>
-              ) : (
-                <EmptyFieldPrompt label="Set Length" onClick={() => startInlineEdit("set_length")} />
-              )}
-            </FieldGroup>
 
             <FieldGroup
               title="Departure"
