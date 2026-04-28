@@ -65,6 +65,26 @@
   }
 }
 
+/* Phase 1 stagger — one-shot cascade as Day of Show Phase 1 assembles.
+   Four data-stagger anchors live in PhasePreShow.tsx:
+     0 = hero (time column + venue, animated together)
+     1 = reserved
+     2 = schedule list
+     3 = action stack
+   Cascade is 30ms so the whole assemble lands under ~150ms. Decorative
+   only — does not block interaction. Hardware-accelerated (transform +
+   opacity only). */
+@keyframes phase-1-stagger {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @layer base {
   :root {
     --background: 40 30% 97%;
@@ -273,6 +293,17 @@
     animation: phase-morph 380ms var(--ease-in-out) both;
   }
 
+  /* Phase 1 stagger anchors — see @keyframes phase-1-stagger above. The
+     stagger runs nested inside .phase-morph so each phase remount replays
+     it. Indices map to PhasePreShow's data-stagger attributes. */
+  .phase-morph [data-stagger] {
+    animation: phase-1-stagger 360ms var(--ease-out) both;
+  }
+  .phase-morph [data-stagger="0"] { animation-delay: 0ms; }
+  .phase-morph [data-stagger="1"] { animation-delay: 30ms; }
+  .phase-morph [data-stagger="2"] { animation-delay: 60ms; }
+  .phase-morph [data-stagger="3"] { animation-delay: 90ms; }
+
   /* Override tailwindcss-animate defaults with our stronger curves */
   [data-state] {
     animation-timing-function: var(--ease-out);
@@ -306,6 +337,10 @@
     }
 
     .phase-morph {
+      animation: none;
+    }
+
+    .phase-morph [data-stagger] {
       animation: none;
     }
 
