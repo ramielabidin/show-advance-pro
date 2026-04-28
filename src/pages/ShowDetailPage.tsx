@@ -1668,37 +1668,41 @@ export default function ShowDetailPage() {
                   className="w-full text-left space-y-2 card-pressable cursor-pointer"
                 >
                   <FieldRow label="Green Room" value={show.green_room_info} placeholder="Add green room info…" />
-                  {show.wifi_network ? (
+                  {(show.wifi_network || show.wifi_password) ? (
                     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                      <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Network</span>
-                      <div
-                        className="flex items-center gap-1.5 min-w-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <span className="text-[13px] font-mono text-foreground break-all">
-                          {show.wifi_network}
-                        </span>
-                        <CopyButton value={show.wifi_network} />
+                      <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">WiFi</span>
+                      <div className="flex flex-col gap-1.5 min-w-0">
+                        <div className="flex items-baseline gap-3">
+                          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80 font-medium w-[68px] shrink-0">
+                            Network
+                          </span>
+                          {show.wifi_network ? (
+                            <span className="text-[13px] font-mono text-foreground break-all">
+                              {show.wifi_network}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground/55 italic">Add network…</span>
+                          )}
+                        </div>
+                        <div className="flex items-baseline gap-3">
+                          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80 font-medium w-[68px] shrink-0">
+                            Password
+                          </span>
+                          {show.wifi_password ? (
+                            <>
+                              <span className="text-[13px] font-mono text-foreground break-all">
+                                {show.wifi_password}
+                              </span>
+                              <CopyButton value={show.wifi_password} />
+                            </>
+                          ) : (
+                            <span className="text-sm text-muted-foreground/55 italic">Add password…</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ) : (
-                    <FieldRow label="Network" value={null} placeholder="Add WiFi network…" />
-                  )}
-                  {show.wifi_password ? (
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                      <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Password</span>
-                      <div
-                        className="flex items-center gap-1.5 min-w-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <span className="text-[13px] font-mono text-foreground break-all">
-                          {show.wifi_password}
-                        </span>
-                        <CopyButton value={show.wifi_password} />
-                      </div>
-                    </div>
-                  ) : (
-                    <FieldRow label="Password" value={null} placeholder="Add WiFi password…" />
+                    <FieldRow label="WiFi" value={null} placeholder="Add WiFi network and password…" />
                   )}
                   <FieldRow label="Hospitality" value={show.hospitality} placeholder="Add hospitality info…" />
                 </div>
