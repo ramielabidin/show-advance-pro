@@ -1122,13 +1122,13 @@ export default function ShowDetailPage() {
                       setInlineField(null);
                     }
                   }}
-                  className="text-[28px] sm:text-4xl font-display font-bold tracking-[-0.02em] h-auto py-0.5 px-1 -ml-1"
+                  className="text-[36px] sm:text-[clamp(40px,4.6vw,52px)] font-display font-bold tracking-[-0.02em] h-auto py-0.5 px-1 -ml-1"
                 />
               </div>
             ) : (
               <div className="flex items-center gap-3 flex-wrap">
                 <h1
-                  className="font-display font-bold text-[28px] sm:text-4xl leading-[1.05] tracking-[-0.02em] cursor-pointer hover:text-primary/80 transition-colors"
+                  className="font-display font-bold text-[36px] sm:text-[clamp(40px,4.6vw,52px)] leading-[1.02] tracking-[-0.02em] cursor-pointer hover:text-primary/80 transition-colors"
                   onClick={() => { setInlineField("venue_name"); setInlineValue(show.venue_name); }}
                 >
                   {show.venue_name}
@@ -1480,7 +1480,29 @@ export default function ShowDetailPage() {
             </div>
 
             <FieldGroup title="Set Length">
-              {editField("set_length", "Set Length", { alwaysShow: true, labelHidden: true, placeholder: "e.g. 75 min" })}
+              {inlineField === "set_length" ? (
+                <div ref={inlineRef}>
+                  <InlineEditable
+                    value={inlineValue}
+                    onChange={setInlineValue}
+                    onSave={saveInline}
+                    onCancel={cancelInline}
+                    placeholder="e.g. 75 min"
+                    saving={updateMutation.isPending}
+                    className="font-display text-[28px] leading-none tracking-[-0.02em] py-0"
+                  />
+                </div>
+              ) : show.set_length ? (
+                <button
+                  type="button"
+                  onClick={() => startInlineEdit("set_length")}
+                  className="text-left font-display text-[28px] leading-none tracking-[-0.02em] text-foreground hover:text-primary/80 transition-colors py-1"
+                >
+                  {show.set_length}
+                </button>
+              ) : (
+                <EmptyFieldPrompt label="Set Length" onClick={() => startInlineEdit("set_length")} />
+              )}
             </FieldGroup>
 
             <FieldGroup
@@ -1554,10 +1576,23 @@ export default function ShowDetailPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); departureEditor.startEdit(); }
                   }}
-                  className="w-full text-left space-y-2 card-pressable cursor-pointer"
+                  className="w-full text-left card-pressable cursor-pointer grid grid-cols-1 sm:grid-cols-[180px_1fr] sm:items-baseline gap-y-2 sm:gap-x-8 py-1"
                 >
-                  <FieldRow label="Time" value={show.departure_time} mono placeholder="Add departure time…" />
-                  <FieldRow label="Notes" value={show.departure_notes} placeholder="Add notes…" />
+                  {show.departure_time ? (
+                    <span className="font-display tracking-[-0.02em] leading-none text-[32px] text-foreground">
+                      {show.departure_time}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground/55 italic">Add departure time…</span>
+                  )}
+                  <span
+                    className={cn(
+                      "text-sm leading-relaxed whitespace-pre-line",
+                      show.departure_notes ? "text-muted-foreground" : "text-muted-foreground/55 italic",
+                    )}
+                  >
+                    {show.departure_notes || "Add notes…"}
+                  </span>
                 </div>
               )}
             </FieldGroup>
@@ -1744,6 +1779,9 @@ export default function ShowDetailPage() {
                 )}
               </FieldGroup>
             </div>
+
+            {/* Implicit pre-/post-show transition — no label, just a hairline pause */}
+            <div aria-hidden className="h-px bg-foreground/15" />
 
             <FieldGroup
               title="Accommodations"
