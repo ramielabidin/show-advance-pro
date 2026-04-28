@@ -319,3 +319,12 @@
     }
   }
 }
+
+/* iOS Safari auto-zooms when a focused input has font-size < 16px.
+   !important is required — Tailwind utility classes (text-[13px] etc.) have
+   higher specificity than element selectors and would otherwise win. */
+@media (max-width: 767px) {
+  input, textarea, select {
+    font-size: max(16px, 1em) !important;
+  }
+}

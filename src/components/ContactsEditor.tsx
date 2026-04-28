@@ -17,7 +17,6 @@ export interface ContactRow {
 interface ContactsEditorProps {
   initial: ContactRow[];
   onSave: (rows: ContactRow[]) => void;
-  saving?: boolean;
 }
 
 const INLINE_CHROME =
@@ -49,11 +48,10 @@ function rowIsBlank(r: ContactRow): boolean {
   return !r.name.trim() && !r.phone.trim() && !r.email.trim() && !r.notes.trim();
 }
 
-export default function ContactsEditor({ initial, onSave, saving }: ContactsEditorProps) {
+export default function ContactsEditor({ initial, onSave }: ContactsEditorProps) {
   const [rows, setRows] = useState<ContactRow[]>(() => initial);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [draft, setDraft] = useState<ContactRow | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
 
   const startEdit = (idx: number) => {
     setEditingIdx(idx);
@@ -69,22 +67,23 @@ export default function ContactsEditor({ initial, onSave, saving }: ContactsEdit
       name: draft.name.trim(),
       role_label: draft.role === "custom" ? draft.role_label.trim() : "",
     };
-    const updated = rows.map((r, i) => (i === editingIdx ? cleaned : r));
-    setRows(roleSort(updated));
+    const sorted = roleSort(rows.map((r, i) => (i === editingIdx ? cleaned : r)));
+    setRows(sorted);
     setEditingIdx(null);
     setDraft(null);
-    setIsDirty(true);
+    onSave(sorted.filter((r) => !rowIsBlank(r)));
   };
 
   const removeRow = (idx: number) => {
-    setRows((prev) => prev.filter((_, i) => i !== idx));
+    const updated = rows.filter((_, i) => i !== idx);
+    setRows(updated);
     if (editingIdx === idx) {
       setEditingIdx(null);
       setDraft(null);
     } else if (editingIdx !== null && editingIdx > idx) {
       setEditingIdx(editingIdx - 1);
     }
-    setIsDirty(true);
+    onSave(updated.filter((r) => !rowIsBlank(r)));
   };
 
   const addRow = (role: string = "custom") => {
@@ -94,13 +93,6 @@ export default function ContactsEditor({ initial, onSave, saving }: ContactsEdit
     setRows((prev) => [...prev, newRow]);
     setEditingIdx(rows.length);
     setDraft(newRow);
-  };
-
-  const reset = () => {
-    setRows(initial);
-    setEditingIdx(null);
-    setDraft(null);
-    setIsDirty(false);
   };
 
   if (rows.length === 0 && editingIdx === null) {
@@ -262,26 +254,6 @@ export default function ContactsEditor({ initial, onSave, saving }: ContactsEdit
         </button>
       </div>
 
-      {/* Save / Cancel — only visible when dirty */}
-      {isDirty && (
-        <div className="flex items-center gap-1.5 pt-2 border-t border-border/40 mt-1">
-          <button
-            type="button"
-            onClick={reset}
-            className="h-7 px-2.5 text-xs rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => onSave(rows.filter((r) => !rowIsBlank(r)))}
-            disabled={saving}
-            className="h-7 px-2.5 text-xs rounded-md bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            Save contacts
-          </button>
-        </div>
-      )}
     </div>
   );
 }

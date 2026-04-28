@@ -13,7 +13,6 @@ export interface ScheduleRow {
 interface ScheduleEditorProps {
   initial: ScheduleRow[];
   onSave: (rows: ScheduleRow[]) => void;
-  saving?: boolean;
 }
 
 const INLINE_CHROME =
@@ -29,11 +28,10 @@ function chronoSort(rows: ScheduleRow[]): ScheduleRow[] {
   });
 }
 
-export default function ScheduleEditor({ initial, onSave, saving }: ScheduleEditorProps) {
+export default function ScheduleEditor({ initial, onSave }: ScheduleEditorProps) {
   const [rows, setRows] = useState<ScheduleRow[]>(() => (initial.length > 0 ? initial : []));
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [draft, setDraft] = useState<ScheduleRow | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
 
   const startEdit = (idx: number) => {
     setEditingIdx(idx);
@@ -47,21 +45,23 @@ export default function ScheduleEditor({ initial, onSave, saving }: ScheduleEdit
     if (draft.is_band) {
       updated = updated.map((r, i) => (i === editingIdx ? r : { ...r, is_band: false }));
     }
-    setRows(chronoSort(updated));
+    const sorted = chronoSort(updated);
+    setRows(sorted);
     setEditingIdx(null);
     setDraft(null);
-    setIsDirty(true);
+    onSave(sorted.filter((r) => r.time.trim() || r.label.trim()));
   };
 
   const removeRow = (idx: number) => {
-    setRows((prev) => prev.filter((_, i) => i !== idx));
+    const updated = rows.filter((_, i) => i !== idx);
+    setRows(updated);
     if (editingIdx === idx) {
       setEditingIdx(null);
       setDraft(null);
     } else if (editingIdx !== null && editingIdx > idx) {
       setEditingIdx(editingIdx - 1);
     }
-    setIsDirty(true);
+    onSave(updated.filter((r) => r.time.trim() || r.label.trim()));
   };
 
   const addRow = () => {
@@ -69,13 +69,6 @@ export default function ScheduleEditor({ initial, onSave, saving }: ScheduleEdit
     setRows((prev) => [...prev, newRow]);
     setEditingIdx(rows.length);
     setDraft(newRow);
-  };
-
-  const reset = () => {
-    setRows(initial.length > 0 ? initial : []);
-    setEditingIdx(null);
-    setDraft(null);
-    setIsDirty(false);
   };
 
   if (rows.length === 0 && editingIdx === null) {
@@ -194,26 +187,6 @@ export default function ScheduleEditor({ initial, onSave, saving }: ScheduleEdit
         </button>
       </div>
 
-      {/* Save / Cancel — only visible when dirty */}
-      {isDirty && (
-        <div className="flex items-center gap-1.5 pt-2 border-t border-border/40 mt-1">
-          <button
-            type="button"
-            onClick={reset}
-            className="h-7 px-2.5 text-xs rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => onSave(rows.filter((r) => r.time.trim() || r.label.trim()))}
-            disabled={saving}
-            className="h-7 px-2.5 text-xs rounded-md bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            Save schedule
-          </button>
-        </div>
-      )}
     </div>
   );
 }
