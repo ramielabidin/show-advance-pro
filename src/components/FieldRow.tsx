@@ -7,6 +7,12 @@ interface FieldRowProps {
   mono?: boolean;
   compact?: boolean;
   noLabel?: boolean;
+  /**
+   * When set, an empty value renders the placeholder as muted text instead of
+   * returning null. Lets group read-modes show every subfield's label even when
+   * only some are filled. Opt-in so guest views and exports stay clean.
+   */
+  placeholder?: string;
 }
 
 /** Detect patterns like "1. foo 2. bar" or "1) foo 2) bar" and split into list items */
@@ -27,10 +33,30 @@ function parseNumberedList(text: string): string[] | null {
   return items.length >= 2 ? items : null;
 }
 
-export default function FieldRow({ label, value, mono, compact, noLabel }: FieldRowProps) {
+export default function FieldRow({ label, value, mono, compact, noLabel, placeholder }: FieldRowProps) {
   const listItems = useMemo(() => value ? parseNumberedList(value) : null, [value]);
 
-  if (!value) return null;
+  if (!value) {
+    if (!placeholder) return null;
+    if (noLabel) {
+      return (
+        <span className="text-sm text-muted-foreground/55 italic">{placeholder}</span>
+      );
+    }
+    return (
+      <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+        <span
+          className={cn(
+            "text-sm text-muted-foreground sm:shrink-0",
+            compact ? "sm:w-16" : "sm:w-32",
+          )}
+        >
+          {label}
+        </span>
+        <span className="text-sm text-muted-foreground/55 italic">{placeholder}</span>
+      </div>
+    );
+  }
 
   // group-hover styles only activate when an ancestor has the `group` class —
   // that's how editField wraps its rows, so the affordance shows up only when

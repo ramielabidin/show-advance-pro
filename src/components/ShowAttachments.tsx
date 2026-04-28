@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Loader2, Paperclip, Plus, Trash2 } from "lucide-react";
+import { FileText, Loader2, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/components/TeamProvider";
 import { Button } from "@/components/ui/button";
+import { LedgerRule } from "@/components/Ledger";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -126,38 +127,38 @@ export default function ShowAttachments({ showId }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-foreground flex items-center gap-2 font-sans">
-          <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-          Attachments
-        </h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploadMutation.isPending || !teamId}
-        >
-          {uploadMutation.isPending ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-              Uploading…
-            </>
-          ) : (
-            <>
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              Add PDF
-            </>
-          )}
-        </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/pdf"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-      </div>
+      <LedgerRule
+        right={
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadMutation.isPending || !teamId}
+          >
+            {uploadMutation.isPending ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                Uploading…
+              </>
+            ) : (
+              <>
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Add PDF
+              </>
+            )}
+          </Button>
+        }
+      >
+        Attachments
+      </LedgerRule>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={handleFileChange}
+      />
 
       {isLoading ? (
         <div className="h-12 rounded-md bg-muted animate-pulse" />

@@ -10,7 +10,6 @@ import { useTeam } from "@/components/TeamProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +30,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import FieldGroup from "@/components/FieldGroup";
 import FieldRow from "@/components/FieldRow";
+import { LedgerRule } from "@/components/Ledger";
 import SlackPushDialog from "@/components/SlackPushDialog";
 import EmailBandDialog from "@/components/EmailBandDialog";
 import ParseAdvanceForShowDialog from "@/components/ParseAdvanceForShowDialog";
@@ -716,7 +716,38 @@ export default function ShowDetailPage() {
   });
 
   if (isLoading) {
-    return <div className="space-y-4 animate-pulse"><div className="h-8 w-48 bg-muted rounded" /><div className="h-64 bg-muted rounded-lg" /></div>;
+    // Layout-faithful skeleton: mirrors the page header (eyebrow + title +
+    // subline), the underlined tab strip, and three ledger-style sections so
+    // first-navigation users see the shape of what's loading instead of a
+    // generic block.
+    return (
+      <div className="animate-fade-in max-w-3xl space-y-7 pb-8">
+        <div className="space-y-2 animate-pulse">
+          <div className="h-3 w-16 bg-muted rounded" />
+          <div className="h-8 w-2/3 bg-muted rounded" />
+          <div className="h-3.5 w-1/3 bg-muted rounded" />
+        </div>
+        <div className="flex gap-5 pt-3 border-b border-border pb-2 animate-pulse">
+          <div className="h-4 w-20 bg-muted rounded" />
+          <div className="h-4 w-16 bg-muted rounded" />
+          <div className="h-4 w-20 bg-muted rounded" />
+          <div className="h-4 w-16 bg-muted rounded" />
+        </div>
+        <div className="space-y-7 animate-pulse">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="space-y-2.5">
+              <div className="flex items-center pb-1.5 border-b border-foreground/80">
+                <div className="h-2.5 w-20 bg-muted rounded" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-full bg-muted/60 rounded" />
+                <div className="h-4 w-5/6 bg-muted/60 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (!show) {
@@ -843,11 +874,17 @@ export default function ShowDetailPage() {
 
     const displayValue = opts?.currency ? formatCurrency(value) : value;
 
-    // Clickable value to enter inline edit
+    // Clickable value to enter inline edit. Multi-line text fields (Backline,
+    // Notes) get a dashed-border container so the editable region reads as a
+    // block rather than loose text — mirrors the Hotel card affordance.
     return (
       <button
         onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat, structuredTime: opts?.structuredTime })}
-        className="w-full text-left group"
+        className={cn(
+          "w-full text-left group",
+          opts?.multiline &&
+            "rounded-lg border border-dashed border-foreground/20 bg-background/40 hover:bg-foreground/[0.02] [transition:background-color_150ms_var(--ease-out)] px-4 py-3",
+        )}
       >
         <FieldRow label={label} value={displayValue} mono={opts?.mono} compact={opts?.compact} noLabel={opts?.labelHidden} />
       </button>
@@ -1396,24 +1433,22 @@ export default function ShowDetailPage() {
                   <button
                     type="button"
                     onClick={dismissImportAdvance}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+                    className="text-xs text-muted-foreground hover:text-foreground [transition:color_150ms_var(--ease-out)] underline underline-offset-2"
                   >
                     or fill in manually
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-2 opacity-50 pointer-events-none select-none">
-                <div className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground border-l-2 border-border pl-2">
-                  Schedule
-                </div>
-                <div className="text-sm text-muted-foreground pl-2">Awaiting advance</div>
+              <div className="opacity-50 pointer-events-none select-none">
+                <FieldGroup title="Schedule">
+                  <p className="text-sm text-muted-foreground">Awaiting advance</p>
+                </FieldGroup>
               </div>
-              <div className="space-y-2 opacity-50 pointer-events-none select-none">
-                <div className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground border-l-2 border-border pl-2">
-                  Contacts
-                </div>
-                <div className="text-sm text-muted-foreground pl-2">Awaiting advance</div>
+              <div className="opacity-50 pointer-events-none select-none">
+                <FieldGroup title="Contacts">
+                  <p className="text-sm text-muted-foreground">Awaiting advance</p>
+                </FieldGroup>
               </div>
             </div>
           ) : (
@@ -1454,19 +1489,9 @@ export default function ShowDetailPage() {
               </FieldGroup>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="w-0.5 h-3.5 rounded-full bg-foreground/25" />
-                <h3 className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-                  Set Length
-                </h3>
-              </div>
-              <div className="flex-1 min-w-0">
-                {editField("set_length", "Set Length", { alwaysShow: true, labelHidden: true, placeholder: "e.g. 75 min" })}
-              </div>
-            </div>
-
-            <Separator />
+            <FieldGroup title="Set Length">
+              {editField("set_length", "Set Length", { alwaysShow: true, labelHidden: true, placeholder: "e.g. 75 min" })}
+            </FieldGroup>
 
             <FieldGroup
               title="Departure"
@@ -1535,20 +1560,11 @@ export default function ShowDetailPage() {
                   }}
                   className="w-full text-left space-y-2 card-pressable cursor-pointer"
                 >
-                  <FieldRow label="Time" value={show.departure_time} mono />
-                  {show.departure_notes ? (
-                    <FieldRow label="Notes" value={show.departure_notes} />
-                  ) : (
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                      <span className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">Notes</span>
-                      <span className="text-sm text-muted-foreground/50">Add notes…</span>
-                    </div>
-                  )}
+                  <FieldRow label="Time" value={show.departure_time} mono placeholder="Add departure time…" />
+                  <FieldRow label="Notes" value={show.departure_notes} placeholder="Add notes…" />
                 </div>
               )}
             </FieldGroup>
-
-            <Separator />
 
             {/* Arrival — full width */}
             <FieldGroup
@@ -1589,13 +1605,11 @@ export default function ShowDetailPage() {
                   }}
                   className="w-full text-left space-y-4 card-pressable cursor-pointer"
                 >
-                  <FieldRow label="Load In" value={show.load_in_details} />
-                  <FieldRow label="Parking" value={show.parking_notes} />
+                  <FieldRow label="Load In" value={show.load_in_details} placeholder="Add load in details…" />
+                  <FieldRow label="Parking" value={show.parking_notes} placeholder="Add parking info…" />
                 </div>
               )}
             </FieldGroup>
-
-            <Separator />
 
             <FieldGroup
               title="At The Venue"
@@ -1653,35 +1667,51 @@ export default function ShowDetailPage() {
                   }}
                   className="w-full text-left space-y-2 card-pressable cursor-pointer"
                 >
-                  <FieldRow label="Green Room" value={show.green_room_info} />
+                  <FieldRow label="Green Room" value={show.green_room_info} placeholder="Add green room info…" />
                   {(show.wifi_network || show.wifi_password) ? (
                     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
                       <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">WiFi</span>
-                      <div className="flex flex-col gap-0.5">
-                        {show.wifi_network && (
-                          <span className="text-sm text-foreground font-mono text-[13px]">{show.wifi_network}</span>
-                        )}
-                        {show.wifi_password && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-sm text-foreground font-mono text-[13px]">{show.wifi_password}</span>
-                            <CopyButton value={show.wifi_password} />
-                          </div>
-                        )}
+                      <div className="flex flex-col gap-1.5 min-w-0">
+                        <div className="flex items-baseline gap-3">
+                          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80 font-medium w-[68px] shrink-0">
+                            Network
+                          </span>
+                          {show.wifi_network ? (
+                            <span className="text-[13px] font-mono text-foreground break-all">
+                              {show.wifi_network}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground/55 italic">Add network…</span>
+                          )}
+                        </div>
+                        <div className="flex items-baseline gap-3">
+                          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80 font-medium w-[68px] shrink-0">
+                            Password
+                          </span>
+                          {show.wifi_password ? (
+                            <>
+                              <span className="text-[13px] font-mono text-foreground break-all">
+                                {show.wifi_password}
+                              </span>
+                              <CopyButton value={show.wifi_password} />
+                            </>
+                          ) : (
+                            <span className="text-sm text-muted-foreground/55 italic">Add password…</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  ) : null}
-                  <FieldRow label="Hospitality" value={show.hospitality} />
+                  ) : (
+                    <FieldRow label="WiFi" value={null} placeholder="Add WiFi network and password…" />
+                  )}
+                  <FieldRow label="Hospitality" value={show.hospitality} placeholder="Add hospitality info…" />
                 </div>
               )}
             </FieldGroup>
 
-            <Separator />
-
             <FieldGroup title="Backline" collapsible defaultOpen={!!show.backline_provided}>
               {editField("backline_provided", "Backline", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add backline notes" })}
             </FieldGroup>
-
-            <Separator />
 
             {/* Guest List */}
             <div id="guest-list-section">
@@ -1706,12 +1736,6 @@ export default function ShowDetailPage() {
                 )}
               </FieldGroup>
             </div>
-
-            <Separator />
-
-            <ShowAttachments showId={show.id} />
-
-            <Separator />
 
             <FieldGroup
               title="Accommodations"
@@ -1849,25 +1873,29 @@ export default function ShowDetailPage() {
               )}
             </FieldGroup>
 
-            <Separator />
-
             {/* Notes — collapsed by default on fresh shows */}
             <FieldGroup title="Notes" collapsible defaultOpen={!!show.additional_info}>
               {editField("additional_info", "Notes", { multiline: true, alwaysShow: true, labelHidden: true, placeholder: "Tap to add notes" })}
             </FieldGroup>
+
+            <ShowAttachments showId={show.id} />
           </div>
           )}
         </TabsContent>
 
         <TabsContent value="contacts">
           <div className="space-y-6 sm:space-y-8">
-            <Card className="p-5 sm:p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <h2 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Contacts</h2>
-                {(show.show_contacts?.length ?? 0) === 0 && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" aria-hidden />
-                )}
-              </div>
+            <FieldGroup
+              title="Contacts"
+              headerRight={
+                (show.show_contacts?.length ?? 0) === 0 ? (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60"
+                    aria-hidden
+                  />
+                ) : null
+              }
+            >
               <ContactsEditor
                 key={(show.show_contacts ?? []).map((c) => c.id).join(",") || "empty"}
                 initial={(show.show_contacts ?? [])
@@ -1908,7 +1936,7 @@ export default function ShowDetailPage() {
                   }
                 }}
               />
-            </Card>
+            </FieldGroup>
           </div>
         </TabsContent>
 
@@ -1953,22 +1981,8 @@ export default function ShowDetailPage() {
             const canSimulate = wp !== null || (tp != null && tp > 0 && validCap != null);
             const showSimulator = !(g === 0 && !canSimulate);
 
-            // Local helpers — ledger row + rule label
-            const LedgerRule = ({
-              children,
-              right,
-            }: {
-              children: React.ReactNode;
-              right?: React.ReactNode;
-            }) => (
-              <div className="flex items-center gap-2 pb-1.5 mb-2.5 border-b border-foreground/80">
-                <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-foreground">
-                  {children}
-                </span>
-                {right && <span className="ml-auto">{right}</span>}
-              </div>
-            );
-
+            // Local helpers — ledger row (LedgerRule lives in @/components/Ledger
+            // so it can be shared with FieldGroup)
             const LedgerRow = ({
               label,
               hint,
@@ -2141,7 +2155,7 @@ export default function ShowDetailPage() {
 
                     {/* Walkout — one editorial line */}
                     <div className="flex items-baseline justify-between gap-3 flex-wrap pb-2.5 border-b border-dotted border-border/80">
-                      <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
                         Walkout
                       </span>
                       <span className="inline-flex items-baseline gap-2.5 flex-wrap">
@@ -2192,7 +2206,7 @@ export default function ShowDetailPage() {
 
                     {show.settlement_notes && (
                       <div className="pt-3">
-                        <p className="text-[10px] uppercase tracking-[0.16em] font-medium text-muted-foreground mb-1.5">
+                        <p className="text-[10px] uppercase tracking-[0.18em] font-medium text-muted-foreground mb-1.5">
                           Notes
                         </p>
                         <p className="text-sm whitespace-pre-wrap text-muted-foreground leading-relaxed">

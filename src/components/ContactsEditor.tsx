@@ -211,7 +211,7 @@ export default function ContactsEditor({ initial, onSave, saving }: ContactsEdit
             className="w-full text-left rounded-md px-3 py-2.5 hover:bg-muted/30 transition-colors space-y-1.5"
           >
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-[0.1em] text-muted-foreground">
+              <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
                 {roleLabel(row)}
               </span>
               {rowIsBlank(row) && (
