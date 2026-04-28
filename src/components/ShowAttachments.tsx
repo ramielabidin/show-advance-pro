@@ -105,15 +105,22 @@ export default function ShowAttachments({ showId }: Props) {
 
   const openAttachment = async (id: string, storagePath: string) => {
     setOpening(id);
+    // Open the tab synchronously before any async work. Mobile browsers
+    // (iOS Safari especially) block window.open() called after an await
+    // because the user-gesture context is lost by then.
+    const win = window.open("", "_blank");
     try {
       const { data, error } = await supabase.storage
         .from(BUCKET)
         .createSignedUrl(storagePath, 60);
       if (error || !data?.signedUrl) {
+        win?.close();
         toast.error("Could not open attachment");
         return;
       }
-      window.open(data.signedUrl, "_blank");
+      if (win) {
+        win.location.href = data.signedUrl;
+      }
     } finally {
       setOpening(null);
     }
