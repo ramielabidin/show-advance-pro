@@ -71,9 +71,12 @@
      1 = reserved
      2 = schedule list
      3 = action stack
-   Cascade is 30ms so the whole assemble lands under ~150ms. Decorative
-   only — does not block interaction. Hardware-accelerated (transform +
-   opacity only). */
+   Anchors stagger 30ms apart; last anchor settles ~450ms after first
+   frame (90ms delay + 360ms duration). 360ms exceeds the 300ms
+   interactive-animation rule on purpose — this is decorative entry,
+   nested inside .phase-morph's 380ms parent window, so the cascade
+   reads as the tail of a single transition. Hardware-accelerated
+   (transform + opacity only) and disabled under prefers-reduced-motion. */
 @keyframes phase-1-stagger {
   from {
     opacity: 0;
