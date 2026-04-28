@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
@@ -8,7 +8,6 @@ import {
   Dices,
   StickyNote,
   Music,
-  Save,
   Search,
   ListMusic,
   GripVertical,
@@ -158,10 +157,11 @@ export default function SetListEditor({ show }: Props) {
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
 
-  // Re-seed when the saved set list changes (after save / parent refetch).
+  // Re-seed when the saved set list changes, but not while a save is in flight
+  // (that would clobber edits made during the network round-trip).
   useEffect(() => {
-    setEntries(seed);
-  }, [seed]);
+    if (!saveMutation.isPending) setEntries(seed);
+  }, [seed, saveMutation.isPending]);
 
   const dirty = useMemo(() => !entriesEqual(entries, seed), [entries, seed]);
 
@@ -187,20 +187,30 @@ export default function SetListEditor({ show }: Props) {
   }, [entries]);
 
   const saveMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (entriesToSave: SetListEntry[]) => {
       const { error } = await supabase
         .from("shows")
-        .update({ set_list: entries })
+        .update({ set_list: entriesToSave })
         .eq("id", show.id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["show", show.id] });
       queryClient.invalidateQueries({ queryKey: ["shows"] });
-      toast.success("Set list saved");
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced auto-save: fires 800ms after the last change.
+  useEffect(() => {
+    if (entriesEqual(entries, seed)) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    const snapshot = entries;
+    saveTimerRef.current = setTimeout(() => { saveMutation.mutate(snapshot); }, 800);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [entries]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sensors = useSensors(
     // Touch: 200ms hold + 8px tolerance so a tap-and-scroll still scrolls.
@@ -310,25 +320,17 @@ export default function SetListEditor({ show }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Header — title + Save / PDF actions */}
+      {/* Header — title + PDF action + auto-save status */}
       <div className="flex items-center justify-between gap-2">
-        <div>
+        <div className="flex items-center gap-2">
           <h2 className="text-xs uppercase tracking-widest text-muted-foreground font-medium">
             Set list · {entries.length}
           </h2>
+          {saveMutation.isPending && (
+            <span className="text-[11px] text-muted-foreground/60">Saving…</span>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <SetListPdfDialog show={show} entries={entries} />
-          <Button
-            size="sm"
-            className="gap-1.5"
-            onClick={() => saveMutation.mutate()}
-            disabled={!dirty || saveMutation.isPending}
-          >
-            <Save className="h-4 w-4" />
-            {saveMutation.isPending ? "Saving…" : dirty ? "Save" : "Saved"}
-          </Button>
-        </div>
+        <SetListPdfDialog show={show} entries={entries} />
       </div>
 
       {/* ── Add row ──────────────────────────────────────────────

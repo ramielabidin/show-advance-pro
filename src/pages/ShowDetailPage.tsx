@@ -1,7 +1,7 @@
 import { useParams, useNavigate, useLocation, useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Trash2, Save, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, Check, Share2, Car, FileText, MoreHorizontal, ChevronDown, Pencil } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, Check, Share2, Car, FileText, MoreHorizontal, ChevronDown, Pencil } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -803,11 +803,11 @@ export default function ShowDetailPage() {
   // Inline save/cancel buttons component
   const InlineActions = ({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) => (
     <div className="flex items-center gap-1.5 pt-1">
-      <Button variant="ghost" size="sm" onClick={onCancel} className="h-7 text-xs">
+      <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={onCancel} className="h-7 text-xs">
         <X className="h-3 w-3 mr-1" /> Cancel
       </Button>
-      <Button size="sm" onClick={onSave} disabled={updateMutation.isPending} className="h-7 text-xs">
-        <Save className="h-3 w-3 mr-1" /> Save
+      <Button size="sm" onMouseDown={(e) => e.preventDefault()} onClick={onSave} disabled={updateMutation.isPending} className="h-7 w-7 p-0">
+        <Check className="h-3.5 w-3.5" />
       </Button>
     </div>
   );
@@ -1489,7 +1489,11 @@ export default function ShowDetailPage() {
               defaultOpen={!!show.departure_time || !!show.departure_notes || (!!recommendedDeparture && !suggestionDismissed)}
             >
               {departureEditor.isEditing ? (
-                <div ref={inlineRef} className="space-y-3">
+                <div
+                  ref={inlineRef}
+                  className="space-y-3"
+                  onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) departureEditor.save(); }}
+                >
                   <div className="space-y-2">
                     <Label className="block text-xs text-muted-foreground">Time</Label>
                     <TimeInput
@@ -1508,7 +1512,9 @@ export default function ShowDetailPage() {
                       placeholder="e.g. Car 1 leaving from hotel at 9am, Car 2 from venue at 9:30am"
                     />
                   </div>
-                  <InlineActions onSave={departureEditor.save} onCancel={departureEditor.cancel} />
+                  <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={departureEditor.cancel} className="h-7 text-xs">
+                    <X className="h-3 w-3 mr-1" /> Cancel
+                  </Button>
                 </div>
               ) : departureEditor.empty ? (
                 <>
@@ -1563,7 +1569,11 @@ export default function ShowDetailPage() {
               defaultOpen={!!(show.load_in_details || show.parking_notes)}
             >
               {arrivalEditor.isEditing ? (
-                <div ref={inlineRef} className="space-y-4">
+                <div
+                  ref={inlineRef}
+                  className="space-y-4"
+                  onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) arrivalEditor.save(); }}
+                >
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Load In</Label>
                     <InlineField
@@ -1581,7 +1591,9 @@ export default function ShowDetailPage() {
                       multiline
                     />
                   </div>
-                  <InlineActions onSave={arrivalEditor.save} onCancel={arrivalEditor.cancel} />
+                  <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={arrivalEditor.cancel} className="h-7 text-xs">
+                    <X className="h-3 w-3 mr-1" /> Cancel
+                  </Button>
                 </div>
               ) : arrivalEditor.empty ? (
                 <EmptyFieldPrompt label="arrival (load in / parking)" onClick={arrivalEditor.startEdit} />
@@ -1607,7 +1619,11 @@ export default function ShowDetailPage() {
               defaultOpen={!!(show.green_room_info || show.wifi_network || show.wifi_password || show.hospitality)}
             >
               {venueEditor.isEditing ? (
-                <div ref={inlineRef} className="space-y-3">
+                <div
+                  ref={inlineRef}
+                  className="space-y-3"
+                  onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) venueEditor.save(); }}
+                >
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Green Room</Label>
                     <InlineField
@@ -1643,7 +1659,9 @@ export default function ShowDetailPage() {
                       multiline
                     />
                   </div>
-                  <InlineActions onSave={venueEditor.save} onCancel={venueEditor.cancel} />
+                  <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={venueEditor.cancel} className="h-7 text-xs">
+                    <X className="h-3 w-3 mr-1" /> Cancel
+                  </Button>
                 </div>
               ) : venueEditor.empty ? (
                 <EmptyFieldPrompt label="venue details" onClick={venueEditor.startEdit} />
@@ -1733,7 +1751,11 @@ export default function ShowDetailPage() {
               defaultOpen={!!(show.hotel_name || show.hotel_address || show.hotel_confirmation || show.hotel_checkin || show.hotel_checkin_date || show.hotel_checkout || show.hotel_checkout_date)}
             >
               {hotelEditor.isEditing ? (
-                <div ref={inlineRef} className="space-y-3">
+                <div
+                  ref={inlineRef}
+                  className="space-y-3"
+                  onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) hotelEditor.save(); }}
+                >
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Name</Label>
                     <InlineField value={hotelEditor.get("hotel_name")} onChange={(v) => hotelEditor.setField("hotel_name", v)} autoFocus />
@@ -1784,7 +1806,9 @@ export default function ShowDetailPage() {
                       </div>
                     </div>
                   </div>
-                  <InlineActions onSave={hotelEditor.save} onCancel={hotelEditor.cancel} />
+                  <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={hotelEditor.cancel} className="h-7 text-xs">
+                    <X className="h-3 w-3 mr-1" /> Cancel
+                  </Button>
                 </div>
               ) : hotelEditor.empty ? (
                 <EmptyFieldPrompt label="accommodations" onClick={hotelEditor.startEdit} />
