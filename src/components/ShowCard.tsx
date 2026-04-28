@@ -216,7 +216,7 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
   return (
     <div
       ref={wrapperRef}
-      className="relative rounded-lg overflow-hidden"
+      className={cn("relative rounded-lg overflow-hidden", past && "opacity-60")}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -238,10 +238,7 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
       <Link
         to={`/shows/${show.id}`}
         onClick={handleClick}
-        className={cn(
-          "relative group flex items-center justify-between rounded-lg border bg-card p-3 sm:p-4 card-pressable hover:border-foreground/20 hover:shadow-sm active:bg-accent/50",
-          past && "opacity-60",
-        )}
+        className="relative group flex items-center justify-between rounded-lg border bg-card p-3 sm:p-4 card-pressable hover:border-foreground/20 hover:shadow-sm active:bg-accent/50"
         style={{
           transform: `translateX(${dragX}px)`,
           transition: isDragging ? "none" : SNAP_TRANSITION,
