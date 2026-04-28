@@ -50,10 +50,11 @@ export default function PhasePostSettle({ show }: PhasePostSettleProps) {
 
   return (
     <div className="px-[22px] pt-2 pb-7 flex-1 flex flex-col">
-      {/* Eyebrow + lead-in */}
-      <div className="mt-6">
+      {/* Eyebrow + lead-in — aligned to Phase 1's pt-[14px] hero rhythm and
+          11px eyebrow scale for cohesion across the flow. */}
+      <div className="pt-[14px]">
         <div
-          className="text-[10.5px] uppercase font-medium leading-none mb-2"
+          className="text-[11px] uppercase font-medium leading-none mb-2.5"
           style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
         >
           Settled · Drive safe
