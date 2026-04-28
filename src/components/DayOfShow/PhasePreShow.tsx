@@ -99,9 +99,9 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
           Left = when (temporal hero), right = where (venue as quiet
           mirrored typography, no card chrome). Eyebrows align at the top
           baseline so the two sides read as one rhythm. */}
-      <div className="pt-[14px] pb-1 grid grid-cols-[1.2fr_1fr] gap-5 items-start">
+      <div className="pt-[14px] pb-1 grid grid-cols-[1fr_1fr] gap-6 items-start">
         {/* Time column */}
-        <div className="min-w-0">
+        <div className="min-w-0 pr-3" data-stagger="0">
           <div
             className="text-[11px] uppercase font-medium leading-none mb-2.5"
             style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
@@ -112,7 +112,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
           {hero && (
             <>
               <div
-                className="text-[28px] font-medium leading-[1.05] truncate"
+                className="text-[26px] font-medium leading-[1.05] truncate"
                 style={{ letterSpacing: "-0.02em", color: "hsl(var(--foreground))" }}
               >
                 {hero.label}
@@ -121,14 +121,14 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
               {/* Big serif TIME — the operative number */}
               {heroParts && (
                 <div
-                  className="mt-[18px] flex items-baseline gap-2.5 tabular-nums"
-                  style={{ letterSpacing: "-0.05em" }}
+                  className="mt-[16px] flex items-baseline gap-2 tabular-nums"
+                  style={{ letterSpacing: "-0.03em" }}
                 >
                   <span
                     className="font-display"
                     style={{
-                      fontSize: 110,
-                      lineHeight: 0.9,
+                      fontSize: 82,
+                      lineHeight: 0.92,
                       color: "hsl(var(--foreground))",
                     }}
                   >
@@ -137,8 +137,8 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
                   <span
                     className="font-display"
                     style={{
-                      fontSize: 38,
-                      lineHeight: 0.9,
+                      fontSize: 28,
+                      lineHeight: 0.92,
                       letterSpacing: "-0.02em",
                       color: "hsl(var(--muted-foreground))",
                     }}
@@ -151,7 +151,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
               {/* Countdown — supporting context */}
               {remaining !== null && (
                 <div
-                  className="mt-2 text-[14px] font-medium leading-[1.2]"
+                  className="mt-3 text-[15px] font-medium leading-[1.2]"
                   style={{ color: "hsl(var(--muted-foreground))" }}
                 >
                   {isFuture ? formatRelative(remaining) : "now"}
@@ -168,6 +168,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
             href={venueNavHref ?? undefined}
             target={venueNavHref ? "_blank" : undefined}
             rel={venueNavHref ? "noopener noreferrer" : undefined}
+            data-stagger="0"
             className="text-left flex flex-col items-stretch min-w-0 [transition:transform_160ms_var(--ease-out)] active:scale-[0.985]"
           >
             <div className="flex items-center justify-between mb-2.5">
@@ -188,7 +189,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
             <div
               className="font-display leading-[1.1] break-words"
               style={{
-                fontSize: "clamp(20px, 5.2vw, 24px)",
+                fontSize: "clamp(18px, 4.8vw, 22px)",
                 letterSpacing: "-0.02em",
                 color: "hsl(var(--foreground))",
                 textWrap: "pretty",
