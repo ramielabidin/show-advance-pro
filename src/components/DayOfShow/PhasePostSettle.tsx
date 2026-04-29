@@ -1,26 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import type { Show } from "@/lib/types";
-
-/**
- * Lead-in copy as a confident, time-aware statement. Each variant is
- * a self-contained line that names the moment without instructing the
- * user — the screen below speaks for itself, so the lead-in doesn't
- * need a "go to bed / drive safe" branch. Avoids "safe" doubling.
- *
- * Buckets:
- *   pre-midnight (9 PM–11:59 PM): "That's the show."
- *   post-midnight (00:00–02:59):  "That's a long one."
- *   pre-dawn (03:00–04:59):       "Almost dawn."
- *   morning (05:00–07:59, rare):  "Show's in the books."
- *
- * (After 8 AM the overlay auto-resolves itself.)
- */
-function leadInCopy(nowHour: number): string {
-  if (nowHour >= 5 && nowHour < 8) return "Show's in the books.";
-  if (nowHour >= 3 && nowHour < 5) return "Almost dawn.";
-  if (nowHour < 3) return "That's a long one.";
-  return "That's the show.";
-}
+import HotelReveal from "./HotelReveal";
 
 /**
  * Pool of sign-offs picked deterministically by show date so the same
@@ -48,202 +30,181 @@ interface PhasePostSettleProps {
 }
 
 /**
- * Phase 3 — settled. Intentionally minimal: a confident time-aware
- * lead-in at top, a delicate hand-drawn done-mark filling the middle,
- * and a sign-off pinned to the bottom. The hotel reveal that used to
- * live here was redundant — Phase 2 already shows a hotel teaser, and
- * the show detail page has the full booking. Phase 3 is for closing
- * the moment, not surfacing more data.
+ * Phase 3 — settled. Branches into:
  *
- * The done-mark is interactive: hold to complete. Holding fills a circle
- * around the checkmark over ~1.5s. On release, the checkmark fills in
- * (satisfying completion animation), then the phase closes.
+ *   3a (celebration) — runs once, on first open after settle. Persists
+ *      `dos_closed_at` on mount so subsequent opens land on 3b. Auto-
+ *      plays a ~3.6s sequence (check draws, holds, fades; "Good job."
+ *      rises, lingers, fades). Tap-anywhere skips to dismiss.
+ *
+ *   3b (hotel reveal) — runs on every subsequent open. Centered hotel
+ *      card with conditional Maps + Call chips, then the line footer.
+ *
+ * The branch is captured ONCE at first render via useState(() => ...)
+ * so a successful mutation that updates `dos_closed_at` mid-sequence
+ * can't swap the surface to 3b while the celebration is still playing.
+ *
+ * Degenerate case: if there's no hotel name, both 3a (after dismiss)
+ * and 3b would have nothing to show. Phase 3a still plays normally.
+ * Phase 3b in the no-hotel case renders just the line footer.
  */
 export default function PhasePostSettle({ show, onShowDone }: PhasePostSettleProps) {
+  // Capture the closed state at mount time so subsequent re-fetches
+  // (e.g. the mutation success cache invalidation) don't swap the
+  // surface mid-celebration.
+  const [wasClosedAtMount] = useState(() => !!show.dos_closed_at);
+
+  if (!wasClosedAtMount) {
+    return <Phase3aCelebration show={show} onDone={onShowDone ?? (() => {})} />;
+  }
+
   return (
     <div className="px-[22px] pt-2 pb-7 flex-1 flex flex-col">
-      {/* Lead-in — big display statement that names the moment. Clamps
-          38–52px, wraps via textWrap: balance for clean two-line breaks. */}
-      <div className="pt-[14px] pb-3">
-        <div
-          className="font-display"
-          style={{
-            fontSize: "clamp(38px, 11vw, 52px)",
-            lineHeight: 1.05,
-            letterSpacing: "-0.03em",
-            color: "hsl(var(--foreground))",
-            textWrap: "balance",
-          }}
-        >
-          {leadInCopy(new Date().getHours())}
-        </div>
-      </div>
-
-      {/* Done-mark — the closing flourish. Centered in the middle of the
-          available space, sized to feel substantial but not loud. The
-          three-part animation (ring stroke → check stroke → tiny serif
-          punctuation dot) sequences ~1.5s on phase entry. Interactive:
-          hold to complete. */}
-      <div className="flex-1 flex items-center justify-center py-6">
-        <DoneMark onComplete={onShowDone} />
-      </div>
-
-      {/* Sign-off — pinned to the bottom. Pool varies by show date so
-          the line changes day-to-day across a tour without ever feeling
-          random within a single show's repeat opens. */}
-      <div className="text-center">
-        <div
-          className="font-display gentle-breathe"
-          style={{
-            fontSize: 22,
-            lineHeight: 1.2,
-            letterSpacing: "-0.02em",
-            color: "hsl(var(--foreground))",
-          }}
-        >
-          {signOffFor(show.date)}
-        </div>
-      </div>
+      {show.hotel_name ? <HotelReveal show={show} /> : <div className="flex-1" />}
+      <div className="dos-phase-footer">{signOffFor(show.date)}</div>
     </div>
   );
 }
 
-/**
- * Interactive done-mark. Hold to complete. Holding fills the circle around
- * the checkmark over ~1.5s. On release/completion, the checkmark fills in
- * (satisfying solid fill animation), then triggers onComplete callback.
- *
- * Initial animation: ring + check + dot draw in sequence (~1.5s total).
- * Hold interaction: circle fills from 0→100% over 1500ms with linear timing.
- * Completion: checkmark transitions to solid fill, then fades with sign-off.
- */
-function DoneMark({ onComplete }: { onComplete?: () => void }) {
-  const [isHolding, setIsHolding] = useState(false);
-  const [holdProgress, setHoldProgress] = useState(0);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const holdStartRef = useRef<number | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
+// ─── Phase 3a — celebration (auto-played, ~3.6s) ────────────────
 
-  const HOLD_DURATION = 1500; // ms
+const T_CELEBRATION = {
+  checkDrawEnd:   880,
+  checkHoldBeat:  500,
+  checkFadeOut:   360,
+  goodJobIn:      320,
+  goodJobLinger: 1100,
+  goodJobFadeOut: 460,
+} as const;
+const T_CHECK_GONE   = T_CELEBRATION.checkDrawEnd + T_CELEBRATION.checkHoldBeat + T_CELEBRATION.checkFadeOut;
+const T_GOODJOB_PEAK = T_CHECK_GONE + T_CELEBRATION.goodJobIn;
+const T_GOODJOB_FADE = T_GOODJOB_PEAK + T_CELEBRATION.goodJobLinger;
+const T_DISMISS      = T_GOODJOB_FADE + T_CELEBRATION.goodJobFadeOut;
 
-  const startHold = () => {
-    if (isCompleted) return;
-    setIsHolding(true);
-    holdStartRef.current = performance.now();
+function Phase3aCelebration({ show, onDone }: { show: Show; onDone: () => void }) {
+  const [checkFading, setCheckFading] = useState(false);
+  const [goodJobShow, setGoodJobShow] = useState(false);
+  const [goodJobFading, setGoodJobFading] = useState(false);
 
-    const updateProgress = () => {
-      if (!holdStartRef.current) return;
-      const elapsed = performance.now() - holdStartRef.current;
-      const progress = Math.min(elapsed / HOLD_DURATION, 1);
-      setHoldProgress(progress);
+  const skippedRef = useRef(false);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
-      if (progress < 1) {
-        animationFrameRef.current = requestAnimationFrame(updateProgress);
-      } else {
-        endHold(true);
+  // Persist dos_closed_at on first mount. Optimistic update writes
+  // the timestamp into the cached show immediately so any subsequent
+  // refetch sees the closed state. Failures are logged but don't
+  // roll the UI back — re-running the celebration on a later open
+  // is a worse outcome than dropping a single network hit.
+  const queryClient = useQueryClient();
+  const closeMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("shows")
+        .update({ dos_closed_at: new Date().toISOString() })
+        .eq("id", show.id)
+        .is("dos_closed_at", null);
+      if (error) throw error;
+    },
+    onMutate: async () => {
+      const key = ["show", show.id];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<Show>(key);
+      if (previous) {
+        queryClient.setQueryData<Show>(key, {
+          ...previous,
+          dos_closed_at: new Date().toISOString(),
+        });
       }
-    };
+      return { previous };
+    },
+    onError: (err) => {
+      // No rollback — see comment above.
+      console.warn("dos_closed_at persistence failed", err);
+    },
+  });
 
-    animationFrameRef.current = requestAnimationFrame(updateProgress);
-  };
-
-  const endHold = (completed: boolean) => {
-    setIsHolding(false);
-    holdStartRef.current = null;
-
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-
-    if (completed) {
-      setIsCompleted(true);
-      // Trigger phase close after completion animation (~600ms)
-      holdTimerRef.current = setTimeout(() => {
-        onComplete?.();
-      }, 600);
-    } else {
-      setHoldProgress(0);
-    }
-  };
-
+  // Fire the mutation exactly once on mount.
+  const closedRef = useRef(false);
   useEffect(() => {
+    if (closedRef.current) return;
+    closedRef.current = true;
+    closeMutation.mutate();
+    // We intentionally don't list closeMutation in deps — it's stable
+    // for the lifetime of this component, and listing it would risk
+    // re-running the effect on a re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Run the celebration timeline.
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    timers.push(setTimeout(() => {
+      if (skippedRef.current) return;
+      setCheckFading(true);
+    }, T_CELEBRATION.checkDrawEnd + T_CELEBRATION.checkHoldBeat));
+
+    timers.push(setTimeout(() => {
+      if (skippedRef.current) return;
+      setGoodJobShow(true);
+    }, T_CHECK_GONE));
+
+    timers.push(setTimeout(() => {
+      if (skippedRef.current) return;
+      setGoodJobShow(false);
+      setGoodJobFading(true);
+    }, T_GOODJOB_FADE));
+
+    timers.push(setTimeout(() => {
+      if (skippedRef.current) return;
+      onDoneRef.current();
+    }, T_DISMISS));
+
     return () => {
-      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      timers.forEach(clearTimeout);
     };
   }, []);
 
+  const skip = useCallback(() => {
+    if (skippedRef.current) return;
+    skippedRef.current = true;
+    setCheckFading(true);
+    setGoodJobShow(false);
+    setGoodJobFading(true);
+    window.setTimeout(() => onDoneRef.current(), T_CELEBRATION.goodJobFadeOut);
+  }, []);
+
   return (
-    <button
-      type="button"
-      onPointerDown={startHold}
-      onPointerUp={() => endHold(false)}
-      onPointerLeave={() => endHold(false)}
-      onPointerCancel={() => endHold(false)}
-      disabled={isCompleted}
-      className="done-mark relative cursor-pointer [transition:opacity_600ms_var(--ease-out)] disabled:cursor-default"
-      style={{
-        width: 96,
-        height: 96,
-        opacity: isCompleted ? 0 : 1,
+    <div
+      className="px-[22px] pt-2 pb-7 flex-1 flex flex-col"
+      onClick={skip}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          skip();
+        }
       }}
-      aria-label="Hold to complete the show"
-      aria-valuenow={Math.round(holdProgress * 100)}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      role="progressbar"
+      aria-label="Tap to dismiss"
     >
-      <svg viewBox="0 0 72 72" width={96} height={96} className="block">
-        {/* Outer circle for hold fill progress (appears on hold) */}
-        {holdProgress > 0 && (
-          <circle
-            cx="36"
-            cy="36"
-            r="32"
-            fill="none"
-            stroke="hsl(var(--foreground) / 0.3)"
-            strokeWidth="2"
-            strokeDasharray={`${(holdProgress * 201).toFixed(1)} 201`}
-            strokeLinecap="round"
-            style={{
-              transformOrigin: "36px 36px",
-              transform: "rotate(-90deg)",
-            }}
-          />
-        )}
+      <div className="flex-1 flex items-center justify-center">
+        <div className="relative flex flex-col items-center">
+          <div className={`dos-check-mark${checkFading ? " fading" : ""}`}>
+            <svg viewBox="0 0 72 72" width="96" height="96" className="block overflow-visible">
+              <path className="check-stroke" d="M 19 38 L 31 50 L 55 24" />
+            </svg>
+          </div>
+          <div
+            className={`dos-good-job${goodJobShow ? " show" : ""}${goodJobFading ? " fading" : ""}`}
+            style={{ top: 28 }}
+          >
+            Good job.
+          </div>
+        </div>
+      </div>
 
-        {/* Base circle (entrance animation) */}
-        <circle
-          className="done-circle"
-          cx="36"
-          cy="36"
-          r="32"
-          fill="none"
-          stroke="hsl(var(--muted-foreground) / 0.55)"
-          strokeWidth="1"
-        />
-
-        {/* Checkmark — fills on completion */}
-        <path
-          className={`done-check ${isCompleted ? "done-check-completed" : ""}`}
-          d="M 23 37 L 33 47 L 51 27"
-          fill="none"
-          stroke="hsl(var(--foreground))"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Serif punctuation dot */}
-        <circle
-          className="done-dot"
-          cx="56"
-          cy="20"
-          r="1.4"
-          fill="hsl(var(--foreground))"
-        />
-      </svg>
-    </button>
+      <div className="dos-phase-footer">{signOffFor(show.date)}</div>
+    </div>
   );
 }
