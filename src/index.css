@@ -751,6 +751,9 @@
     transition-duration: 200ms;
     transform: none;
   }
+  .dos-good-job.fading {
+    transform: none;
+  }
   .dos-phase-footer,
   .dos-phase-footer-place {
     animation: none;
