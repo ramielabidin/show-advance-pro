@@ -140,6 +140,44 @@
   }
 }
 
+/* Done-mark — Phase 3 closing flourish. Sequenced one-shot:
+   ring stroke draws → check stroke draws (delayed) → tiny serif
+   punctuation dot pops in (delayed further). Total settle ~1.5s.
+   Stroke-dasharray values match the SVG path lengths
+   (circle r=32 ≈ 201, check path ≈ 46) so the stroke transitions
+   from "not drawn" to "fully drawn" cleanly. The serif dot is the
+   "almost cute" hand-drawn flourish next to the precise mark. */
+@keyframes done-circle-draw {
+  from {
+    stroke-dashoffset: 201;
+    opacity: 0;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes done-check-draw {
+  from {
+    stroke-dashoffset: 46;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes done-dot-in {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 @layer base {
   :root {
     --background: 40 30% 97%;
@@ -394,6 +432,28 @@
     animation-fill-mode: both;
   }
 
+  /* Done-mark — Phase 3 closing flourish. Three SVG primitives composed
+     into one mark, each driving its own keyframe: ring stroke draws →
+     check stroke draws → small serif punctuation dot pops. The wrapper
+     class is the stable hook for reduced-motion fallback below. */
+  .done-mark .done-circle {
+    stroke-dasharray: 201;
+    animation: done-circle-draw 1100ms cubic-bezier(0.6, 0.1, 0.2, 1) 80ms
+      backwards;
+    transform-origin: 36px 36px;
+  }
+  .done-mark .done-check {
+    stroke-dasharray: 46;
+    stroke-dashoffset: 46;
+    animation: done-check-draw 520ms cubic-bezier(0.5, 0, 0.2, 1) 720ms
+      forwards;
+  }
+  .done-mark .done-dot {
+    animation: done-dot-in 320ms cubic-bezier(0.4, 1.6, 0.6, 1) 1180ms
+      backwards;
+    transform-origin: 56px 20px;
+  }
+
   /* Override tailwindcss-animate defaults with our stronger curves */
   [data-state] {
     animation-timing-function: var(--ease-out);
@@ -451,6 +511,20 @@
       animation: none;
       opacity: 1;
       scale: 1;
+    }
+
+    /* Done-mark resolves to its final drawn state — circle and check
+       fully visible, punctuation dot in place — without animating. */
+    .done-mark .done-circle,
+    .done-mark .done-check {
+      animation: none;
+      stroke-dashoffset: 0;
+      opacity: 1;
+    }
+    .done-mark .done-dot {
+      animation: none;
+      transform: scale(1);
+      opacity: 1;
     }
 
     /* Neutralize Radix animate-in/out transform motion; keep opacity fade only */
