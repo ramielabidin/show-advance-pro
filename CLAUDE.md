@@ -31,6 +31,16 @@ What this means for day-to-day work:
 - **Guests are first-class.** Most people who interact with tour data (promoters, venue contacts, show-day crew) will never log in. Magic-link guest access and great transactional emails are how the product spreads.
 - **No anti-exploit logic on edits.** When tier enforcement does land, deleting a show will not return a slot and editing a show will not affect any counter. Do not add validation that makes legitimate edits (reschedules, routing changes) feel hostile.
 
+## Branch Discipline
+
+**This is the most important workflow rule.** Multiple parallel Claude sessions run on this repo, and commits landing on the wrong branch — or on top of another session's in-flight work — has been the single biggest source of friction. Before any commit:
+
+- ALWAYS verify the current branch with `git branch --show-current` before making commits
+- NEVER commit to an existing PR branch without explicit confirmation it's the right one
+- When starting new work, create a fresh branch off latest main: `git checkout main && git pull && git checkout -b <new-branch>`
+- Before pushing, verify commits aren't entangled with another agent's in-flight work (`git log main..HEAD --oneline` — every line should be yours)
+- If the harness routes you back to a different branch mid-session, stop and re-confirm before continuing edits
+
 ## Tech Stack
 
 - **React 18 + TypeScript** (Vite, path alias `@/` → `src/`)
@@ -229,6 +239,12 @@ Located in `supabase/functions/`. Called via `supabase.functions.invoke("<name>"
 
 **Migrations**: new migrations should be named `YYYYMMDDHHMMSS_short_snake_name.sql` (see the most recent files under `supabase/migrations/`). Older entries use a timestamp + UUID suffix — that's legacy; don't copy it. Apply via `supabase db push` against the remote project; regenerate `src/integrations/supabase/types.ts` after.
 
+## Database Migrations
+
+- Use the Supabase MCP server for all database operations (migrations, vault secrets, RLS policies)
+- Avoid direct Postgres connections (IPv6-only host and pooler tenant issues are recurring blockers)
+- When adding RLS policies, ensure SELECT, INSERT, UPDATE, and DELETE are all covered explicitly — missing UPDATE policies cause silent failures (this bit us on the initial RBAC ship)
+
 ## Guest links & guest views
 
 "Guests are first-class" is a stated product principle — most people who interact with tour data (promoters, venue contacts, show-day crew, the artist on tour) will never log in. The guest-link system gives them scoped, read-mostly access to a single show via a tokenized URL.
@@ -343,6 +359,12 @@ The app uses a dark-mode-first aesthetic (light-mode is also available). Key pri
 - Every user-facing detail should feel considered
 
 Output quality is part of the product — PDFs, emails, and Slack messages must match in-app visual quality. Before changing an exporter, eyeball the current output (download the PDF, check the Gmail preview) so the new version is a strict improvement.
+
+## Design Handoff Compliance
+
+- When implementing from a design file, re-read the spec before coding and after Phase 1 to verify scope
+- Do not add elements not in the spec (e.g., hotel info, extra fields) without asking
+- Match interaction patterns exactly (e.g., simple check mark vs. slide-to-settle) — confirm ambiguous interactions before building
 
 ## Testing
 
