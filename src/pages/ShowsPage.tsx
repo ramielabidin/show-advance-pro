@@ -376,7 +376,7 @@ export default function ShowsPage() {
             ariaLabelClear="Clear tour filter"
           >
             <span className="text-muted-foreground mr-1.5">Tour</span>
-            <span className="truncate max-w-[14ch]">{tour.name}</span>
+            <span className="truncate max-w-[22ch] sm:max-w-[32ch]">{tour.name}</span>
           </FilterChip>
         )}
 
