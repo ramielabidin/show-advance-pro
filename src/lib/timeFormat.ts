@@ -52,7 +52,7 @@ export function to24Hour(raw: string | null | undefined): string | null {
 export function to12Hour(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const h24 = to24Hour(raw);
-  if (h24 === null) return null;
+  if (h24 === null || typeof h24 !== "string") return null;
   const [hStr, mStr] = h24.split(":");
   const h = parseInt(hStr, 10);
   const ampm = h >= 12 ? "PM" : "AM";
