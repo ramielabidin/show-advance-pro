@@ -54,18 +54,25 @@ export default function DashboardPage() {
   const userFirstName = userFullName.split(/\s+/)[0] || null;
   const todayStr = format(today, "yyyy-MM-dd");
 
-  // "Today's show" — matches today's calendar date, OR yesterday's date if
-  // we're in the post-midnight early-morning window (before 4 AM). Load-outs
-  // and after-show wind-down run late; the chip should persist past midnight
-  // until the show day naturally ends (~4 AM cliff).
+  // "Today's show" — prioritizes unsettled show from today's date. Before 4 AM,
+  // falls back to unsettled show from yesterday (load-outs and after-show wind-down
+  // run late; the chip should persist past midnight until ~4 AM cliff). Always
+  // prefers today's unsettled show over yesterday's, even before 4 AM, so newly
+  // created shows take priority over completed ones from the previous night.
   const showToday = useMemo(() => {
     const now = new Date();
+    // First priority: any unsettled show from today
+    const todayShow = shows.find((s) => s.date === todayStr && !s.is_settled);
+    if (todayShow) return todayShow;
+
+    // Before 4 AM: fall back to unsettled show from yesterday (load-out window)
     if (now.getHours() < 4) {
       const yesterdayStr = format(subDays(now, 1), "yyyy-MM-dd");
-      const yesterdayShow = shows.find((s) => s.date === yesterdayStr);
+      const yesterdayShow = shows.find((s) => s.date === yesterdayStr && !s.is_settled);
       if (yesterdayShow) return yesterdayShow;
     }
-    return shows.find((s) => s.date === todayStr) ?? null;
+
+    return null;
   }, [shows, todayStr]);
 
   const headerLine = showToday
