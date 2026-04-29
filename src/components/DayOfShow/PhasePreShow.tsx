@@ -1,12 +1,10 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Phone, ArrowUpRight } from "lucide-react";
+import { Phone } from "lucide-react";
 import { to24Hour } from "@/lib/timeFormat";
-import { roleLabel } from "@/lib/contactRoles";
-import { normalizePhone, formatCityState } from "@/lib/utils";
 import type { Show, ScheduleEntry } from "@/lib/types";
-import ActionCard from "./ActionCard";
 import ScheduleList from "./ScheduleList";
+import PlaceFooter from "./PlaceFooter";
 import { fmt12parts, formatRelative, showDayMinutes } from "./timeUtils";
 
 interface PhasePreShowProps {
@@ -16,19 +14,27 @@ interface PhasePreShowProps {
 }
 
 /**
- * Phase 1 surface — pre-show. Two-column hero (Up next on the left, Venue
- * mirrored on the right), then the schedule list as the operative artifact,
- * then a single day-of contact action. Guest-list management lives on the
- * show detail page; this surface stays focused on what the user needs in
- * the moment.
+ * Phase 1 surface — pre-show. Three regions, top-to-bottom:
+ *
+ *   - Hero (pinned top): "UP NEXT" eyebrow + label + big serif time +
+ *     relative countdown. Single-column; the venue lives in the place
+ *     footer below.
+ *   - Schedule (scrolls): the operative artifact. Soft fades top and
+ *     bottom keep the edges from hard-clipping. The schedule grows
+ *     freely without breaking the layout — long festival schedules
+ *     just scroll inside the device frame.
+ *   - DOS contact + place footer (pinned bottom): always reachable
+ *     regardless of how long the schedule is.
+ *
+ * The flex chain on every column container needs `min-height: 0` so
+ * the scroll child can shrink below content size. Without it, the
+ * schedule pushes the contact + footer off-screen.
  */
 export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
   const navigate = useNavigate();
   const sortedEntries = useMemo<ScheduleEntry[]>(() => {
     const entries = [...(show.schedule_entries ?? [])];
     entries.sort((a, b) => {
-      // Use show-day minutes so post-midnight events (curfew, load-out)
-      // sort AFTER the preceding evening's load-in / soundcheck / set.
       const am = showDayMinutes(a.time);
       const bm = showDayMinutes(b.time);
       if (am === null && bm === null) return a.sort_order - b.sort_order;
@@ -40,10 +46,6 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
     return entries;
   }, [show.schedule_entries]);
 
-  // Hero = first entry whose time is in the future (>= now). If everything is
-  // past, fall back to the last entry (the curfew/load-out has just happened).
-  // Comparison uses show-day minutes so a curfew at 12:30 AM is correctly
-  // seen as "in 35 min" at 11:55 PM, not as "23.5 hours away".
   const heroIndex = useMemo(() => {
     const idx = sortedEntries.findIndex((e) => {
       const m = showDayMinutes(e.time);
@@ -57,7 +59,6 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
   const heroMin = hero ? showDayMinutes(hero.time) : null;
   const remaining = heroMin !== null ? heroMin - nowMin : null;
   const isFuture = remaining !== null && remaining > 0;
-
   const heroParts = hero ? fmt12parts(to24Hour(hero.time) ?? hero.time) : null;
 
   const dosContact = useMemo(
@@ -65,186 +66,138 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
     [show.show_contacts],
   );
 
-  const venueNavHref = useMemo(() => {
-    const target = [show.venue_address, formatCityState(show.city || "")].filter(Boolean).join(", ");
-    if (!target) return undefined;
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(target)}`;
-  }, [show.venue_address, show.city]);
-
-  /**
-   * Split a free-text address into clean stacked lines for the venue column.
-   * "25 Temple St, Portland, ME 04101" → ["25 Temple St", "Portland, ME 04101"]
-   * — first comma splits street vs. the rest. Falls back to formatted city
-   * when there's no address. Returns an empty array if there's nothing to show.
-   */
-  function addressLines(address: string | null | undefined, city: string | null | undefined): string[] {
-    if (address?.trim()) {
-      const parts = address.split(",").map((s) => s.trim()).filter(Boolean);
-      if (parts.length <= 1) return parts;
-      const [street, ...rest] = parts;
-      return [street, rest.join(", ")];
-    }
-    const fallback = formatCityState(city || "");
-    return fallback ? [fallback] : [];
-  }
-
   return (
-    <div className="px-[22px] pt-2 pb-7 flex-1 flex flex-col">
-      {/* Hero — two columns sharing structure but differing in scale.
-          Left = when (temporal hero), right = where (venue as quiet
-          mirrored typography, no card chrome). Eyebrows align at the top
-          baseline so the two sides read as one rhythm. */}
-      <div className="pt-[14px] pb-1 grid grid-cols-[1fr_1fr] gap-6 items-start">
-        {/* Time column */}
-        <div className="min-w-0 pr-3" data-stagger="0">
-          <div
-            className="text-[11px] uppercase font-medium leading-none mb-2.5"
-            style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
-          >
-            {isFuture ? "Up next" : "Now"}
-          </div>
-
-          {hero && (
-            <>
-              <div
-                className="text-[26px] font-medium leading-[1.05] truncate"
-                style={{ letterSpacing: "-0.02em", color: "hsl(var(--foreground))" }}
-              >
-                {hero.label}
-              </div>
-
-              {/* Big serif TIME — the operative number */}
-              {heroParts && (
-                <div
-                  className="mt-[16px] flex items-baseline gap-2 tabular-nums"
-                  style={{ letterSpacing: "-0.03em" }}
-                >
-                  <span
-                    className="font-display"
-                    style={{
-                      fontSize: 82,
-                      lineHeight: 0.92,
-                      color: "hsl(var(--foreground))",
-                    }}
-                  >
-                    {heroParts.n}
-                  </span>
-                  <span
-                    className="font-display"
-                    style={{
-                      fontSize: 28,
-                      lineHeight: 0.92,
-                      letterSpacing: "-0.02em",
-                      color: "hsl(var(--muted-foreground))",
-                    }}
-                  >
-                    {heroParts.u}
-                  </span>
-                </div>
-              )}
-
-              {/* Countdown — supporting context */}
-              {remaining !== null && (
-                <div
-                  className="mt-3 text-[15px] font-medium leading-[1.2]"
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                >
-                  {isFuture ? formatRelative(remaining) : "now"}
-                </div>
-              )}
-            </>
-          )}
+    <div
+      className="px-[22px] pt-2 pb-7 flex-1 flex flex-col gap-4"
+      // min-height: 0 is critical — without it the scroll region below
+      // can't shrink below content size, and the schedule pushes the
+      // pinned footer + contact card off the device frame.
+      style={{ minHeight: 0 }}
+    >
+      {/* Hero (pinned top) */}
+      <div className="pt-[10px] pb-1" data-stagger="0">
+        <div
+          className="text-[11px] uppercase font-medium leading-none mb-2.5"
+          style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
+        >
+          {isFuture ? "Up next" : "Now"}
         </div>
-
-        {/* Venue column — quiet typography mirror. No border, no card.
-            Whole column is one tap target → opens system maps. */}
-        {show.venue_name && (
-          <a
-            href={venueNavHref ?? undefined}
-            target={venueNavHref ? "_blank" : undefined}
-            rel={venueNavHref ? "noopener noreferrer" : undefined}
-            data-stagger="0"
-            className="text-left flex flex-col items-stretch min-w-0 [transition:transform_160ms_var(--ease-out)] active:scale-[0.985]"
-          >
-            <div className="flex items-center justify-between mb-2.5">
-              <span
-                className="text-[11px] uppercase font-medium leading-none"
-                style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
-              >
-                Venue
-              </span>
-              {venueNavHref && (
-                <ArrowUpRight
-                  className="h-3.5 w-3.5 shrink-0"
-                  strokeWidth={1.75}
-                  style={{ color: "hsl(var(--muted-foreground))" }}
-                />
-              )}
-            </div>
+        {hero && (
+          <>
             <div
-              className="font-display leading-[1.1] break-words"
-              style={{
-                fontSize: "clamp(18px, 4.8vw, 22px)",
-                letterSpacing: "-0.02em",
-                color: "hsl(var(--foreground))",
-                textWrap: "pretty",
-              }}
+              className="text-[22px] font-medium leading-[1.05]"
+              style={{ letterSpacing: "-0.02em", color: "hsl(var(--foreground))" }}
             >
-              {show.venue_name}
+              {hero.label}
             </div>
-            {(show.venue_address || show.city) && (
+            {heroParts && (
               <div
-                className="mt-2 font-mono text-[12px] leading-[1.45]"
-                style={{ color: "hsl(var(--muted-foreground))" }}
+                className="mt-3 flex items-baseline gap-2 tabular-nums"
+                style={{ letterSpacing: "-0.03em" }}
               >
-                {addressLines(show.venue_address, show.city).map((line, i) => (
-                  <div key={i}>{line}</div>
-                ))}
+                <span
+                  className="font-display"
+                  style={{
+                    fontSize: 64,
+                    lineHeight: 0.92,
+                    color: "hsl(var(--foreground))",
+                  }}
+                >
+                  {heroParts.n}
+                </span>
+                <span
+                  className="font-display"
+                  style={{
+                    fontSize: 22,
+                    lineHeight: 0.92,
+                    letterSpacing: "-0.02em",
+                    color: "hsl(var(--muted-foreground))",
+                  }}
+                >
+                  {heroParts.u}
+                </span>
               </div>
             )}
-          </a>
+            {remaining !== null && (
+              <div
+                className="mt-2.5 text-[13px] font-medium leading-[1.2]"
+                style={{ color: "hsl(var(--muted-foreground))" }}
+              >
+                {isFuture ? formatRelative(remaining) : "now"}
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* Schedule — the operative artifact on this screen. Given the most
-          vertical space; the user is here to read it. */}
+      {/* Schedule (scrolls in middle) */}
       {sortedEntries.length > 0 && (
-        <div className="mt-8" data-stagger="2">
-          <div
-            className="text-[11px] uppercase font-medium leading-none mb-3"
-            style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
-          >
-            Schedule
+        <div className="dos-p1-scroll-wrap" data-stagger="2">
+          <div className="dos-p1-scroll-fade top" />
+          <div className="dos-p1-scroll">
+            <ScheduleList
+              entries={sortedEntries}
+              nowMin={nowMin}
+              heroIndex={heroIndex}
+            />
           </div>
-          <ScheduleList entries={sortedEntries} nowMin={nowMin} heroIndex={heroIndex} />
+          <div className="dos-p1-scroll-fade bottom" />
         </div>
       )}
 
-      {/* Single action — day-of contact. Guest list, set list, etc. live on
-          the show detail page; this surface stays focused on the in-the-moment
-          ask: "who do I call right now". */}
-      <div className="mt-[22px]" data-stagger="3">
-        <ActionCard
-          icon={Phone}
-          eyebrow="Day-of contact"
-          title={dosContact?.name ?? null}
-          sub={
-            dosContact
-              ? [roleLabel(dosContact), dosContact.phone ? normalizePhone(dosContact.phone) : null]
-                  .filter(Boolean)
-                  .join(" · ") || null
-              : "Not set"
-          }
-          href={dosContact?.phone ? `tel:${dosContact.phone}` : undefined}
-          onClick={
-            dosContact?.phone
-              ? undefined
-              : () => navigate(`/shows/${show.id}?tab=contacts`)
-          }
-          fullWidth
-        />
-      </div>
+      {/* DOS contact (pinned, simplified) */}
+      <a
+        href={dosContact?.phone ? `tel:${dosContact.phone}` : undefined}
+        onClick={
+          dosContact?.phone
+            ? undefined
+            : (e) => {
+                e.preventDefault();
+                navigate(`/shows/${show.id}?tab=contacts`);
+              }
+        }
+        className="flex items-center gap-3 rounded-[12px] border bg-card px-3.5 py-2.5 transition-transform active:scale-[0.985]"
+        style={{ borderColor: "hsl(var(--border))" }}
+        data-stagger="3"
+      >
+        <div className="flex-1 min-w-0">
+          <div
+            className="text-[14px] font-medium leading-tight truncate"
+            style={{
+              color: dosContact?.name
+                ? "hsl(var(--foreground))"
+                : "hsl(var(--muted-foreground))",
+            }}
+          >
+            {dosContact?.name ?? "Add a day-of contact"}
+          </div>
+          <div
+            className="mt-1 text-[11px] uppercase font-medium leading-none"
+            style={{ letterSpacing: "0.14em", color: "hsl(var(--muted-foreground))" }}
+          >
+            Day of Show contact
+          </div>
+        </div>
+        <div
+          aria-hidden
+          className="shrink-0 inline-flex items-center justify-center rounded-full"
+          style={{
+            width: 34,
+            height: 34,
+            background: "hsl(152 60% 22% / 0.55)",
+            color: "hsl(152 60% 78%)",
+          }}
+        >
+          <Phone className="h-[15px] w-[15px]" strokeWidth={1.7} />
+        </div>
+      </a>
+
+      {/* Place footer (pinned bottom) */}
+      <PlaceFooter
+        venueName={show.venue_name}
+        city={show.city}
+        address={show.venue_address}
+      />
     </div>
   );
 }
-
