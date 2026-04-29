@@ -61,7 +61,8 @@ export function to12Hour(raw: string | null | undefined): string | null {
 }
 
 /** Normalize free-text time. AM/PM is preserved if provided, omitted if not. */
-export function normalizeTime(raw: string): string {
+export function normalizeTime(raw: string | null | undefined): string {
+  if (!raw || typeof raw !== "string") return "";
   const s = raw.trim();
   if (!s) return s;
 

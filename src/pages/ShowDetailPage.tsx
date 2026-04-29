@@ -796,7 +796,7 @@ export default function ShowDetailPage() {
     updateMutation.mutate({ backend_deal: deal });
   };
 
-  const scheduleEntries = show.schedule_entries?.sort((a, b) => a.sort_order - b.sort_order) ?? [];
+  const scheduleEntries = (show?.schedule_entries ?? []).map((e) => ({...e, time: e.time ?? ""})).sort((a, b) => a.sort_order - b.sort_order);
 
   // Inline save/cancel buttons component
   const InlineActions = ({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) => (
