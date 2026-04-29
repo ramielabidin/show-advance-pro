@@ -161,17 +161,18 @@ export default function TourScopedHeader({ tour, tourShows, onTourDeleted }: Tou
               {tour.name}
             </h1>
           )}
-          <p className="text-muted-foreground text-sm mt-1">
-            {start && end && start !== end ? (
-              <>
-                {format(parseISO(start), "MMM d")} – {format(parseISO(end), "MMM d, yyyy")} ·{" "}
-              </>
-            ) : start ? (
-              <>{format(parseISO(start), "MMM d, yyyy")} · </>
-            ) : null}
-            {tourShows.length} show{tourShows.length !== 1 ? "s" : ""}
-            {settledCount > 0 && <> · {settledCount} settled</>}
-          </p>
+          {start && (
+            <p className="text-muted-foreground text-sm mt-1">
+              {end && start !== end
+                ? <>{format(parseISO(start), "MMM d")} – {format(parseISO(end), "MMM d, yyyy")}</>
+                : <>{format(parseISO(start), "MMM d, yyyy")}</>}
+            </p>
+          )}
+          {tourShows.length > 0 && (
+            <p className="text-muted-foreground text-sm mt-0.5">
+              {settledCount} of {tourShows.length} complete
+            </p>
+          )}
         </div>
         {!isArtist && (
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
