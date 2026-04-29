@@ -52,6 +52,7 @@ export default function HotelReveal({ show }: HotelRevealProps) {
         style={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
       >
         <div
+          aria-hidden
           className="inline-flex items-center justify-center rounded-[12px] mb-1"
           style={{
             width: 48,
