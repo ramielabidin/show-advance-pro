@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn, formatCityState } from "@/lib/utils";
 import { to12Hour, to24Hour } from "@/lib/timeFormat";
 import { isLoadInLabel, isDoorsLabel } from "@/lib/scheduleMatch";
+import { showDayMinutes } from "@/components/DayOfShow/timeUtils";
 import StatusDot from "@/components/StatusDot";
 import type { Show } from "@/lib/types";
 
@@ -42,6 +43,22 @@ export default function FeaturedShowCard({ show, mode, tour }: FeaturedShowCardP
   const loadInTime = to12Hour(loadInEntry?.time);
   const doorsTime = to12Hour(doorsEntry?.time);
   const setTime = to12Hour(bandEntry?.time);
+
+  const countdownText = (() => {
+    if (daysAway !== 0 || !bandEntry?.time) return null;
+    const setMin = showDayMinutes(bandEntry.time);
+    if (setMin === null) return null;
+    const now = new Date();
+    const todayStr = format(now, "yyyy-MM-dd");
+    const isPostMidnightOnShowNight = show.date <= todayStr && now.getHours() < 4;
+    const currentMin = now.getHours() * 60 + now.getMinutes();
+    const adjustedCurrentMin = isPostMidnightOnShowNight ? currentMin + 24 * 60 : currentMin;
+    const diffMin = setMin - adjustedCurrentMin;
+    if (diffMin <= 0) return null;
+    const hours = Math.floor(diffMin / 60);
+    const mins = diffMin % 60;
+    return hours > 0 ? `in ${hours} hr ${mins} min` : `in ${mins} min`;
+  })();
 
   const capRaw = show.venue_capacity;
   const capNum = capRaw ? parseInt(String(capRaw).replace(/[^\d]/g, ""), 10) : NaN;
@@ -107,6 +124,11 @@ export default function FeaturedShowCard({ show, mode, tour }: FeaturedShowCardP
                   {daysLabel}
                 </span>
               ) : null}
+              {countdownText && daysAway === 0 && (
+                <span className="inline-flex items-center mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                  {countdownText}
+                </span>
+              )}
             </div>
 
             {/* Advance status dot */}
