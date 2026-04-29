@@ -178,6 +178,54 @@
   }
 }
 
+@keyframes done-check-fill {
+  0% {
+    stroke: hsl(var(--foreground));
+    stroke-width: 1.6;
+    fill: none;
+    filter: none;
+  }
+  70% {
+    stroke: hsl(var(--foreground));
+    stroke-width: 1.6;
+    fill: none;
+    filter: drop-shadow(0 0 8px hsl(var(--foreground) / 0.6));
+  }
+  100% {
+    stroke: hsl(var(--foreground));
+    stroke-width: 1.6;
+    fill: hsl(var(--foreground));
+    filter: drop-shadow(0 0 12px hsl(var(--foreground) / 0.4));
+  }
+}
+
+@keyframes pill-powerdown-flicker {
+  0% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px hsl(var(--day-of-active)));
+  }
+  20% {
+    opacity: 0.3;
+    filter: drop-shadow(0 0 12px hsl(var(--day-of-active) / 0.8));
+  }
+  40% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px hsl(var(--day-of-active)));
+  }
+  55% {
+    opacity: 0.2;
+    filter: drop-shadow(0 0 14px hsl(var(--day-of-active) / 0.9));
+  }
+  100% {
+    opacity: 0;
+    filter: drop-shadow(0 0 0px hsl(var(--day-of-active) / 0));
+  }
+}
+
+.pill-powerdown-flicker {
+  animation: pill-powerdown-flicker 800ms var(--ease-out) forwards;
+}
+
 @layer base {
   :root {
     --background: 40 30% 97%;
@@ -452,6 +500,13 @@
     animation: done-dot-in 320ms cubic-bezier(0.4, 1.6, 0.6, 1) 1180ms
       backwards;
     transform-origin: 56px 20px;
+  }
+
+  /* Checkmark completion — hold-to-complete gesture fires this. Fills the
+     checkmark from stroke to solid fill with a satisfying glow. 600ms
+     total animation: 0-70% glows, 70-100% fills. */
+  .done-check-completed {
+    animation: done-check-fill 600ms var(--ease-out) forwards !important;
   }
 
   /* Override tailwindcss-animate defaults with our stronger curves */

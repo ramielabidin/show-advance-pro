@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import type { Show } from "@/lib/types";
 
 /**
@@ -35,13 +36,15 @@ const SIGN_OFFS = [
   "Until the next one.",
 ];
 
-function signOffFor(date: string): string {
+function signOffFor(date: string | null | undefined): string {
+  if (!date || typeof date !== "string") return "See you soon.";
   const seed = date.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
   return SIGN_OFFS[seed % SIGN_OFFS.length];
 }
 
 interface PhasePostSettleProps {
   show: Show;
+  onShowDone?: () => void;
 }
 
 /**
@@ -51,8 +54,12 @@ interface PhasePostSettleProps {
  * live here was redundant — Phase 2 already shows a hotel teaser, and
  * the show detail page has the full booking. Phase 3 is for closing
  * the moment, not surfacing more data.
+ *
+ * The done-mark is interactive: hold to complete. Holding fills a circle
+ * around the checkmark over ~1.5s. On release, the checkmark fills in
+ * (satisfying completion animation), then the phase closes.
  */
-export default function PhasePostSettle({ show }: PhasePostSettleProps) {
+export default function PhasePostSettle({ show, onShowDone }: PhasePostSettleProps) {
   return (
     <div className="px-[22px] pt-2 pb-7 flex-1 flex flex-col">
       {/* Lead-in — big display statement that names the moment. Clamps
@@ -75,9 +82,10 @@ export default function PhasePostSettle({ show }: PhasePostSettleProps) {
       {/* Done-mark — the closing flourish. Centered in the middle of the
           available space, sized to feel substantial but not loud. The
           three-part animation (ring stroke → check stroke → tiny serif
-          punctuation dot) sequences ~1.5s on phase entry. */}
+          punctuation dot) sequences ~1.5s on phase entry. Interactive:
+          hold to complete. */}
       <div className="flex-1 flex items-center justify-center py-6">
-        <DoneMark />
+        <DoneMark onComplete={onShowDone} />
       </div>
 
       {/* Sign-off — pinned to the bottom. Pool varies by show date so
@@ -95,39 +103,117 @@ export default function PhasePostSettle({ show }: PhasePostSettleProps) {
         >
           {signOffFor(show.date)}
         </div>
-        <div
-          className="mt-1 text-[12px]"
-          style={{ color: "hsl(var(--muted-foreground))" }}
-        >
-          This view closes itself in the morning.
-        </div>
       </div>
     </div>
   );
 }
 
 /**
- * The closing flourish — a delicate hand-drawn check inside a barely-
- * there outline circle, with a tiny serif punctuation dot floating off
- * the upper right as a hand-written grace note. Sequenced via per-
- * element animation classes (see `.done-mark` in index.css):
- *   ring stroke draws first  (~1.1s)
- *   check stroke draws       (520ms after a 720ms delay)
- *   serif punctuation dot    (320ms after a 1180ms delay)
+ * Interactive done-mark. Hold to complete. Holding fills the circle around
+ * the checkmark over ~1.5s. On release/completion, the checkmark fills in
+ * (satisfying solid fill animation), then triggers onComplete callback.
  *
- * Path math: circle r=32 has circumference ≈ 201, so dasharray 201 /
- * dashoffset 201 → 0 fully draws it. The check path "M 23 37 L 33 47
- * L 51 27" totals ≈ 46. Reduced-motion resolves all three to their
- * final state without animation.
+ * Initial animation: ring + check + dot draw in sequence (~1.5s total).
+ * Hold interaction: circle fills from 0→100% over 1500ms with linear timing.
+ * Completion: checkmark transitions to solid fill, then fades with sign-off.
  */
-function DoneMark() {
+function DoneMark({ onComplete }: { onComplete?: () => void }) {
+  const [isHolding, setIsHolding] = useState(false);
+  const [holdProgress, setHoldProgress] = useState(0);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const holdStartRef = useRef<number | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  const HOLD_DURATION = 1500; // ms
+
+  const startHold = () => {
+    if (isCompleted) return;
+    setIsHolding(true);
+    holdStartRef.current = performance.now();
+
+    const updateProgress = () => {
+      if (!holdStartRef.current) return;
+      const elapsed = performance.now() - holdStartRef.current;
+      const progress = Math.min(elapsed / HOLD_DURATION, 1);
+      setHoldProgress(progress);
+
+      if (progress < 1) {
+        animationFrameRef.current = requestAnimationFrame(updateProgress);
+      } else {
+        endHold(true);
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(updateProgress);
+  };
+
+  const endHold = (completed: boolean) => {
+    setIsHolding(false);
+    holdStartRef.current = null;
+
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    if (completed) {
+      setIsCompleted(true);
+      // Trigger phase close after completion animation (~600ms)
+      holdTimerRef.current = setTimeout(() => {
+        onComplete?.();
+      }, 600);
+    } else {
+      setHoldProgress(0);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    };
+  }, []);
+
   return (
-    <div
-      className="done-mark relative"
-      style={{ width: 96, height: 96 }}
-      aria-hidden
+    <button
+      type="button"
+      onPointerDown={startHold}
+      onPointerUp={() => endHold(false)}
+      onPointerLeave={() => endHold(false)}
+      onPointerCancel={() => endHold(false)}
+      disabled={isCompleted}
+      className="done-mark relative cursor-pointer [transition:opacity_600ms_var(--ease-out)] disabled:cursor-default"
+      style={{
+        width: 96,
+        height: 96,
+        opacity: isCompleted ? 0 : 1,
+      }}
+      aria-label="Hold to complete the show"
+      aria-valuenow={Math.round(holdProgress * 100)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      role="progressbar"
     >
       <svg viewBox="0 0 72 72" width={96} height={96} className="block">
+        {/* Outer circle for hold fill progress (appears on hold) */}
+        {holdProgress > 0 && (
+          <circle
+            cx="36"
+            cy="36"
+            r="32"
+            fill="none"
+            stroke="hsl(var(--foreground) / 0.3)"
+            strokeWidth="2"
+            strokeDasharray={`${(holdProgress * 201).toFixed(1)} 201`}
+            strokeLinecap="round"
+            style={{
+              transformOrigin: "36px 36px",
+              transform: "rotate(-90deg)",
+            }}
+          />
+        )}
+
+        {/* Base circle (entrance animation) */}
         <circle
           className="done-circle"
           cx="36"
@@ -137,8 +223,10 @@ function DoneMark() {
           stroke="hsl(var(--muted-foreground) / 0.55)"
           strokeWidth="1"
         />
+
+        {/* Checkmark — fills on completion */}
         <path
-          className="done-check"
+          className={`done-check ${isCompleted ? "done-check-completed" : ""}`}
           d="M 23 37 L 33 47 L 51 27"
           fill="none"
           stroke="hsl(var(--foreground))"
@@ -146,6 +234,8 @@ function DoneMark() {
           strokeLinecap="round"
           strokeLinejoin="round"
         />
+
+        {/* Serif punctuation dot */}
         <circle
           className="done-dot"
           cx="56"
@@ -154,6 +244,6 @@ function DoneMark() {
           fill="hsl(var(--foreground))"
         />
       </svg>
-    </div>
+    </button>
   );
 }

@@ -8,7 +8,7 @@
  * coerced into a valid clock time.
  */
 export function to24Hour(raw: string | null | undefined): string | null {
-  if (!raw) return null;
+  if (!raw || typeof raw !== "string") return null;
   const s = raw.trim();
   if (!s || /^(tbd|n\/a)$/i.test(s)) return null;
 
@@ -50,8 +50,9 @@ export function to24Hour(raw: string | null | undefined): string | null {
  * unparseable. Accepts the same inputs as {@link to24Hour}.
  */
 export function to12Hour(raw: string | null | undefined): string | null {
+  if (!raw) return null;
   const h24 = to24Hour(raw);
-  if (h24 === null) return null;
+  if (h24 === null || typeof h24 !== "string") return null;
   const [hStr, mStr] = h24.split(":");
   const h = parseInt(hStr, 10);
   const ampm = h >= 12 ? "PM" : "AM";
@@ -60,7 +61,8 @@ export function to12Hour(raw: string | null | undefined): string | null {
 }
 
 /** Normalize free-text time. AM/PM is preserved if provided, omitted if not. */
-export function normalizeTime(raw: string): string {
+export function normalizeTime(raw: string | null | undefined): string {
+  if (!raw || typeof raw !== "string") return "";
   const s = raw.trim();
   if (!s) return s;
 

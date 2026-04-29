@@ -6,8 +6,9 @@ import { to24Hour } from "@/lib/timeFormat";
  * imports may produce.
  */
 export function timeToMinutes(raw: string | null | undefined): number | null {
+  if (!raw) return null;
   const h24 = to24Hour(raw);
-  if (h24 === null) return null;
+  if (h24 === null || typeof h24 !== "string") return null;
   const [h, m] = h24.split(":").map((n) => parseInt(n, 10));
   return h * 60 + m;
 }
@@ -23,7 +24,7 @@ export function timeToMinutes(raw: string | null | undefined): number | null {
  */
 export function fmt12parts(raw: string | null | undefined): { n: string; u: string } {
   const h24 = to24Hour(raw);
-  if (h24 === null) return { n: raw ?? "", u: "" };
+  if (h24 === null || typeof h24 !== "string") return { n: raw ?? "", u: "" };
   const [hStr, mStr] = h24.split(":");
   const h = parseInt(hStr, 10);
   const m = parseInt(mStr, 10);

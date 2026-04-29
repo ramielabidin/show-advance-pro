@@ -95,7 +95,7 @@ export default function ScheduleEditor({ initial, onSave, setLength, onSetLength
     setEditingIdx(null);
     setDraft(null);
     setSetLengthDraft("");
-    onSave(sorted.filter((r) => r.time.trim() || r.label.trim()));
+    onSave(sorted.filter((r) => (r.time?.trim() || r.label?.trim())));
   };
 
   const removeRow = (idx: number) => {
@@ -107,7 +107,7 @@ export default function ScheduleEditor({ initial, onSave, setLength, onSetLength
     } else if (editingIdx !== null && editingIdx > idx) {
       setEditingIdx(editingIdx - 1);
     }
-    onSave(updated.filter((r) => r.time.trim() || r.label.trim()));
+    onSave(updated.filter((r) => (r.time?.trim() || r.label?.trim())));
   };
 
   const addRow = () => {
