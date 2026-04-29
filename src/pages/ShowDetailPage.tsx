@@ -1419,7 +1419,7 @@ export default function ShowDetailPage() {
               <FieldGroup title="Schedule">
                 <ScheduleEditor
                   key={scheduleKey}
-                  initial={scheduleEntries.map((e) => ({ time: e.time, label: e.label, is_band: e.is_band }))}
+                  initial={scheduleEntries.map((e) => ({ time: e.time ?? "", label: e.label, is_band: e.is_band }))}
                   setLength={show.set_length}
                   onSetLengthChange={(val) => updateMutation.mutate({ set_length: val })}
                   onSave={async (rows) => {
