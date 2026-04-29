@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Mic } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,15 +40,14 @@ export default function DayOfShowFloatingButton({ showId }: DayOfShowFloatingBut
     if (show?.is_settled && !isPoweredDown) {
       setIsPoweredDown(true);
       // Start flicker animation 100ms after power-down transition begins
-      setTimeout(() => setIsFlickering(true), 100);
+      const timer = setTimeout(() => setIsFlickering(true), 100);
+      return () => clearTimeout(timer);
     }
   }, [show?.is_settled, isPoweredDown]);
 
-  const handleShowClose = () => {
+  const handleShowClose = useCallback(() => {
     setOpen(false);
-    // Mark the show as settled (this happens on the server, but we optimistically
-    // trigger the power-down animation locally)
-  };
+  }, []);
 
   return (
     <>
