@@ -26,7 +26,7 @@ export default function PlaceFooter({ venueName, city, address }: PlaceFooterPro
   const queryParts = [venueName];
   if (address?.trim()) queryParts.push(address.trim());
   else if (cityDisplay) queryParts.push(cityDisplay);
-  const href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryParts.join(", "))}`;
+  const href = `https://maps.google.com/?q=${encodeURIComponent(queryParts.join(", "))}`;
 
   return (
     <a
