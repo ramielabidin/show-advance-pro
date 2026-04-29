@@ -1472,7 +1472,7 @@ export default function ShowDetailPage() {
                 <div
                   ref={inlineRef}
                   className="space-y-3"
-                  onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) departureEditor.save(); }}
+                  onBlur={(e) => { const c = e.currentTarget; setTimeout(() => { if (!c.contains(document.activeElement)) departureEditor.save(); }, 0); }}
                 >
                   <div className="space-y-2">
                     <Label className="block text-sm text-muted-foreground">Time</Label>
@@ -1574,7 +1574,7 @@ export default function ShowDetailPage() {
                 <div
                   ref={inlineRef}
                   className="space-y-4"
-                  onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) arrivalEditor.save(); }}
+                  onBlur={(e) => { const c = e.currentTarget; setTimeout(() => { if (!c.contains(document.activeElement)) arrivalEditor.save(); }, 0); }}
                 >
                   <div className="space-y-1">
                     <Label className="text-sm text-muted-foreground">Load In</Label>
@@ -1624,7 +1624,7 @@ export default function ShowDetailPage() {
                 <div
                   ref={inlineRef}
                   className="space-y-3"
-                  onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) venueEditor.save(); }}
+                  onBlur={(e) => { const c = e.currentTarget; setTimeout(() => { if (!c.contains(document.activeElement)) venueEditor.save(); }, 0); }}
                 >
                   <div className="space-y-1">
                     <Label className="text-sm text-muted-foreground">Green Room</Label>
@@ -1716,7 +1716,7 @@ export default function ShowDetailPage() {
                 <div
                   ref={inlineRef}
                   className="space-y-3"
-                  onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) hotelEditor.save(); }}
+                  onBlur={(e) => { const c = e.currentTarget; setTimeout(() => { if (!c.contains(document.activeElement)) hotelEditor.save(); }, 0); }}
                 >
                   <div className="space-y-1">
                     <Label className="text-sm text-muted-foreground">Name</Label>
@@ -1768,9 +1768,14 @@ export default function ShowDetailPage() {
                       </div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={hotelEditor.cancel} className="h-7 text-xs">
-                    <X className="h-3 w-3 mr-1" /> Cancel
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={hotelEditor.save} className="h-7 text-xs">
+                      <Check className="h-3 w-3 mr-1" /> Save
+                    </Button>
+                    <Button variant="ghost" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={hotelEditor.cancel} className="h-7 text-xs">
+                      <X className="h-3 w-3 mr-1" /> Cancel
+                    </Button>
+                  </div>
                 </div>
               ) : hotelEditor.empty ? (
                 <EmptyFieldPrompt label="accommodations" onClick={hotelEditor.startEdit} />
