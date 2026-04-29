@@ -147,7 +147,13 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
 
       {/* DOS contact (pinned, simplified) */}
       <a
-        href={dosContact?.phone ? `tel:${dosContact.phone}` : undefined}
+        href={dosContact?.phone ? `tel:${dosContact.phone}` : "#"}
+        role={dosContact?.phone ? undefined : "button"}
+        aria-label={
+          dosContact?.phone
+            ? `Call ${dosContact.name ?? "day-of-show contact"}`
+            : "Add a day-of-show contact"
+        }
         onClick={
           dosContact?.phone
             ? undefined
