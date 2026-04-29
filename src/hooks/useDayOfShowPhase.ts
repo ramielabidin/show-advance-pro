@@ -38,14 +38,15 @@ export function useDayOfShowPhase(
     const setMin = setEntry ? showDayMinutes(setEntry.time) : null;
     if (setMin === null) return 1;
 
-    // If the show is still "tonight" but the wall clock has crossed midnight
-    // (show.date < today, current hour < 4 AM), bump nowMin into the same
-    // show-day coordinate space as setMin (which showDayMinutes already
-    // bumps for early-morning entries). Without this, a 9 PM band set looks
-    // 19 hours in the future at 1 AM next day instead of 4 hours past.
+    // If the show is still "tonight" but the wall clock is before 4 AM, bump
+    // nowMin into the same show-day coordinate space as setMin (which showDayMinutes
+    // already bumps for early-morning entries). This covers both:
+    //   - show.date < today: last night's show extending past midnight (1 AM load-out)
+    //   - show.date = today: today's show viewed before 4 AM (set time 1 AM already passed)
+    // Without this, a 1 AM set time looks 23+ hours in the future instead of past.
     const now = new Date();
     const todayStr = format(now, "yyyy-MM-dd");
-    const isPostMidnightOnShowNight = show.date < todayStr && now.getHours() < 4;
+    const isPostMidnightOnShowNight = show.date <= todayStr && now.getHours() < 4;
     const showDayNow = isPostMidnightOnShowNight ? nowMin + 24 * 60 : nowMin;
 
     if (showDayNow >= setMin + SETTLE_BUFFER_MIN) return isArtist ? 3 : 2;
