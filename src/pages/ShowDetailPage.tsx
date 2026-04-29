@@ -498,11 +498,11 @@ export default function ShowDetailPage() {
     return hours * 60 + minutes;
   }, [show]);
 
-  // Recommended departure = load-in - drive - 45min buffer
+  // Recommended departure = load-in - drive - 60min buffer
   const recommendedDeparture = useMemo(() => {
     if (loadInMinutes == null || !driveTime?.duration_seconds) return null;
     const driveMin = Math.round(driveTime.duration_seconds / 60);
-    const mins = loadInMinutes - driveMin - 45;
+    const mins = loadInMinutes - driveMin - 60;
     if (mins < 0) return null;
     const h24 = Math.floor(mins / 60) % 24;
     const m = mins % 60;
@@ -1513,38 +1513,39 @@ export default function ShowDetailPage() {
                   empty state. The "Use" affordance only renders when there's
                   no departure_time set yet. */}
               {driveTimeLabel && departureOrigin && !shouldHideDriveTime && !departureEditor.isEditing && (
-                <div className="flex items-center gap-2 flex-wrap pt-3 text-[12px] text-muted-foreground">
-                  <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} />
-                  <span>
-                    <span className="font-mono font-medium text-foreground">{driveTimeLabel}</span> from {departureOrigin.label}
-                  </span>
-                  {driveTime?.distance_text && (
-                    <>
-                      <span className="opacity-60">·</span>
-                      <span className="font-mono">{driveTime.distance_text}</span>
-                    </>
-                  )}
+                <div className="space-y-1.5 pt-3 text-[12px] text-muted-foreground">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} />
+                    <span>
+                      <span className="font-mono font-medium text-foreground">{driveTimeLabel}</span> from {departureOrigin.label}
+                    </span>
+                    {driveTime?.distance_text && (
+                      <>
+                        <span className="opacity-60">·</span>
+                        <span className="font-mono">{driveTime.distance_text}</span>
+                      </>
+                    )}
+                  </div>
                   {recommendedDeparture && (
-                    <>
-                      <span className="opacity-60">·</span>
-                      {show.departure_time ? (
-                        <span>
-                          recommended <span className="font-mono font-medium text-foreground">{recommendedDeparture}</span> <span className="opacity-70">(load-in − drive − 45 min)</span>
-                        </span>
-                      ) : (
+                    show.departure_time ? (
+                      <div className="pl-5">
+                        leave by <span className="font-mono font-medium text-foreground">{recommendedDeparture}</span> to make load-in
+                      </div>
+                    ) : (
+                      <div className="pl-5">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-7 px-2 text-[11px] gap-1.5"
+                          className="h-7 px-2.5 text-[11px] gap-1.5"
                           onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture })}
                           disabled={updateMutation.isPending}
                         >
                           <Clock className="h-3 w-3" />
-                          Use {recommendedDeparture}
-                          <span className="text-muted-foreground/80">· load-in − drive − 45 min</span>
+                          Leave by <span className="font-mono font-medium">{recommendedDeparture}</span>
+                          <span className="text-muted-foreground/80">to make load-in</span>
                         </Button>
-                      )}
-                    </>
+                      </div>
+                    )
                   )}
                 </div>
               )}
