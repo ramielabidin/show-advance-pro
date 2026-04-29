@@ -50,6 +50,7 @@ export function to24Hour(raw: string | null | undefined): string | null {
  * unparseable. Accepts the same inputs as {@link to24Hour}.
  */
 export function to12Hour(raw: string | null | undefined): string | null {
+  if (!raw) return null;
   const h24 = to24Hour(raw);
   if (h24 === null) return null;
   const [hStr, mStr] = h24.split(":");
