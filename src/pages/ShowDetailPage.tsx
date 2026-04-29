@@ -703,6 +703,7 @@ export default function ShowDetailPage() {
     inlineField,
     setInlineField,
     updateMutation,
+    normalizers: { hotel_phone: normalizePhone },
     isEmpty: s => !s.hotel_name && !s.hotel_address && !s.hotel_phone && !s.hotel_confirmation && !s.hotel_checkin && !s.hotel_checkin_date && !s.hotel_checkout && !s.hotel_checkout_date,
   });
 
