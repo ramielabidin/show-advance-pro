@@ -23,7 +23,7 @@ export default function DayOfShowFloatingButton({ showId }: DayOfShowFloatingBut
   const [isFlickering, setIsFlickering] = useState(false);
 
   const { data: show } = useQuery({
-    queryKey: ["show", showId],
+    queryKey: ["show", showId, "settled-only"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shows")
