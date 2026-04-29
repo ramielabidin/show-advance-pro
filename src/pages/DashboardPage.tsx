@@ -18,7 +18,7 @@ import type { Show } from "@/lib/types";
 
 type ShowWithTour = Show & { tours?: { id: string; name: string } | null };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 3;
 
 function isUpcomingDate(date: string): boolean {
   const d = parseISO(date);
@@ -113,7 +113,7 @@ export default function DashboardPage() {
           setVisibleCount((c) => Math.min(c + PAGE_SIZE, listShows.length));
         }
       },
-      { rootMargin: "200px" },
+      { rootMargin: "0px", threshold: 0.6 },
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -223,17 +223,22 @@ export default function DashboardPage() {
               >
                 Upcoming Shows
               </SectionLabel>
-              <div className="stagger-list space-y-2">
-                {visibleListShows.map((show) => (
-                  <ShowCard
+              <div className="space-y-2">
+                {visibleListShows.map((show, i) => (
+                  <div
                     key={show.id}
-                    show={show}
-                    chip={show.tour_id ? "tour" : "none"}
-                  />
+                    className="stagger-item"
+                    style={{ animationDelay: `${(i % PAGE_SIZE) * 60}ms` }}
+                  >
+                    <ShowCard
+                      show={show}
+                      chip={show.tour_id ? "tour" : "none"}
+                    />
+                  </div>
                 ))}
               </div>
               {hasMore && (
-                <div ref={sentinelRef} aria-hidden className="h-8" />
+                <div ref={sentinelRef} aria-hidden className="h-12" />
               )}
             </div>
           )}
