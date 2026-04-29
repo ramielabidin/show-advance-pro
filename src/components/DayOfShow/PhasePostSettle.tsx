@@ -36,7 +36,8 @@ const SIGN_OFFS = [
   "Until the next one.",
 ];
 
-function signOffFor(date: string): string {
+function signOffFor(date: string | null | undefined): string {
+  if (!date || typeof date !== "string") return "See you soon.";
   const seed = date.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
   return SIGN_OFFS[seed % SIGN_OFFS.length];
 }
