@@ -88,6 +88,15 @@
   }
 }
 
+/* Gentle breathe — slow opacity pulse for the Phase 3 sign-off line.
+   4.8s loop, ease-in-out, opacity 1 → 0.78 → 1. Decorative warmth on
+   the moment-of-rest screen; never used elsewhere because at 50+
+   opens-per-show-day Phase 1 would feel like a slow strobe. */
+@keyframes gentle-breathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.78; }
+}
+
 @layer base {
   :root {
     --background: 40 30% 97%;
@@ -307,6 +316,12 @@
   .phase-morph [data-stagger="2"] { animation-delay: 60ms; }
   .phase-morph [data-stagger="3"] { animation-delay: 90ms; }
 
+  /* Gentle breathe — applied to the Phase 3 sign-off line. Pure opacity
+     loop; no transform, no movement. Reduced-motion disables it below. */
+  .gentle-breathe {
+    animation: gentle-breathe 4.8s ease-in-out infinite;
+  }
+
   /* Override tailwindcss-animate defaults with our stronger curves */
   [data-state] {
     animation-timing-function: var(--ease-out);
@@ -344,6 +359,10 @@
     }
 
     .phase-morph [data-stagger] {
+      animation: none;
+    }
+
+    .gentle-breathe {
       animation: none;
     }
 

@@ -4,6 +4,62 @@ import { formatHotelMoment } from "@/lib/timeFormat";
 import { formatCityState } from "@/lib/utils";
 import type { Show } from "@/lib/types";
 
+/**
+ * Lead-in copy that adapts to wall-clock hour. The same show feels
+ * different at 9 PM vs 2 AM vs 5 AM — meet the user where they are.
+ *
+ * Buckets:
+ *   pre-midnight (default, 9 PM–11:59 PM): "Tonight's done."
+ *   post-midnight (00:00–02:59):           "It's been a long one."
+ *   pre-dawn (03:00–04:59):                "Almost dawn."
+ *   morning (05:00–07:59, rare):           "Show's behind you."
+ *
+ * (After 8 AM the overlay auto-resolves itself, so we don't write copy
+ * for that case.)
+ */
+function leadInCopy(hasHotel: boolean, nowHour: number): string {
+  if (nowHour >= 5 && nowHour < 8) {
+    return hasHotel
+      ? "Show's behind you. Here's your bed."
+      : "Show's behind you. Get home safe.";
+  }
+  if (nowHour >= 3 && nowHour < 5) {
+    return hasHotel
+      ? "Almost dawn. Here's your bed."
+      : "Almost dawn. Get there safe.";
+  }
+  if (nowHour < 3) {
+    return hasHotel
+      ? "It's been a long one. Here's where you're sleeping."
+      : "It's been a long one. Drive carefully.";
+  }
+  return hasHotel
+    ? "Tonight's done. Here's where you're sleeping."
+    : "Tonight's done. Get home safe.";
+}
+
+/**
+ * Pool of sign-offs picked deterministically by show date so the same
+ * show always shows the same line (stable across re-opens of the same
+ * day's Phase 3) but the line varies day-to-day across a tour. Date
+ * format is "YYYY-MM-DD" from show.date.
+ */
+const SIGN_OFFS = [
+  "Good night.",
+  "Sleep well.",
+  "Until tomorrow.",
+  "Rest up.",
+  "See you in the morning.",
+  "Until the next one.",
+];
+
+function signOffFor(date: string): string {
+  const seed = date
+    .split("")
+    .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return SIGN_OFFS[seed % SIGN_OFFS.length];
+}
+
 interface PhasePostSettleProps {
   show: Show;
 }
@@ -63,7 +119,7 @@ export default function PhasePostSettle({ show }: PhasePostSettleProps) {
           className="text-[13px] leading-[1.45]"
           style={{ color: "hsl(var(--muted-foreground))" }}
         >
-          {hasHotel ? "Tonight's done. Here's where you're sleeping." : "Tonight's done. Get home safe."}
+          {leadInCopy(hasHotel, new Date().getHours())}
         </div>
       </div>
 
@@ -144,7 +200,7 @@ export default function PhasePostSettle({ show }: PhasePostSettleProps) {
       {/* Sign-off — pinned to the bottom */}
       <div className="mt-auto pt-8 text-center">
         <div
-          className="font-display"
+          className="font-display gentle-breathe"
           style={{
             fontSize: 22,
             lineHeight: 1.2,
@@ -152,7 +208,7 @@ export default function PhasePostSettle({ show }: PhasePostSettleProps) {
             color: "hsl(var(--foreground))",
           }}
         >
-          Good night.
+          {signOffFor(show.date)}
         </div>
         <div
           className="mt-1 text-[12px]"
