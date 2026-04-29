@@ -9,6 +9,23 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit*)",
+            "command": "jq -n --arg branch \"$(git branch --show-current 2>/dev/null)\" --arg ahead \"$(git log main..HEAD --oneline 2>/dev/null)\" '{hookSpecificOutput: {hookEventName: \"PreToolUse\", additionalContext: (\"Branch verification before git commit/push:\\nCurrent branch: \" + $branch + \"\\nCommits ahead of main:\\n\" + (if $ahead == \"\" then \"(none)\" else $ahead end) + \"\\n\\nIf this is NOT the branch you explicitly created with `git checkout -b` for this task, STOP. The harness can silently switch branches between commands; do not proceed without re-confirming with the user.\")}}'"
+          },
+          {
+            "type": "command",
+            "if": "Bash(git push*)",
+            "command": "jq -n --arg branch \"$(git branch --show-current 2>/dev/null)\" --arg ahead \"$(git log main..HEAD --oneline 2>/dev/null)\" '{hookSpecificOutput: {hookEventName: \"PreToolUse\", additionalContext: (\"Branch verification before git commit/push:\\nCurrent branch: \" + $branch + \"\\nCommits ahead of main:\\n\" + (if $ahead == \"\" then \"(none)\" else $ahead end) + \"\\n\\nIf this is NOT the branch you explicitly created with `git checkout -b` for this task, STOP. The harness can silently switch branches between commands; do not proceed without re-confirming with the user.\")}}'"
+          }
+        ]
+      }
     ]
   }
 }
