@@ -27,6 +27,7 @@ tmp/
 .claude/*
 !.claude/skills/
 !.claude/skills/**
+!.claude/settings.json
 
 # Editor directories and files
 .vscode/*
