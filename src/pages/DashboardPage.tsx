@@ -75,6 +75,29 @@ export default function DashboardPage() {
     return null;
   }, [shows, todayStr]);
 
+  // Mount target for the Day of Show floating button. Includes settled
+  // shows so the post-settle transition (powered-down state + the Phase 3
+  // celebration overlay) plays out — without this, settling flips
+  // is_settled, unmounts the button, and drops the user back on the dashboard
+  // mid-flow.
+  const dayOfShowShowId = useMemo(() => {
+    const now = new Date();
+    const todayMatch = shows.filter((s) => s.date === todayStr);
+    const todayUnsettled = todayMatch.find((s) => !s.is_settled);
+    if (todayUnsettled) return todayUnsettled.id;
+    const todaySettled = todayMatch.find((s) => s.is_settled);
+    if (todaySettled) return todaySettled.id;
+    if (now.getHours() < 4) {
+      const yesterdayStr = format(subDays(now, 1), "yyyy-MM-dd");
+      const yesterdayMatch = shows.filter((s) => s.date === yesterdayStr);
+      const yUnsettled = yesterdayMatch.find((s) => !s.is_settled);
+      if (yUnsettled) return yUnsettled.id;
+      const ySettled = yesterdayMatch.find((s) => s.is_settled);
+      if (ySettled) return ySettled.id;
+    }
+    return null;
+  }, [shows, todayStr]);
+
   const headerLine = showToday
     ? userFirstName
       ? `Have a great show, ${userFirstName}`
@@ -172,7 +195,7 @@ export default function DashboardPage() {
             <p className="text-muted-foreground">No shows yet — add your first one to get started.</p>
           </CardContent>
         </Card>
-        {showToday && <DayOfShowFloatingButton showId={showToday.id} />}
+        {dayOfShowShowId && <DayOfShowFloatingButton showId={dayOfShowShowId} />}
       </div>
     );
   }
@@ -252,7 +275,7 @@ export default function DashboardPage() {
         </>
       )}
 
-      {showToday && <DayOfShowFloatingButton showId={showToday.id} />}
+      {dayOfShowShowId && <DayOfShowFloatingButton showId={dayOfShowShowId} />}
     </div>
   );
 }
