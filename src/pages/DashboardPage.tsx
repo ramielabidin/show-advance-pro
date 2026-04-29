@@ -454,13 +454,18 @@ export default function DashboardPage() {
       </div>
 
       {/* Greeting + (on a show day) the mic chip, inline. flex-wrap so the
-          chip drops to the next line gracefully on very narrow widths. */}
+          chip drops to the next line gracefully on very narrow widths. The
+          chip is mobile-only — Day of Show Mode is a phone-in-venue surface,
+          and showing it on desktop would invite a full-screen overlay onto
+          a screen it wasn't designed for. */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="min-w-0 flex-1 font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
           {headerLine}
         </h1>
         {showToday && (
-          <MicChip onClick={() => setDayOfShowOpen(true)} />
+          <div className="md:hidden">
+            <MicChip onClick={() => setDayOfShowOpen(true)} />
+          </div>
         )}
       </div>
     </div>
