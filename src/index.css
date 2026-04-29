@@ -65,6 +65,119 @@
   }
 }
 
+/* Phase 1 stagger — one-shot cascade as Day of Show Phase 1 assembles.
+   Four data-stagger anchors live in PhasePreShow.tsx:
+     0 = hero (time column + venue, animated together)
+     1 = reserved
+     2 = schedule list
+     3 = action stack
+   Anchors stagger 30ms apart; last anchor settles ~450ms after first
+   frame (90ms delay + 360ms duration). 360ms exceeds the 300ms
+   interactive-animation rule on purpose — this is decorative entry,
+   nested inside .phase-morph's 380ms parent window, so the cascade
+   reads as the tail of a single transition. Hardware-accelerated
+   (transform + opacity only) and disabled under prefers-reduced-motion. */
+@keyframes phase-1-stagger {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Gentle breathe — slow opacity pulse for the Phase 3 sign-off line.
+   4.8s loop, ease-in-out, opacity 1 → 0.78 → 1. Decorative warmth on
+   the moment-of-rest screen; never used elsewhere because at 50+
+   opens-per-show-day Phase 1 would feel like a slow strobe. */
+@keyframes gentle-breathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.78; }
+}
+
+/* Day-of-active pulse — soft glow on the inline mic icon at the end of
+   the dashboard headline on show day. Drop-shadow + opacity oscillation
+   in the day-of-active red, signaling tappability without competing
+   with the headline typography. Distinct from .mic-glow (pastel-red,
+   used on the show-card "tonight" indicator) and .mic-chip-pulse (the
+   chip-level halo). */
+@keyframes day-of-active-pulse {
+  0%, 100% {
+    opacity: 0.78;
+    filter: drop-shadow(0 0 2px hsl(var(--day-of-active) / 0.5));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px hsl(var(--day-of-active) / 0.85));
+  }
+}
+
+/* Spine pulse — slow continuous loop on the green left edge of the
+   Phase 2 Settle CTA. Pure box-shadow change (no transform / no
+   layout), 3.6s ease-in-out infinite. Calls attention to "the moment
+   of arrival" without being aggressive. Disabled under
+   prefers-reduced-motion. */
+@keyframes spine-pulse {
+  0%, 100% { box-shadow: 0 0 24px 0 hsl(var(--success) / 0.55); }
+  50%      { box-shadow: 0 0 36px 2px hsl(var(--success) / 0.85); }
+}
+
+/* Timeline dot sparkler — one-shot fade + scale-in on Phase 2 entry.
+   Each dot's animation-delay is set inline based on its left%
+   position so the sweep traces the night left-to-right. Uses the
+   `scale` individual transform property so it stacks cleanly with
+   the existing `transform: translate(-50%, -50%)` centering. */
+@keyframes timeline-dot-sparkler {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/* Done-mark — Phase 3 closing flourish. Sequenced one-shot:
+   ring stroke draws → check stroke draws (delayed) → tiny serif
+   punctuation dot pops in (delayed further). Total settle ~1.5s.
+   Stroke-dasharray values match the SVG path lengths
+   (circle r=32 ≈ 201, check path ≈ 46) so the stroke transitions
+   from "not drawn" to "fully drawn" cleanly. The serif dot is the
+   "almost cute" hand-drawn flourish next to the precise mark. */
+@keyframes done-circle-draw {
+  from {
+    stroke-dashoffset: 201;
+    opacity: 0;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes done-check-draw {
+  from {
+    stroke-dashoffset: 46;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes done-dot-in {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 @layer base {
   :root {
     --background: 40 30% 97%;
@@ -266,11 +379,79 @@
     animation: mic-chip-pulse 2.4s ease-in-out infinite;
   }
 
+  /* Inline mic accent at the end of the show-day headline. Soft glow
+     pulse in the day-of-active red, paired with a Mic icon. Replaces
+     the standalone .mic-chip-pulse chip on the dashboard so the entry
+     integrates into the headline instead of crowding the row. */
+  .day-of-active-pulse {
+    animation: day-of-active-pulse 2.4s ease-in-out infinite;
+  }
+
   /* Day of Show phase swap — used on a keyed wrapper so React's remount on
      phase change replays the animation. 380ms is fast enough to not feel
      like a wait, slow enough to register as intentional. */
   .phase-morph {
     animation: phase-morph 380ms var(--ease-in-out) both;
+  }
+
+  /* Phase 1 stagger anchors — see @keyframes phase-1-stagger above. The
+     stagger runs nested inside .phase-morph so each phase remount replays
+     it. Indices map to PhasePreShow's data-stagger attributes. */
+  .phase-morph [data-stagger] {
+    animation: phase-1-stagger 360ms var(--ease-out) both;
+  }
+  .phase-morph [data-stagger="0"] { animation-delay: 0ms; }
+  .phase-morph [data-stagger="1"] { animation-delay: 30ms; }
+  .phase-morph [data-stagger="2"] { animation-delay: 60ms; }
+  .phase-morph [data-stagger="3"] { animation-delay: 90ms; }
+
+  /* Gentle breathe — applied to the Phase 3 sign-off line. Pure opacity
+     loop; no transform, no movement. Reduced-motion disables it below. */
+  .gentle-breathe {
+    animation: gentle-breathe 4.8s ease-in-out infinite;
+  }
+
+  /* Spine pulse — applied to the green spine div inside the Phase 2
+     Settle CTA. The continuous box-shadow loop keeps the moment-of-
+     arrival feeling alive without crossing into "celebration" — Advance
+     stays serious. Reduced-motion disables it. */
+  .spine-pulse {
+    animation: spine-pulse 3.6s ease-in-out infinite;
+  }
+
+  /* Timeline dot — applied to each dot in the Phase 2 night-timeline
+     footer. Animation-delay is set inline based on the dot's left%
+     position so the dots fade + scale in left-to-right (sparkler
+     effect) when Phase 2 first mounts. Reduced-motion disables it
+     below — the dots still render at their final positions because
+     animation-fill-mode `both` is overridden by the disable. */
+  .timeline-dot {
+    animation-name: timeline-dot-sparkler;
+    animation-duration: 280ms;
+    animation-timing-function: var(--ease-out);
+    animation-fill-mode: both;
+  }
+
+  /* Done-mark — Phase 3 closing flourish. Three SVG primitives composed
+     into one mark, each driving its own keyframe: ring stroke draws →
+     check stroke draws → small serif punctuation dot pops. The wrapper
+     class is the stable hook for reduced-motion fallback below. */
+  .done-mark .done-circle {
+    stroke-dasharray: 201;
+    animation: done-circle-draw 1100ms cubic-bezier(0.6, 0.1, 0.2, 1) 80ms
+      backwards;
+    transform-origin: 36px 36px;
+  }
+  .done-mark .done-check {
+    stroke-dasharray: 46;
+    stroke-dashoffset: 46;
+    animation: done-check-draw 520ms cubic-bezier(0.5, 0, 0.2, 1) 720ms
+      forwards;
+  }
+  .done-mark .done-dot {
+    animation: done-dot-in 320ms cubic-bezier(0.4, 1.6, 0.6, 1) 1180ms
+      backwards;
+    transform-origin: 56px 20px;
   }
 
   /* Override tailwindcss-animate defaults with our stronger curves */
@@ -305,8 +486,45 @@
       animation: none;
     }
 
+    .day-of-active-pulse {
+      animation: none;
+      opacity: 1;
+    }
+
     .phase-morph {
       animation: none;
+    }
+
+    .phase-morph [data-stagger] {
+      animation: none;
+    }
+
+    .gentle-breathe {
+      animation: none;
+    }
+
+    .spine-pulse {
+      animation: none;
+    }
+
+    .timeline-dot {
+      animation: none;
+      opacity: 1;
+      scale: 1;
+    }
+
+    /* Done-mark resolves to its final drawn state — circle and check
+       fully visible, punctuation dot in place — without animating. */
+    .done-mark .done-circle,
+    .done-mark .done-check {
+      animation: none;
+      stroke-dashoffset: 0;
+      opacity: 1;
+    }
+    .done-mark .done-dot {
+      animation: none;
+      transform: scale(1);
+      opacity: 1;
     }
 
     /* Neutralize Radix animate-in/out transform motion; keep opacity fade only */

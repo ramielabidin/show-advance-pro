@@ -1,10 +1,9 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Phone, Users, ArrowUpRight } from "lucide-react";
+import { Phone, ArrowUpRight } from "lucide-react";
 import { to24Hour } from "@/lib/timeFormat";
 import { roleLabel } from "@/lib/contactRoles";
 import { normalizePhone, formatCityState } from "@/lib/utils";
-import { parseGuestList, guestTotal } from "@/components/GuestListEditor";
 import type { Show, ScheduleEntry } from "@/lib/types";
 import ActionCard from "./ActionCard";
 import ScheduleList from "./ScheduleList";
@@ -17,10 +16,11 @@ interface PhasePreShowProps {
 }
 
 /**
- * Phase 1 surface — pre-show. Hero is the next schedule moment, with the
- * clock time as the typographic flex and the countdown demoted to a subtitle
- * (per the design feedback round). Schedule list, then a 2-up DOS contact +
- * guest list count, then a full-width venue navigate row.
+ * Phase 1 surface — pre-show. Two-column hero (Up next on the left, Venue
+ * mirrored on the right), then the schedule list as the operative artifact,
+ * then a single day-of contact action. Guest-list management lives on the
+ * show detail page; this surface stays focused on what the user needs in
+ * the moment.
  */
 export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
   const navigate = useNavigate();
@@ -65,11 +65,6 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
     [show.show_contacts],
   );
 
-  const guestCount = useMemo(
-    () => guestTotal(parseGuestList(show.guest_list_details)),
-    [show.guest_list_details],
-  );
-
   const venueNavHref = useMemo(() => {
     const target = [show.venue_address, formatCityState(show.city || "")].filter(Boolean).join(", ");
     if (!target) return undefined;
@@ -99,9 +94,9 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
           Left = when (temporal hero), right = where (venue as quiet
           mirrored typography, no card chrome). Eyebrows align at the top
           baseline so the two sides read as one rhythm. */}
-      <div className="pt-[14px] pb-1 grid grid-cols-[1.2fr_1fr] gap-5 items-start">
+      <div className="pt-[14px] pb-1 grid grid-cols-[1fr_1fr] gap-6 items-start">
         {/* Time column */}
-        <div className="min-w-0">
+        <div className="min-w-0 pr-3" data-stagger="0">
           <div
             className="text-[11px] uppercase font-medium leading-none mb-2.5"
             style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
@@ -112,7 +107,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
           {hero && (
             <>
               <div
-                className="text-[28px] font-medium leading-[1.05] truncate"
+                className="text-[26px] font-medium leading-[1.05] truncate"
                 style={{ letterSpacing: "-0.02em", color: "hsl(var(--foreground))" }}
               >
                 {hero.label}
@@ -121,14 +116,14 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
               {/* Big serif TIME — the operative number */}
               {heroParts && (
                 <div
-                  className="mt-[18px] flex items-baseline gap-2.5 tabular-nums"
-                  style={{ letterSpacing: "-0.05em" }}
+                  className="mt-[16px] flex items-baseline gap-2 tabular-nums"
+                  style={{ letterSpacing: "-0.03em" }}
                 >
                   <span
                     className="font-display"
                     style={{
-                      fontSize: 110,
-                      lineHeight: 0.9,
+                      fontSize: 82,
+                      lineHeight: 0.92,
                       color: "hsl(var(--foreground))",
                     }}
                   >
@@ -137,8 +132,8 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
                   <span
                     className="font-display"
                     style={{
-                      fontSize: 38,
-                      lineHeight: 0.9,
+                      fontSize: 28,
+                      lineHeight: 0.92,
                       letterSpacing: "-0.02em",
                       color: "hsl(var(--muted-foreground))",
                     }}
@@ -151,7 +146,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
               {/* Countdown — supporting context */}
               {remaining !== null && (
                 <div
-                  className="mt-2 text-[14px] font-medium leading-[1.2]"
+                  className="mt-3 text-[15px] font-medium leading-[1.2]"
                   style={{ color: "hsl(var(--muted-foreground))" }}
                 >
                   {isFuture ? formatRelative(remaining) : "now"}
@@ -168,6 +163,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
             href={venueNavHref ?? undefined}
             target={venueNavHref ? "_blank" : undefined}
             rel={venueNavHref ? "noopener noreferrer" : undefined}
+            data-stagger="0"
             className="text-left flex flex-col items-stretch min-w-0 [transition:transform_160ms_var(--ease-out)] active:scale-[0.985]"
           >
             <div className="flex items-center justify-between mb-2.5">
@@ -188,7 +184,7 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
             <div
               className="font-display leading-[1.1] break-words"
               style={{
-                fontSize: "clamp(20px, 5.2vw, 24px)",
+                fontSize: "clamp(18px, 4.8vw, 22px)",
                 letterSpacing: "-0.02em",
                 color: "hsl(var(--foreground))",
                 textWrap: "pretty",
@@ -210,11 +206,12 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
         )}
       </div>
 
-      {/* Schedule list */}
+      {/* Schedule — the operative artifact on this screen. Given the most
+          vertical space; the user is here to read it. */}
       {sortedEntries.length > 0 && (
-        <div className="mt-6">
+        <div className="mt-8" data-stagger="2">
           <div
-            className="text-[11px] uppercase font-medium leading-none mb-2"
+            className="text-[11px] uppercase font-medium leading-none mb-3"
             style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
           >
             Schedule
@@ -223,8 +220,10 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
         </div>
       )}
 
-      {/* Action stack — venue lives in the hero now, so just contact + guests */}
-      <div className="mt-[22px] space-y-2.5">
+      {/* Single action — day-of contact. Guest list, set list, etc. live on
+          the show detail page; this surface stays focused on the in-the-moment
+          ask: "who do I call right now". */}
+      <div className="mt-[22px]" data-stagger="3">
         <ActionCard
           icon={Phone}
           eyebrow="Day-of contact"
@@ -243,15 +242,6 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
               : () => navigate(`/shows/${show.id}?tab=contacts`)
           }
           fullWidth
-        />
-        <ActionCard
-          icon={Users}
-          eyebrow="Guest list"
-          title={String(guestCount)}
-          sub={guestCount === 0 ? "no guests yet" : "confirmed names"}
-          titleMono
-          fullWidth
-          onClick={() => navigate(`/shows/${show.id}?focus=guest-list`)}
         />
       </div>
     </div>
