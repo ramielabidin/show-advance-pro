@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { format } from "date-fns";
 import type { Show } from "@/lib/types";
 import { showDayMinutes } from "@/components/DayOfShow/timeUtils";
 
@@ -40,13 +39,14 @@ export function useDayOfShowPhase(
 
     // If the show is still "tonight" but the wall clock is before 4 AM, bump
     // nowMin into the same show-day coordinate space as setMin (which showDayMinutes
-    // already bumps for early-morning entries). This covers both:
+    // already bumps for early-morning entries). Guard on setMin >= 24*60 to ensure
+    // setMin was actually bumped (only times before 4 AM get bumped). This covers both:
     //   - show.date < today: last night's show extending past midnight (1 AM load-out)
-    //   - show.date = today: today's show viewed before 4 AM (set time 1 AM already passed)
-    // Without this, a 1 AM set time looks 23+ hours in the future instead of past.
+    //   - show.date = today: today's show with early-morning set (1 AM already passed)
+    // Without this guard, a normal evening set (9 PM) on today viewed at 1-3 AM would
+    // incorrectly bump nowMin and show Phase 2/3 instead of Phase 1.
     const now = new Date();
-    const todayStr = format(now, "yyyy-MM-dd");
-    const isPostMidnightOnShowNight = show.date <= todayStr && now.getHours() < 4;
+    const isPostMidnightOnShowNight = setMin >= 24 * 60 && now.getHours() < 4;
     const showDayNow = isPostMidnightOnShowNight ? nowMin + 24 * 60 : nowMin;
 
     if (showDayNow >= setMin + SETTLE_BUFFER_MIN) return isArtist ? 3 : 2;

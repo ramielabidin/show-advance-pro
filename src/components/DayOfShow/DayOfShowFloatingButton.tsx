@@ -91,7 +91,7 @@ export default function DayOfShowFloatingButton({ showId }: DayOfShowFloatingBut
         aria-label={isPoweredDown ? "Show hotel info" : "Enter Day of Show Mode"}
         className={`md:hidden fixed bottom-20 right-4 z-40 inline-flex items-center justify-center text-white transition-all ${
           isPoweredDown
-            ? "h-10 w-10 rounded-full bg-[hsl(var(--day-of-active) / 0.4)]"
+            ? "h-10 w-10 rounded-full bg-[hsl(var(--day-of-active)/0.4)]"
             : "day-of-active-pulse h-11 gap-2 pl-2 pr-4 rounded-full bg-[hsl(var(--day-of-active))]"
         } [transition:transform_160ms_var(--ease-out),all_800ms_var(--ease-out)] active:scale-[0.97]`}
         style={{

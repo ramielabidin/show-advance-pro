@@ -6,6 +6,7 @@ import { cn, formatCityState } from "@/lib/utils";
 import { to12Hour, to24Hour } from "@/lib/timeFormat";
 import { isLoadInLabel, isDoorsLabel } from "@/lib/scheduleMatch";
 import { showDayMinutes } from "@/components/DayOfShow/timeUtils";
+import { useNowMinutes } from "@/hooks/useNowMinutes";
 import StatusDot from "@/components/StatusDot";
 import type { Show } from "@/lib/types";
 
@@ -33,6 +34,7 @@ export default function FeaturedShowCard({ show, mode, tour }: FeaturedShowCardP
   const isUrgent = daysAway >= 0 && daysAway < 7;
   const showFinalDate = mode === "final";
 
+  const nowMin = useNowMinutes();
   const entries = show.schedule_entries ?? [];
   const loadInEntry = entries
     .filter((e) => isLoadInLabel(e.label))
@@ -45,14 +47,12 @@ export default function FeaturedShowCard({ show, mode, tour }: FeaturedShowCardP
   const setTime = to12Hour(bandEntry?.time);
 
   const countdownText = (() => {
-    if (daysAway !== 0 || !bandEntry?.time) return null;
+    if (daysAway > 0 || !bandEntry?.time) return null;
     const setMin = showDayMinutes(bandEntry.time);
     if (setMin === null) return null;
     const now = new Date();
-    const todayStr = format(now, "yyyy-MM-dd");
-    const isPostMidnightOnShowNight = show.date <= todayStr && now.getHours() < 4;
-    const currentMin = now.getHours() * 60 + now.getMinutes();
-    const adjustedCurrentMin = isPostMidnightOnShowNight ? currentMin + 24 * 60 : currentMin;
+    const isPostMidnightOnShowNight = setMin >= 24 * 60 && now.getHours() < 4;
+    const adjustedCurrentMin = isPostMidnightOnShowNight ? nowMin + 24 * 60 : nowMin;
     const diffMin = setMin - adjustedCurrentMin;
     if (diffMin <= 0) return null;
     const hours = Math.floor(diffMin / 60);
