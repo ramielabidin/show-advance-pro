@@ -49,7 +49,7 @@ import { cn, formatCityState, normalizePhone } from "@/lib/utils";
 import { normalizeTime, formatHotelMoment } from "@/lib/timeFormat";
 import { isLoadInLabel } from "@/lib/scheduleMatch";
 import TimeInput from "@/components/TimeInput";
-import type { Show } from "@/lib/types";
+import type { Show, ScheduleEntry, ShowContact } from "@/lib/types";
 import RevenueSimulator, { parseDollar } from "@/components/RevenueSimulator";
 import SettleShowDialog from "@/components/SettleShowDialog";
 import { useGroupEditor } from "@/pages/show-detail/useGroupEditor";
@@ -584,7 +584,22 @@ export default function ShowDetailPage() {
       const { error } = await supabase.from("shows").update(showUpdates).eq("id", id!);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      // Patch the cache synchronously with the values we just wrote so the UI
+      // reflects the user's input immediately. invalidateQueries below still
+      // fires a background refetch to reconcile against the server (handles
+      // computed columns, triggers, normalisation).
+      const {
+        schedule_entries: _schedule_entries,
+        show_contacts: _show_contacts,
+        show_party_members: _show_party_members,
+        tours: _tours,
+        ...showPatch
+      } = variables;
+      if (showPatch.tour_id === "" || showPatch.tour_id === "none") showPatch.tour_id = null;
+      queryClient.setQueryData<Show>(["show", id], (old) =>
+        old ? { ...old, ...showPatch } : old,
+      );
       queryClient.invalidateQueries({ queryKey: ["show", id] });
       queryClient.invalidateQueries({ queryKey: ["shows"] });
       setInlineField(null);
@@ -606,7 +621,10 @@ export default function ShowDetailPage() {
         .eq("id", id!);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, guest_list_details) => {
+      queryClient.setQueryData<Show>(["show", id], (old) =>
+        old ? { ...old, guest_list_details } : old,
+      );
       queryClient.invalidateQueries({ queryKey: ["show", id] });
     },
     onError: (err: unknown) => {
@@ -1452,6 +1470,7 @@ export default function ShowDetailPage() {
                   onSave={async (rows) => {
                     try {
                       await supabase.from("schedule_entries").delete().eq("show_id", id!);
+                      let inserted: ScheduleEntry[] = [];
                       if (rows.length > 0) {
                         const inserts = rows.map((r, i) => ({
                           show_id: id!,
@@ -1460,9 +1479,19 @@ export default function ShowDetailPage() {
                           is_band: r.is_band,
                           sort_order: i,
                         }));
-                        const { error } = await supabase.from("schedule_entries").insert(inserts);
+                        // .select() returns the freshly-inserted rows so we can
+                        // patch the cache with real ids — UI updates immediately
+                        // without waiting on the invalidate refetch.
+                        const { data, error } = await supabase
+                          .from("schedule_entries")
+                          .insert(inserts)
+                          .select();
                         if (error) throw error;
+                        inserted = (data ?? []) as ScheduleEntry[];
                       }
+                      queryClient.setQueryData<Show>(["show", id], (old) =>
+                        old ? { ...old, schedule_entries: inserted } : old,
+                      );
                       queryClient.invalidateQueries({ queryKey: ["show", id] });
                       queryClient.invalidateQueries({ queryKey: ["shows"] });
                       queryClient.invalidateQueries({ queryKey: ["schedule-counts"] });
@@ -1927,6 +1956,7 @@ export default function ShowDetailPage() {
                 onSave={async (rows) => {
                   try {
                     await supabase.from("show_contacts").delete().eq("show_id", id!);
+                    let inserted: ShowContact[] = [];
                     if (rows.length > 0) {
                       const inserts = rows.map((r, i) => ({
                         show_id: id!,
@@ -1938,9 +1968,16 @@ export default function ShowDetailPage() {
                         notes: r.notes || null,
                         sort_order: i,
                       }));
-                      const { error } = await supabase.from("show_contacts").insert(inserts);
+                      const { data, error } = await supabase
+                        .from("show_contacts")
+                        .insert(inserts)
+                        .select();
                       if (error) throw error;
+                      inserted = (data ?? []) as ShowContact[];
                     }
+                    queryClient.setQueryData<Show>(["show", id], (old) =>
+                      old ? { ...old, show_contacts: inserted } : old,
+                    );
                     queryClient.invalidateQueries({ queryKey: ["show", id] });
                     queryClient.invalidateQueries({ queryKey: ["shows"] });
                     toast.success("Contacts updated");
