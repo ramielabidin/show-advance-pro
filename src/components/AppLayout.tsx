@@ -60,6 +60,15 @@ export default function AppLayout() {
             <Button
               variant="ghost"
               size="sm"
+              aria-label="Search shows"
+              onClick={() => navigate("/shows", { state: { focusSearch: true } })}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="text-muted-foreground hover:text-foreground"
             >
