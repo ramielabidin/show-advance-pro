@@ -31,6 +31,8 @@ import type { Show, Tour } from "@/lib/types";
 type View = "all" | "tour" | "standalone";
 type ShowWithTour = Show & { tours?: { id: string; name: string } | null };
 
+const PAGE_SIZE = 8;
+
 function parseView(raw: string | null): View {
   if (raw === "tour" || raw === "standalone") return raw;
   return "all";
@@ -224,6 +226,37 @@ export default function ShowsPage() {
     return "standalone";
   };
 
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const visibleDisplayed = useMemo(
+    () => displayed.slice(0, visibleCount),
+    [displayed, visibleCount],
+  );
+  const hasMore = visibleCount < displayed.length;
+
+  // Reset the visible window when the filter set changes so the user starts
+  // at the top of the new result set rather than scrolled into nothing.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [tab, view, tourId, trimmedQuery]);
+
+  useEffect(() => {
+    if (!hasMore) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setVisibleCount((c) => Math.min(c + PAGE_SIZE, displayed.length));
+        }
+      },
+      { rootMargin: "0px", threshold: 0.6 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, displayed.length]);
+
   return (
     <div className="animate-fade-in">
       {/* Header */}
@@ -243,10 +276,8 @@ export default function ShowsPage() {
           </PageTitle>
           {!isArtist && (
             <div className="flex items-center gap-2 shrink-0">
-              <div className="hidden sm:flex items-center gap-2">
-                <BulkUploadDialog />
-              </div>
-              <CreateShowDialog />
+              <BulkUploadDialog triggerClassName="h-9" iconOnlyMobile />
+              <CreateShowDialog triggerClassName="h-9" iconOnlyMobile />
             </div>
           )}
         </div>
@@ -385,18 +416,24 @@ export default function ShowsPage() {
             />
             )
           ) : (
-            <div className="space-y-2 stagger-list">
-              {displayed.map((show) => (
-                <ShowCard
+            <div className="space-y-2">
+              {visibleDisplayed.map((show, i) => (
+                <div
                   key={show.id}
-                  show={show}
-                  chip={chipFor(show)}
-                  onDelete={() => setPendingDeleteId(show.id)}
-                  onRemoveFromTour={
-                    isTourScoped ? () => setPendingRemoveFromTourId(show.id) : undefined
-                  }
-                />
+                  className="stagger-item"
+                  style={{ animationDelay: `${(i % PAGE_SIZE) * 40}ms` }}
+                >
+                  <ShowCard
+                    show={show}
+                    chip={chipFor(show)}
+                    onDelete={() => setPendingDeleteId(show.id)}
+                    onRemoveFromTour={
+                      isTourScoped ? () => setPendingRemoveFromTourId(show.id) : undefined
+                    }
+                  />
+                </div>
               ))}
+              {hasMore && <div ref={sentinelRef} aria-hidden className="h-12" />}
             </div>
           )}
         </>
