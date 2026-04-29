@@ -19,14 +19,34 @@ export default function DayOfShowFloatingButton({ showId }: DayOfShowFloatingBut
       {/* Bottom scroll-edge fade — keeps the pill on a clean canvas as
           upcoming-show cards scroll past it. Mobile-only; sits below the
           pill (z-30) and above page content, beneath the bottom tab bar
-          (z-50). Spans the full bottom 128px of the viewport, fading from
-          transparent up top to solid background by the bottom 30%. */}
+          (z-50). Uses an easing-gradient (many stops following an ease-out
+          curve) instead of a plain linear-gradient so the dissolve has no
+          visible "edge" where the fade tapers off — the eye reads it as a
+          natural falloff into the page background, the way fog dissolves
+          rather than a sheet of vellum. */}
       <div
         aria-hidden
         className="md:hidden pointer-events-none fixed bottom-0 left-0 right-0 h-32 z-30"
         style={{
-          background:
-            "linear-gradient(to top, hsl(var(--background)) 30%, hsl(var(--background) / 0))",
+          background: `linear-gradient(
+            to top,
+            hsl(var(--background) / 1) 0%,
+            hsl(var(--background) / 0.987) 8.1%,
+            hsl(var(--background) / 0.951) 15.5%,
+            hsl(var(--background) / 0.896) 22.5%,
+            hsl(var(--background) / 0.825) 29%,
+            hsl(var(--background) / 0.741) 35.3%,
+            hsl(var(--background) / 0.648) 41.2%,
+            hsl(var(--background) / 0.55) 47.1%,
+            hsl(var(--background) / 0.45) 52.9%,
+            hsl(var(--background) / 0.352) 58.8%,
+            hsl(var(--background) / 0.259) 64.7%,
+            hsl(var(--background) / 0.175) 71%,
+            hsl(var(--background) / 0.104) 77.5%,
+            hsl(var(--background) / 0.049) 84.5%,
+            hsl(var(--background) / 0.013) 91.9%,
+            hsl(var(--background) / 0) 100%
+          )`,
         }}
       />
       <button
