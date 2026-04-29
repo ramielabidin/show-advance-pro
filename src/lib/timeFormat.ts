@@ -8,7 +8,7 @@
  * coerced into a valid clock time.
  */
 export function to24Hour(raw: string | null | undefined): string | null {
-  if (!raw) return null;
+  if (!raw || typeof raw !== "string") return null;
   const s = raw.trim();
   if (!s || /^(tbd|n\/a)$/i.test(s)) return null;
 
