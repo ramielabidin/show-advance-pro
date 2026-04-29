@@ -601,3 +601,158 @@
     font-size: max(16px, 1em) !important;
   }
 }
+
+/* ── Day of Show — shared footer + Phase 3a celebration + Phase 1 scroll ── */
+
+/* Gentle breathe used by both flavors of the phase footer. */
+@keyframes dos-gentle-breathe {
+  0%, 100% { opacity: 0.85; }
+  50%      { opacity: 1; }
+}
+
+/* Single-line footer (Phase 3a, 3b) */
+.dos-phase-footer {
+  text-align: center;
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: hsl(var(--foreground));
+  padding-top: 24px;
+  animation: dos-gentle-breathe 4.2s ease-in-out infinite;
+}
+
+/* Place footer (Phase 1, 2): serif venue name + mono City, ST. */
+.dos-phase-footer-place {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  padding-top: 24px;
+  animation: dos-gentle-breathe 4.2s ease-in-out infinite;
+  transition: opacity 200ms cubic-bezier(.2,.8,.2,1),
+              transform 160ms cubic-bezier(.2,.8,.2,1);
+  -webkit-tap-highlight-color: transparent;
+}
+.dos-phase-footer-place:hover { opacity: 0.85; }
+.dos-phase-footer-place:active { transform: scale(0.99); }
+.dos-phase-footer-place .pf-name {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: hsl(var(--foreground));
+}
+.dos-phase-footer-place .pf-addr {
+  margin-top: 4px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground));
+  letter-spacing: 0;
+}
+
+/* Phase 1 scrollable schedule region */
+.dos-p1-scroll-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+}
+.dos-p1-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 12px;
+}
+.dos-p1-scroll::-webkit-scrollbar { width: 0; height: 0; }
+.dos-p1-scroll-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 28px;
+  pointer-events: none;
+  z-index: 2;
+}
+.dos-p1-scroll-fade.top {
+  top: 0;
+  background: linear-gradient(
+    to top,
+    hsl(var(--background) / 0) 0%,
+    hsl(var(--background) / 1) 100%
+  );
+}
+.dos-p1-scroll-fade.bottom {
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    hsl(var(--background) / 0) 0%,
+    hsl(var(--background) / 1) 100%
+  );
+}
+
+/* Phase 3a celebration — single-stroke check + "Good job." rise. */
+@keyframes dos-check-draw {
+  to { stroke-dashoffset: 0; }
+}
+.dos-check-mark {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  pointer-events: none;
+}
+.dos-check-mark .check-stroke {
+  fill: none;
+  stroke: hsl(var(--foreground));
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: dos-check-draw 760ms cubic-bezier(.16,1,.3,1) 120ms forwards;
+  transition: opacity 460ms cubic-bezier(.2,.8,.2,1);
+}
+.dos-check-mark.fading .check-stroke { opacity: 0; }
+
+.dos-good-job {
+  position: absolute;
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: hsl(var(--foreground));
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition:
+    opacity 320ms cubic-bezier(.16,1,.3,1),
+    transform 320ms cubic-bezier(.16,1,.3,1);
+}
+.dos-good-job.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.dos-good-job.fading {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition-duration: 460ms;
+}
+
+/* Reduced motion — disable the draw + rise transitions, just fade. */
+@media (prefers-reduced-motion: reduce) {
+  .dos-check-mark .check-stroke {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+  .dos-good-job {
+    transition-duration: 200ms;
+    transform: none;
+  }
+  .dos-phase-footer,
+  .dos-phase-footer-place {
+    animation: none;
+  }
+}
