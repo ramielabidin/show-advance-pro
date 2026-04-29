@@ -323,9 +323,6 @@ export default function ShowDetailPage() {
 
   const [lookingUpAddress, setLookingUpAddress] = useState(false);
   const [scheduleKey, setScheduleKey] = useState(0);
-  const [suggestionDismissed, setSuggestionDismissed] = useState(() =>
-    id ? localStorage.getItem(`departure-suggestion-dismissed-${id}`) === "true" : false
-  );
   const [dealTabSeen, setDealTabSeen] = useState(() =>
     id ? localStorage.getItem(`deal-tab-seen-${id}`) === "true" : true
   );
@@ -1236,19 +1233,6 @@ export default function ShowDetailPage() {
                       </Button>
                     </span>
                   )}
-                  {driveTimeLabel && departureOrigin && !shouldHideDriveTime && (
-                    <span className="inline-flex items-center gap-1.5 flex-wrap">
-                      <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} />
-                      <span className="font-mono text-foreground font-medium">{driveTimeLabel}</span>
-                      <span>from {departureOrigin.label}</span>
-                      {driveTime?.distance_text && (
-                        <>
-                          <span className="opacity-60">·</span>
-                          <span className="font-mono">{driveTime.distance_text}</span>
-                        </>
-                      )}
-                    </span>
-                  )}
                 </div>
 
                 {/* Mobile meta — address as single maps link, matching desktop behaviour */}
@@ -1304,19 +1288,6 @@ export default function ShowDetailPage() {
                   )}
                 </div>
               </>
-            )}
-            {driveTimeLabel && departureOrigin && !shouldHideDriveTime && (
-              <div
-                className="sm:hidden flex items-center gap-2.5 mt-3 px-2.5 py-2 rounded-md text-[12.5px] text-muted-foreground"
-                style={{ background: "hsl(var(--muted) / 0.55)" }}
-              >
-                <Car className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-                <span className="font-mono font-medium text-foreground">{driveTimeLabel}</span>
-                <span className="truncate">from {departureOrigin.label}</span>
-                {driveTime?.distance_text && (
-                  <span className="ml-auto font-mono font-medium shrink-0">{driveTime.distance_text}</span>
-                )}
-              </div>
             )}
           </div>
 
@@ -1477,7 +1448,7 @@ export default function ShowDetailPage() {
             <FieldGroup
               title="Departure"
               collapsible
-              defaultOpen={!!show.departure_time || !!show.departure_notes || (!!recommendedDeparture && !suggestionDismissed)}
+              defaultOpen={!!show.departure_time || !!show.departure_notes || !!recommendedDeparture}
             >
               {departureEditor.isEditing ? (
                 <div
@@ -1508,35 +1479,7 @@ export default function ShowDetailPage() {
                   </Button>
                 </div>
               ) : departureEditor.empty ? (
-                <>
-                  <EmptyFieldPrompt label="departure" onClick={departureEditor.startEdit} />
-                  {recommendedDeparture && !suggestionDismissed && (
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs gap-1.5"
-                        onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture })}
-                        disabled={updateMutation.isPending}
-                      >
-                        <Clock className="h-3 w-3" />
-                        Use {recommendedDeparture}
-                        <span className="text-muted-foreground">· load-in − drive − 45 min</span>
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (id) localStorage.setItem(`departure-suggestion-dismissed-${id}`, "true");
-                          setSuggestionDismissed(true);
-                        }}
-                        className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
-                        aria-label="Dismiss departure suggestion"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </>
+                <EmptyFieldPrompt label="departure" onClick={departureEditor.startEdit} />
               ) : (
                 <div
                   role="button"
@@ -1545,14 +1488,14 @@ export default function ShowDetailPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); departureEditor.startEdit(); }
                   }}
-                  className="w-full text-left card-pressable cursor-pointer grid grid-cols-1 sm:grid-cols-[180px_1fr] sm:items-baseline gap-y-2 sm:gap-x-8 py-1"
+                  className="w-full text-left card-pressable cursor-pointer grid grid-cols-1 sm:grid-cols-[120px_1fr] sm:items-baseline gap-y-1 sm:gap-x-6 py-1"
                 >
                   {show.departure_time ? (
-                    <span className="font-display tracking-[-0.02em] leading-none text-[32px] text-foreground">
+                    <span className="font-mono text-sm font-medium text-foreground">
                       {show.departure_time}
                     </span>
                   ) : (
-                    <span className="text-sm text-muted-foreground/55 italic">Add departure time…</span>
+                    <span className="text-sm text-muted-foreground/55 italic">Add time…</span>
                   )}
                   <span
                     className={cn(
@@ -1562,6 +1505,47 @@ export default function ShowDetailPage() {
                   >
                     {show.departure_notes || "Add notes…"}
                   </span>
+                </div>
+              )}
+
+              {/* Drive-time + recommended-departure context — one consolidated
+                  block in the section so it's always visible, not gated to
+                  empty state. The "Use" affordance only renders when there's
+                  no departure_time set yet. */}
+              {driveTimeLabel && departureOrigin && !shouldHideDriveTime && !departureEditor.isEditing && (
+                <div className="flex items-center gap-2 flex-wrap pt-3 text-[12px] text-muted-foreground">
+                  <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} />
+                  <span>
+                    <span className="font-mono font-medium text-foreground">{driveTimeLabel}</span> from {departureOrigin.label}
+                  </span>
+                  {driveTime?.distance_text && (
+                    <>
+                      <span className="opacity-60">·</span>
+                      <span className="font-mono">{driveTime.distance_text}</span>
+                    </>
+                  )}
+                  {recommendedDeparture && (
+                    <>
+                      <span className="opacity-60">·</span>
+                      {show.departure_time ? (
+                        <span>
+                          recommended <span className="font-mono font-medium text-foreground">{recommendedDeparture}</span> <span className="opacity-70">(load-in − drive − 45 min)</span>
+                        </span>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-[11px] gap-1.5"
+                          onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture })}
+                          disabled={updateMutation.isPending}
+                        >
+                          <Clock className="h-3 w-3" />
+                          Use {recommendedDeparture}
+                          <span className="text-muted-foreground/80">· load-in − drive − 45 min</span>
+                        </Button>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </FieldGroup>
