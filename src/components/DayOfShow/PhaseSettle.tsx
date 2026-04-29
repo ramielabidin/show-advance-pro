@@ -50,13 +50,38 @@ export default function PhaseSettle({ show }: PhaseSettleProps) {
 
   return (
     <div className="px-[22px] pt-2 pb-7 flex-1 flex flex-col">
-      {/* Eyebrow — aligned to Phase 1's pt-[14px] hero rhythm so the phase
-          morph reads as a content swap, not a layout shift. */}
-      <div
-        className="text-[11px] uppercase font-medium leading-none pt-[14px] mb-3.5"
-        style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
-      >
-        Show's done.
+      {/* Eyebrow + venue context — Phase 2 needs a sense of place so the
+          wrap-up moment doesn't feel suspended in air. Eyebrow stays at
+          Phase 1's pt-[14px] rhythm; venue lands below in the display
+          font at roughly half the scale of Phase 1's hero, so it reads
+          as "context for the moment" not "the primary information." */}
+      <div className="pt-[14px] mb-5">
+        <div
+          className="text-[11px] uppercase font-medium leading-none mb-3"
+          style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
+        >
+          Show's done.
+        </div>
+        {show.venue_name && (
+          <div
+            className="font-display leading-[1.05]"
+            style={{
+              fontSize: "clamp(26px, 7vw, 32px)",
+              letterSpacing: "-0.02em",
+              color: "hsl(var(--foreground))",
+            }}
+          >
+            {show.venue_name}
+          </div>
+        )}
+        {show.city && (
+          <div
+            className="mt-2 font-mono text-[12.5px] leading-tight"
+            style={{ color: "hsl(var(--muted-foreground))" }}
+          >
+            {formatCityState(show.city)}
+          </div>
+        )}
       </div>
 
       {/* Settle CTA — spine variant. Quiet card with a glowing green left

@@ -1,41 +1,30 @@
 import { useMemo } from "react";
 import { Navigation, ArrowUpRight } from "lucide-react";
-import { formatHotelMoment } from "@/lib/timeFormat";
+import { formatHotelMoment, to12Hour } from "@/lib/timeFormat";
 import { formatCityState } from "@/lib/utils";
-import type { Show } from "@/lib/types";
+import type { Show, ScheduleEntry } from "@/lib/types";
+import { showDayMinutes } from "./timeUtils";
 
 /**
- * Lead-in copy that adapts to wall-clock hour. The same show feels
- * different at 9 PM vs 2 AM vs 5 AM — meet the user where they are.
+ * Lead-in copy as a confident, time-aware statement. Each variant is
+ * a self-contained line that names the moment without instructing the
+ * user — the hotel hero (or its absence) below speaks for itself, so
+ * the lead-in doesn't need a "go to bed / drive safe" branch. Avoids
+ * any "safe" doubling against the eyebrow.
  *
  * Buckets:
- *   pre-midnight (default, 9 PM–11:59 PM): "Tonight's done."
- *   post-midnight (00:00–02:59):           "It's been a long one."
- *   pre-dawn (03:00–04:59):                "Almost dawn."
- *   morning (05:00–07:59, rare):           "Show's behind you."
+ *   pre-midnight (9 PM–11:59 PM): "That's the show."
+ *   post-midnight (00:00–02:59):  "That's a long one."
+ *   pre-dawn (03:00–04:59):       "Almost dawn."
+ *   morning (05:00–07:59, rare):  "Show's in the books."
  *
- * (After 8 AM the overlay auto-resolves itself, so we don't write copy
- * for that case.)
+ * (After 8 AM the overlay auto-resolves itself.)
  */
-function leadInCopy(hasHotel: boolean, nowHour: number): string {
-  if (nowHour >= 5 && nowHour < 8) {
-    return hasHotel
-      ? "Show's behind you. Here's your bed."
-      : "Show's behind you. Get home safe.";
-  }
-  if (nowHour >= 3 && nowHour < 5) {
-    return hasHotel
-      ? "Almost dawn. Here's your bed."
-      : "Almost dawn. Get there safe.";
-  }
-  if (nowHour < 3) {
-    return hasHotel
-      ? "It's been a long one. Here's where you're sleeping."
-      : "It's been a long one. Drive carefully.";
-  }
-  return hasHotel
-    ? "Tonight's done. Here's where you're sleeping."
-    : "Tonight's done. Get home safe.";
+function leadInCopy(nowHour: number): string {
+  if (nowHour >= 5 && nowHour < 8) return "Show's in the books.";
+  if (nowHour >= 3 && nowHour < 5) return "Almost dawn.";
+  if (nowHour < 3) return "That's a long one.";
+  return "That's the show.";
 }
 
 /**
@@ -100,26 +89,43 @@ export default function PhasePostSettle({ show }: PhasePostSettleProps) {
 
   const hasBookingDetail = !!(checkInDisplay || show.hotel_confirmation || checkOutDisplay);
 
-  // No hotel info at all — show a graceful "drive safe" sign-off rather than
-  // an empty hero. Most shows will have at least a name; this is the edge.
+  // No hotel info at all — fall through to the sign-off without the hero.
+  // Most shows will have at least a name; this is the edge case.
   const hasHotel = !!(show.hotel_name?.trim() || show.hotel_address?.trim());
+
+  // Schedule timeline — echoes Phase 2's timeline footer as a closing
+  // visual. Same dot positions, same band-halo, no label or cues count
+  // — a quiet recap of the night now behind the user. The dots replay
+  // the sparkler animation so the timeline reads as a thread connecting
+  // Phase 2 → Phase 3.
+  const sortedEntries = useMemo<{ entry: ScheduleEntry; min: number }[]>(() => {
+    const entries = (show.schedule_entries ?? [])
+      .map((entry) => ({ entry, min: showDayMinutes(entry.time) }))
+      .filter((row): row is { entry: ScheduleEntry; min: number } => row.min !== null);
+    entries.sort((a, b) => {
+      if (a.min !== b.min) return a.min - b.min;
+      return a.entry.sort_order - b.entry.sort_order;
+    });
+    return entries;
+  }, [show.schedule_entries]);
 
   return (
     <div className="px-[22px] pt-2 pb-7 flex-1 flex flex-col">
       {/* Eyebrow + lead-in — aligned to Phase 1's pt-[14px] hero rhythm and
-          11px eyebrow scale for cohesion across the flow. */}
+          11px eyebrow scale for cohesion across the flow. Eyebrow is
+          a single confident word; lead-in is a statement, not advice. */}
       <div className="pt-[14px]">
         <div
           className="text-[11px] uppercase font-medium leading-none mb-2.5"
           style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
         >
-          Settled · Drive safe
+          Settled
         </div>
         <div
           className="text-[13px] leading-[1.45]"
           style={{ color: "hsl(var(--muted-foreground))" }}
         >
-          {leadInCopy(hasHotel, new Date().getHours())}
+          {leadInCopy(new Date().getHours())}
         </div>
       </div>
 
@@ -197,24 +203,76 @@ export default function PhasePostSettle({ show }: PhasePostSettleProps) {
         </>
       )}
 
-      {/* Sign-off — pinned to the bottom */}
-      <div className="mt-auto pt-8 text-center">
-        <div
-          className="font-display gentle-breathe"
-          style={{
-            fontSize: 22,
-            lineHeight: 1.2,
-            letterSpacing: "-0.02em",
-            color: "hsl(var(--foreground))",
-          }}
-        >
-          {signOffFor(show.date)}
-        </div>
-        <div
-          className="mt-1 text-[12px]"
-          style={{ color: "hsl(var(--muted-foreground))" }}
-        >
-          This view closes itself in the morning.
+      {/* Closing artifact — quiet timeline echo from Phase 2 plus the
+          sign-off, pinned to the bottom together. The timeline has no
+          label or cues count here (Phase 2 already named it "Tonight,
+          in full") and the dots are slightly smaller / softer so it
+          reads as memory, not data. The dots replay the sparkler so
+          the timeline feels like a single thread connecting the two
+          wrap-up phases. */}
+      <div className="mt-auto pt-8">
+        {sortedEntries.length >= 2 && (
+          <div className="mb-7 relative h-6">
+            <div
+              aria-hidden
+              className="absolute left-0 right-0 top-1/2 h-px"
+              style={{
+                background: "hsl(var(--border))",
+                transform: "translateY(-50%)",
+              }}
+            />
+            {(() => {
+              const startMin = sortedEntries[0].min;
+              const endMin = sortedEntries[sortedEntries.length - 1].min;
+              const span = Math.max(endMin - startMin, 1);
+              return sortedEntries.map(({ entry, min }) => {
+                const pos = ((min - startMin) / span) * 100;
+                const isBand = !!entry.is_band;
+                const size = isBand ? 8 : 5;
+                const display = to12Hour(entry.time) ?? entry.time;
+                const delayMs = Math.round(pos * 4);
+                return (
+                  <div
+                    key={entry.id}
+                    title={`${display} — ${entry.label}`}
+                    className="timeline-dot absolute top-1/2 rounded-full"
+                    style={{
+                      left: `${pos}%`,
+                      transform: "translate(-50%, -50%)",
+                      width: size,
+                      height: size,
+                      background: isBand
+                        ? "hsl(var(--badge-new))"
+                        : "hsl(var(--muted-foreground) / 0.7)",
+                      boxShadow: isBand
+                        ? "0 0 0 2px hsl(var(--background)), 0 0 0 3px hsl(var(--badge-new) / 0.4)"
+                        : "0 0 0 2px hsl(var(--background))",
+                      animationDelay: `${delayMs}ms`,
+                    }}
+                  />
+                );
+              });
+            })()}
+          </div>
+        )}
+        <div className="text-center">
+          <div
+            className="font-display gentle-breathe"
+            style={{
+              fontSize: 22,
+              lineHeight: 1.2,
+              letterSpacing: "-0.02em",
+              color: "hsl(var(--foreground))",
+            }}
+          >
+            {signOffFor(show.date)}
+          </div>
+          <div
+            className="mt-1 text-[12px]"
+            style={{ color: "hsl(var(--muted-foreground))" }}
+          >
+            This view closes itself in the morning.
+          </div>
         </div>
       </div>
     </div>
