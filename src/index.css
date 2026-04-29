@@ -140,65 +140,6 @@
   }
 }
 
-/* Done-mark — Phase 3 closing flourish. Sequenced one-shot:
-   ring stroke draws → check stroke draws (delayed) → tiny serif
-   punctuation dot pops in (delayed further). Total settle ~1.5s.
-   Stroke-dasharray values match the SVG path lengths
-   (circle r=32 ≈ 201, check path ≈ 46) so the stroke transitions
-   from "not drawn" to "fully drawn" cleanly. The serif dot is the
-   "almost cute" hand-drawn flourish next to the precise mark. */
-@keyframes done-circle-draw {
-  from {
-    stroke-dashoffset: 201;
-    opacity: 0;
-  }
-  to {
-    stroke-dashoffset: 0;
-    opacity: 1;
-  }
-}
-
-@keyframes done-check-draw {
-  from {
-    stroke-dashoffset: 46;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes done-dot-in {
-  from {
-    transform: scale(0);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes done-check-fill {
-  0% {
-    stroke: hsl(var(--foreground));
-    stroke-width: 1.6;
-    fill: none;
-    filter: none;
-  }
-  70% {
-    stroke: hsl(var(--foreground));
-    stroke-width: 1.6;
-    fill: none;
-    filter: drop-shadow(0 0 8px hsl(var(--foreground) / 0.6));
-  }
-  100% {
-    stroke: hsl(var(--foreground));
-    stroke-width: 1.6;
-    fill: hsl(var(--foreground));
-    filter: drop-shadow(0 0 12px hsl(var(--foreground) / 0.4));
-  }
-}
-
 @keyframes pill-powerdown-flicker {
   0% {
     opacity: 1;
@@ -480,35 +421,6 @@
     animation-fill-mode: both;
   }
 
-  /* Done-mark — Phase 3 closing flourish. Three SVG primitives composed
-     into one mark, each driving its own keyframe: ring stroke draws →
-     check stroke draws → small serif punctuation dot pops. The wrapper
-     class is the stable hook for reduced-motion fallback below. */
-  .done-mark .done-circle {
-    stroke-dasharray: 201;
-    animation: done-circle-draw 1100ms cubic-bezier(0.6, 0.1, 0.2, 1) 80ms
-      backwards;
-    transform-origin: 36px 36px;
-  }
-  .done-mark .done-check {
-    stroke-dasharray: 46;
-    stroke-dashoffset: 46;
-    animation: done-check-draw 520ms cubic-bezier(0.5, 0, 0.2, 1) 720ms
-      forwards;
-  }
-  .done-mark .done-dot {
-    animation: done-dot-in 320ms cubic-bezier(0.4, 1.6, 0.6, 1) 1180ms
-      backwards;
-    transform-origin: 56px 20px;
-  }
-
-  /* Checkmark completion — hold-to-complete gesture fires this. Fills the
-     checkmark from stroke to solid fill with a satisfying glow. 600ms
-     total animation: 0-70% glows, 70-100% fills. */
-  .done-check-completed {
-    animation: done-check-fill 600ms var(--ease-out) forwards !important;
-  }
-
   /* Override tailwindcss-animate defaults with our stronger curves */
   [data-state] {
     animation-timing-function: var(--ease-out);
@@ -566,20 +478,6 @@
       animation: none;
       opacity: 1;
       scale: 1;
-    }
-
-    /* Done-mark resolves to its final drawn state — circle and check
-       fully visible, punctuation dot in place — without animating. */
-    .done-mark .done-circle,
-    .done-mark .done-check {
-      animation: none;
-      stroke-dashoffset: 0;
-      opacity: 1;
-    }
-    .done-mark .done-dot {
-      animation: none;
-      transform: scale(1);
-      opacity: 1;
     }
 
     /* Neutralize Radix animate-in/out transform motion; keep opacity fade only */
