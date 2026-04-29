@@ -85,10 +85,12 @@ function Phase3aCelebration({ show, onDone }: { show: Show; onDone: () => void }
   const [checkFading, setCheckFading] = useState(false);
   const [goodJobShow, setGoodJobShow] = useState(false);
   const [goodJobFading, setGoodJobFading] = useState(false);
+  const goodJobShownRef = useRef(false);
 
   const skippedRef = useRef(false);
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
+  const skipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Persist dos_closed_at on first mount. Optimistic update writes
   // the timestamp into the cached show immediately so any subsequent
@@ -146,6 +148,7 @@ function Phase3aCelebration({ show, onDone }: { show: Show; onDone: () => void }
 
     timers.push(setTimeout(() => {
       if (skippedRef.current) return;
+      goodJobShownRef.current = true;
       setGoodJobShow(true);
     }, T_CHECK_GONE));
 
@@ -162,6 +165,7 @@ function Phase3aCelebration({ show, onDone }: { show: Show; onDone: () => void }
 
     return () => {
       timers.forEach(clearTimeout);
+      if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
     };
   }, []);
 
@@ -171,7 +175,7 @@ function Phase3aCelebration({ show, onDone }: { show: Show; onDone: () => void }
     setCheckFading(true);
     setGoodJobShow(false);
     setGoodJobFading(true);
-    window.setTimeout(() => onDoneRef.current(), T_CELEBRATION.goodJobFadeOut);
+    skipTimerRef.current = setTimeout(() => onDoneRef.current(), T_CELEBRATION.goodJobFadeOut);
   }, []);
 
   return (
@@ -196,7 +200,7 @@ function Phase3aCelebration({ show, onDone }: { show: Show; onDone: () => void }
             </svg>
           </div>
           <div
-            className={`dos-good-job${goodJobShow ? " show" : ""}${goodJobFading ? " fading" : ""}`}
+            className={`dos-good-job${goodJobShow ? " show" : ""}${goodJobFading && goodJobShownRef.current ? " fading" : ""}`}
             style={{ top: 28 }}
           >
             Good job.
