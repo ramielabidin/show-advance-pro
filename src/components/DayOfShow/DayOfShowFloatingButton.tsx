@@ -16,6 +16,19 @@ export default function DayOfShowFloatingButton({ showId }: DayOfShowFloatingBut
 
   return (
     <>
+      {/* Bottom scroll-edge fade — keeps the pill on a clean canvas as
+          upcoming-show cards scroll past it. Mobile-only; sits below the
+          pill (z-30) and above page content, beneath the bottom tab bar
+          (z-50). Spans the full bottom 128px of the viewport, fading from
+          transparent up top to solid background by the bottom 30%. */}
+      <div
+        aria-hidden
+        className="md:hidden pointer-events-none fixed bottom-0 left-0 right-0 h-32 z-30"
+        style={{
+          background:
+            "linear-gradient(to top, hsl(var(--background)) 30%, hsl(var(--background) / 0))",
+        }}
+      />
       <button
         type="button"
         onClick={() => setOpen(true)}
