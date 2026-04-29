@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isPast, isToday, parseISO } from "date-fns";
 import { Calendar, Search, X } from "lucide-react";
@@ -47,6 +47,19 @@ export default function ShowsPage() {
   const [pendingRemoveFromTourId, setPendingRemoveFromTourId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { isArtist } = useTeam();
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const state = location.state as { focusSearch?: boolean } | null;
+    if (state?.focusSearch) {
+      searchInputRef.current?.focus();
+      // Clear the state so a refresh doesn't re-focus.
+      navigate(location.pathname + location.search, { replace: true, state: null });
+    }
+  }, [location, navigate]);
 
   const setSearchQuery = (next: string) => {
     const params = new URLSearchParams(searchParams);
@@ -244,6 +257,7 @@ export default function ShowsPage() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
+            ref={searchInputRef}
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
