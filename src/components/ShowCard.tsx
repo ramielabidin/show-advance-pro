@@ -26,7 +26,24 @@ const SNAP_TRANSITION =
 export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "none" }: ShowCardProps) {
   const date = parseISO(show.date);
   const past = isPast(date) && !isToday(date);
-  const swipeEnabled = !!onDelete;
+
+  const [isHoverDevice, setIsHoverDevice] = useState(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return false;
+    return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  });
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const handler = (e: MediaQueryListEvent) => setIsHoverDevice(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
+  // Swipe-to-delete is touch-only. On hover-capable devices (mouse/trackpad)
+  // we render the simple Link variant and rely on the hover-reveal trash icon
+  // inside cardContent — keeps the two delete affordances cleanly separated
+  // and prevents the red panel from bleeding through the card on click.
+  const swipeEnabled = !!onDelete && !isHoverDevice;
 
   const [revealed, setRevealed] = useState(false);
   const [dragX, setDragX] = useState(0);
