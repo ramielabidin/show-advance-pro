@@ -33,9 +33,15 @@ interface TimeInputProps {
   onChange: (value: string) => void;
   autoFocus?: boolean;
   hideTbd?: boolean;
+  /**
+   * `compact` swaps the 28px serif display for body-sized mono. Use when the
+   * surrounding context reads as body text (e.g. a quiet inline-edit row)
+   * rather than a hero/editor stage like ScheduleEditor's commit row.
+   */
+  compact?: boolean;
 }
 
-export default function TimeInput({ value, onChange, autoFocus, hideTbd }: TimeInputProps) {
+export default function TimeInput({ value, onChange, autoFocus, hideTbd, compact }: TimeInputProps) {
   const isTbd = value === "TBD";
   const parsed = parseTime(value);
 
@@ -65,13 +71,23 @@ export default function TimeInput({ value, onChange, autoFocus, hideTbd }: TimeI
 
   const normalize = (text: string, rail: "AM" | "PM") => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    // Clearing the field has to propagate — without onChange("") the parent
+    // never learns the value was wiped, so a save would re-send the previous
+    // value and the field would never actually clear.
+    if (!trimmed) {
+      onChange("");
+      return;
+    }
     // If user typed an explicit meridiem ("8p", "9am", "8:30 PM"), trust it
     // Otherwise, append the rail selection so "8:30" + PM rail → "8:30 PM"
     const hasExplicitMeridiem = /[ap]/i.test(trimmed);
     const toParse = hasExplicitMeridiem ? trimmed : `${trimmed} ${rail}`;
     const normalized = normalizeTime(toParse);
-    if (!normalized) { setRaw(""); return; }
+    if (!normalized) {
+      setRaw("");
+      onChange("");
+      return;
+    }
     // Update display to canonical H:MM form and sync rail
     const p = parseTime(normalized);
     if (p) {
@@ -93,11 +109,15 @@ export default function TimeInput({ value, onChange, autoFocus, hideTbd }: TimeI
     normalize(raw, a);
   };
 
-  const inputClass =
-    "bg-transparent border-0 border-b border-dashed border-foreground/30 " +
-    "focus:border-foreground/60 focus:outline-none rounded-none p-0 " +
-    "font-display text-[28px] leading-none tracking-tight text-foreground " +
-    "placeholder:text-muted-foreground/40";
+  const inputClass = compact
+    ? "bg-transparent border-0 border-b border-dashed border-foreground/30 " +
+      "focus:border-foreground/60 focus:outline-none rounded-none py-1 px-0 " +
+      "font-mono text-sm font-medium text-foreground " +
+      "placeholder:text-muted-foreground/40"
+    : "bg-transparent border-0 border-b border-dashed border-foreground/30 " +
+      "focus:border-foreground/60 focus:outline-none rounded-none p-0 " +
+      "font-display text-[28px] leading-none tracking-tight text-foreground " +
+      "placeholder:text-muted-foreground/40";
 
   return (
     <div className="inline-flex items-center gap-3 flex-wrap">

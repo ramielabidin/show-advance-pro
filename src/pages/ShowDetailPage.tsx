@@ -323,9 +323,6 @@ export default function ShowDetailPage() {
 
   const [lookingUpAddress, setLookingUpAddress] = useState(false);
   const [scheduleKey, setScheduleKey] = useState(0);
-  const [suggestionDismissed, setSuggestionDismissed] = useState(() =>
-    id ? localStorage.getItem(`departure-suggestion-dismissed-${id}`) === "true" : false
-  );
   const [dealTabSeen, setDealTabSeen] = useState(() =>
     id ? localStorage.getItem(`deal-tab-seen-${id}`) === "true" : true
   );
@@ -501,11 +498,11 @@ export default function ShowDetailPage() {
     return hours * 60 + minutes;
   }, [show]);
 
-  // Recommended departure = load-in - drive - 45min buffer
+  // Recommended departure = load-in - drive - 60min buffer
   const recommendedDeparture = useMemo(() => {
     if (loadInMinutes == null || !driveTime?.duration_seconds) return null;
     const driveMin = Math.round(driveTime.duration_seconds / 60);
-    const mins = loadInMinutes - driveMin - 45;
+    const mins = loadInMinutes - driveMin - 60;
     if (mins < 0) return null;
     const h24 = Math.floor(mins / 60) % 24;
     const m = mins % 60;
@@ -846,7 +843,7 @@ export default function ShowDetailPage() {
       if (opts?.structuredTime) {
         return (
           <div ref={inlineRef} className="space-y-2">
-            <Label className="text-xs text-muted-foreground">{label}</Label>
+            <Label className="text-sm text-muted-foreground">{label}</Label>
             <TimeInput
               value={inlineValue}
               onChange={(val) => setInlineValue(val)}
@@ -860,7 +857,7 @@ export default function ShowDetailPage() {
 
       return (
         <div ref={inlineRef} className="space-y-1">
-          {!opts?.labelHidden && <Label className="text-xs text-muted-foreground">{label}</Label>}
+          {!opts?.labelHidden && <Label className="text-sm text-muted-foreground">{label}</Label>}
           <InlineEditable
             value={inlineValue}
             onChange={setInlineValue}
@@ -885,17 +882,10 @@ export default function ShowDetailPage() {
 
     const displayValue = opts?.currency ? formatCurrency(value) : value;
 
-    // Clickable value to enter inline edit. Multi-line text fields (Backline,
-    // Notes) get a dashed-border container so the editable region reads as a
-    // block rather than loose text — mirrors the Hotel card affordance.
     return (
       <button
         onClick={() => startInlineEdit(key, { timeFormat: opts?.timeFormat, structuredTime: opts?.structuredTime })}
-        className={cn(
-          "w-full text-left group",
-          opts?.multiline &&
-            "rounded-lg border border-dashed border-foreground/20 bg-background/40 hover:bg-foreground/[0.02] [transition:background-color_150ms_var(--ease-out)] px-4 py-3",
-        )}
+        className="w-full text-left group"
       >
         <FieldRow label={label} value={displayValue} mono={opts?.mono} compact={opts?.compact} noLabel={opts?.labelHidden} />
       </button>
@@ -1140,13 +1130,13 @@ export default function ShowDetailPage() {
                       setInlineField(null);
                     }
                   }}
-                  className="text-[28px] sm:text-4xl font-display font-bold tracking-[-0.02em] h-auto py-0.5 px-1 -ml-1"
+                  className="text-[36px] sm:text-[clamp(40px,4.6vw,52px)] font-display font-bold tracking-[-0.02em] h-auto py-0.5 px-1 -ml-1"
                 />
               </div>
             ) : (
               <div className="flex items-center gap-3 flex-wrap">
                 <h1
-                  className="font-display font-bold text-[28px] sm:text-4xl leading-[1.05] tracking-[-0.02em] cursor-pointer hover:text-primary/80 transition-colors"
+                  className="font-display font-bold text-[36px] sm:text-[clamp(40px,4.6vw,52px)] leading-[1.02] tracking-[-0.02em] cursor-pointer hover:text-primary/80 transition-colors"
                   onClick={() => { setInlineField("venue_name"); setInlineValue(show.venue_name); }}
                 >
                   {show.venue_name}
@@ -1261,19 +1251,6 @@ export default function ShowDetailPage() {
                       </Button>
                     </span>
                   )}
-                  {driveTimeLabel && departureOrigin && !shouldHideDriveTime && (
-                    <span className="inline-flex items-center gap-1.5 flex-wrap">
-                      <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} />
-                      <span className="font-mono text-foreground font-medium">{driveTimeLabel}</span>
-                      <span>from {departureOrigin.label}</span>
-                      {driveTime?.distance_text && (
-                        <>
-                          <span className="opacity-60">·</span>
-                          <span className="font-mono">{driveTime.distance_text}</span>
-                        </>
-                      )}
-                    </span>
-                  )}
                 </div>
 
                 {/* Mobile meta — address as single maps link, matching desktop behaviour */}
@@ -1329,19 +1306,6 @@ export default function ShowDetailPage() {
                   )}
                 </div>
               </>
-            )}
-            {driveTimeLabel && departureOrigin && !shouldHideDriveTime && (
-              <div
-                className="sm:hidden flex items-center gap-2.5 mt-3 px-2.5 py-2 rounded-md text-[12.5px] text-muted-foreground"
-                style={{ background: "hsl(var(--muted) / 0.55)" }}
-              >
-                <Car className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-                <span className="font-mono font-medium text-foreground">{driveTimeLabel}</span>
-                <span className="truncate">from {departureOrigin.label}</span>
-                {driveTime?.distance_text && (
-                  <span className="ml-auto font-mono font-medium shrink-0">{driveTime.distance_text}</span>
-                )}
-              </div>
             )}
           </div>
 
@@ -1467,6 +1431,8 @@ export default function ShowDetailPage() {
                 <ScheduleEditor
                   key={scheduleKey}
                   initial={scheduleEntries.map((e) => ({ time: e.time, label: e.label, is_band: e.is_band }))}
+                  setLength={show.set_length}
+                  onSetLengthChange={(val) => updateMutation.mutate({ set_length: val })}
                   onSave={async (rows) => {
                     try {
                       await supabase.from("schedule_entries").delete().eq("show_id", id!);
@@ -1508,14 +1474,10 @@ export default function ShowDetailPage() {
               </FieldGroup>
             </div>
 
-            <FieldGroup title="Set Length">
-              {editField("set_length", "Set Length", { alwaysShow: true, labelHidden: true, placeholder: "e.g. 75 min" })}
-            </FieldGroup>
-
             <FieldGroup
               title="Departure"
               collapsible
-              defaultOpen={!!show.departure_time || !!show.departure_notes || (!!recommendedDeparture && !suggestionDismissed)}
+              defaultOpen={!!show.departure_time || !!show.departure_notes || !!recommendedDeparture}
             >
               {departureEditor.isEditing ? (
                 <div
@@ -1524,16 +1486,17 @@ export default function ShowDetailPage() {
                   onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) departureEditor.save(); }}
                 >
                   <div className="space-y-2">
-                    <Label className="block text-xs text-muted-foreground">Time</Label>
+                    <Label className="block text-sm text-muted-foreground">Time</Label>
                     <TimeInput
                       value={departureEditor.get("departure_time")}
                       onChange={(val) => departureEditor.setField("departure_time", val)}
                       autoFocus
                       hideTbd
+                      compact
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Notes</Label>
+                    <Label className="text-sm text-muted-foreground">Notes</Label>
                     <InlineField
                       value={departureEditor.get("departure_notes")}
                       onChange={(v) => departureEditor.setField("departure_notes", v)}
@@ -1546,35 +1509,7 @@ export default function ShowDetailPage() {
                   </Button>
                 </div>
               ) : departureEditor.empty ? (
-                <>
-                  <EmptyFieldPrompt label="departure" onClick={departureEditor.startEdit} />
-                  {recommendedDeparture && !suggestionDismissed && (
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs gap-1.5"
-                        onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture })}
-                        disabled={updateMutation.isPending}
-                      >
-                        <Clock className="h-3 w-3" />
-                        Use {recommendedDeparture}
-                        <span className="text-muted-foreground">· load-in − drive − 45 min</span>
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (id) localStorage.setItem(`departure-suggestion-dismissed-${id}`, "true");
-                          setSuggestionDismissed(true);
-                        }}
-                        className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent [transition:color_150ms_var(--ease-out),background-color_150ms_var(--ease-out)]"
-                        aria-label="Dismiss departure suggestion"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </>
+                <EmptyFieldPrompt label="departure" onClick={departureEditor.startEdit} />
               ) : (
                 <div
                   role="button"
@@ -1583,10 +1518,59 @@ export default function ShowDetailPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); departureEditor.startEdit(); }
                   }}
-                  className="w-full text-left space-y-2 card-pressable cursor-pointer"
+                  className="w-full text-left card-pressable cursor-pointer grid grid-cols-1 sm:grid-cols-[128px_1fr] sm:items-baseline gap-y-1 sm:gap-x-3 py-1"
                 >
-                  <FieldRow label="Time" value={show.departure_time} mono placeholder="Add departure time…" />
-                  <FieldRow label="Notes" value={show.departure_notes} placeholder="Add notes…" />
+                  {show.departure_time ? (
+                    <span className="font-mono text-sm text-foreground">
+                      {show.departure_time}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground/55 italic">Add time…</span>
+                  )}
+                  <span
+                    className={cn(
+                      "text-sm leading-relaxed whitespace-pre-line",
+                      show.departure_notes ? "text-muted-foreground" : "text-muted-foreground/55 italic",
+                    )}
+                  >
+                    {show.departure_notes || "Add notes…"}
+                  </span>
+                </div>
+              )}
+
+              {/* Drive-time + recommended-departure context — one consolidated
+                  block in the section so it's always visible, not gated to
+                  empty state. The "Use" affordance only renders when there's
+                  no departure_time set yet. */}
+              {driveTimeLabel && departureOrigin && !shouldHideDriveTime && !departureEditor.isEditing && (
+                <div className="space-y-1.5 pt-3 text-[12px] text-muted-foreground">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} />
+                    <span>
+                      <span className="font-mono font-medium text-foreground">{driveTimeLabel}</span> from {departureOrigin.label}
+                    </span>
+                    {driveTime?.distance_text && (
+                      <>
+                        <span className="opacity-60">·</span>
+                        <span className="font-mono">{driveTime.distance_text}</span>
+                      </>
+                    )}
+                  </div>
+                  {recommendedDeparture && !show.departure_time && (
+                    <div className="pl-5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2.5 text-[11px] gap-1.5"
+                        onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture })}
+                        disabled={updateMutation.isPending}
+                      >
+                        <Clock className="h-3 w-3" />
+                        Leave by <span className="font-mono font-medium">{recommendedDeparture}</span>
+                        <span className="text-muted-foreground/80">to make load-in</span>
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </FieldGroup>
@@ -1604,7 +1588,7 @@ export default function ShowDetailPage() {
                   onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) arrivalEditor.save(); }}
                 >
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Load In</Label>
+                    <Label className="text-sm text-muted-foreground">Load In</Label>
                     <InlineField
                       value={arrivalEditor.get("load_in_details")}
                       onChange={(v) => arrivalEditor.setField("load_in_details", v)}
@@ -1613,7 +1597,7 @@ export default function ShowDetailPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Parking</Label>
+                    <Label className="text-sm text-muted-foreground">Parking</Label>
                     <InlineField
                       value={arrivalEditor.get("parking_notes")}
                       onChange={(v) => arrivalEditor.setField("parking_notes", v)}
@@ -1625,7 +1609,7 @@ export default function ShowDetailPage() {
                   </Button>
                 </div>
               ) : arrivalEditor.empty ? (
-                <EmptyFieldPrompt label="arrival (load in / parking)" onClick={arrivalEditor.startEdit} />
+                <EmptyFieldPrompt label="arrival" onClick={arrivalEditor.startEdit} />
               ) : (
                 <div
                   role="button"
@@ -1654,7 +1638,7 @@ export default function ShowDetailPage() {
                   onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) venueEditor.save(); }}
                 >
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Green Room</Label>
+                    <Label className="text-sm text-muted-foreground">Green Room</Label>
                     <InlineField
                       value={venueEditor.get("green_room_info")}
                       onChange={(v) => venueEditor.setField("green_room_info", v)}
@@ -1664,7 +1648,7 @@ export default function ShowDetailPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">WiFi Network</Label>
+                      <Label className="text-sm text-muted-foreground">WiFi Network</Label>
                       <InlineField
                         value={venueEditor.get("wifi_network")}
                         onChange={(v) => venueEditor.setField("wifi_network", v)}
@@ -1672,7 +1656,7 @@ export default function ShowDetailPage() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">WiFi Password</Label>
+                      <Label className="text-sm text-muted-foreground">WiFi Password</Label>
                       <InlineField
                         value={venueEditor.get("wifi_password")}
                         onChange={(v) => venueEditor.setField("wifi_password", v)}
@@ -1681,7 +1665,7 @@ export default function ShowDetailPage() {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Hospitality</Label>
+                    <Label className="text-sm text-muted-foreground">Hospitality</Label>
                     <InlineField
                       value={venueEditor.get("hospitality")}
                       onChange={(v) => venueEditor.setField("hospitality", v)}
@@ -1693,7 +1677,7 @@ export default function ShowDetailPage() {
                   </Button>
                 </div>
               ) : venueEditor.empty ? (
-                <EmptyFieldPrompt label="venue details" onClick={venueEditor.startEdit} />
+                <EmptyFieldPrompt label="venue" onClick={venueEditor.startEdit} />
               ) : (
                 <div
                   role="button"
@@ -1706,38 +1690,22 @@ export default function ShowDetailPage() {
                 >
                   <FieldRow label="Green Room" value={show.green_room_info} placeholder="Add green room info…" />
                   {(show.wifi_network || show.wifi_password) ? (
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                      <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">WiFi</span>
-                      <div className="flex flex-col gap-1.5 min-w-0">
-                        <div className="flex items-baseline gap-3">
-                          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80 font-medium w-[68px] shrink-0">
-                            Network
-                          </span>
-                          {show.wifi_network ? (
-                            <span className="text-[13px] font-mono text-foreground break-all">
-                              {show.wifi_network}
+                    <>
+                      <FieldRow label="Network" value={show.wifi_network} mono placeholder="Add network…" />
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+                        <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Password</span>
+                        {show.wifi_password ? (
+                          <span className="inline-flex items-center gap-2 min-w-0">
+                            <span className="text-sm font-mono text-foreground break-all">
+                              {show.wifi_password}
                             </span>
-                          ) : (
-                            <span className="text-sm text-muted-foreground/55 italic">Add network…</span>
-                          )}
-                        </div>
-                        <div className="flex items-baseline gap-3">
-                          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80 font-medium w-[68px] shrink-0">
-                            Password
+                            <CopyButton value={show.wifi_password} />
                           </span>
-                          {show.wifi_password ? (
-                            <>
-                              <span className="text-[13px] font-mono text-foreground break-all">
-                                {show.wifi_password}
-                              </span>
-                              <CopyButton value={show.wifi_password} />
-                            </>
-                          ) : (
-                            <span className="text-sm text-muted-foreground/55 italic">Add password…</span>
-                          )}
-                        </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground/55 italic">Add password…</span>
+                        )}
                       </div>
-                    </div>
+                    </>
                   ) : (
                     <FieldRow label="WiFi" value={null} placeholder="Add WiFi network and password…" />
                   )}
@@ -1774,6 +1742,9 @@ export default function ShowDetailPage() {
               </FieldGroup>
             </div>
 
+            {/* Implicit pre-/post-show transition — no label, just a hairline pause */}
+            <div aria-hidden className="h-px bg-foreground/15" />
+
             <FieldGroup
               title="Accommodations"
               collapsible
@@ -1786,20 +1757,20 @@ export default function ShowDetailPage() {
                   onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) hotelEditor.save(); }}
                 >
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Name</Label>
+                    <Label className="text-sm text-muted-foreground">Name</Label>
                     <InlineField value={hotelEditor.get("hotel_name")} onChange={(v) => hotelEditor.setField("hotel_name", v)} autoFocus />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Address</Label>
+                    <Label className="text-sm text-muted-foreground">Address</Label>
                     <InlineField value={hotelEditor.get("hotel_address")} onChange={(v) => hotelEditor.setField("hotel_address", v)} />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Confirmation #</Label>
+                    <Label className="text-sm text-muted-foreground">Confirmation #</Label>
                     <InlineField value={hotelEditor.get("hotel_confirmation")} onChange={(v) => hotelEditor.setField("hotel_confirmation", v)} mono />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Check In</Label>
+                      <Label className="text-sm text-muted-foreground">Check In</Label>
                       <div className="grid grid-cols-2 gap-3">
                         <InlineField
                           value={hotelEditor.get("hotel_checkin_date")}
@@ -1817,7 +1788,7 @@ export default function ShowDetailPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Check Out</Label>
+                      <Label className="text-sm text-muted-foreground">Check Out</Label>
                       <div className="grid grid-cols-2 gap-3">
                         <InlineField
                           value={hotelEditor.get("hotel_checkout_date")}
@@ -1894,19 +1865,19 @@ export default function ShowDetailPage() {
                         {show.hotel_confirmation && (
                           <div>
                             <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Confirmation #</div>
-                            <div className="font-mono text-[13px] text-foreground mt-1 break-all">{show.hotel_confirmation}</div>
+                            <div className="font-mono text-sm text-foreground mt-1 break-all">{show.hotel_confirmation}</div>
                           </div>
                         )}
                         {checkInDisplay && (
                           <div>
                             <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check In</div>
-                            <div className="font-mono text-[13px] text-foreground mt-1">{checkInDisplay}</div>
+                            <div className="font-mono text-sm text-foreground mt-1">{checkInDisplay}</div>
                           </div>
                         )}
                         {checkOutDisplay && (
                           <div>
                             <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check Out</div>
-                            <div className="font-mono text-[13px] text-foreground mt-1">{checkOutDisplay}</div>
+                            <div className="font-mono text-sm text-foreground mt-1">{checkOutDisplay}</div>
                           </div>
                         )}
                       </div>
