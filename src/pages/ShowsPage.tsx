@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isPast, isToday, parseISO } from "date-fns";
-import { Calendar, Search, X } from "lucide-react";
+import { Calendar, Check, Filter, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ShowCard from "@/components/ShowCard";
@@ -10,10 +10,9 @@ import CreateShowDialog from "@/components/CreateShowDialog";
 import BulkUploadDialog from "@/components/BulkUploadDialog";
 import EmptyState from "@/components/EmptyState";
 import PageTitle from "@/components/PageTitle";
-import TourPicker from "@/components/TourPicker";
 import TourScopedHeader from "@/components/TourScopedHeader";
-import TourRevenueSimulator from "@/components/TourRevenueSimulator";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useTeam } from "@/components/TeamProvider";
 import { cn } from "@/lib/utils";
 import {
@@ -183,6 +182,48 @@ export default function ShowsPage() {
     enabled: !!tourId,
   });
 
+  type TourSummary = {
+    id: string;
+    name: string;
+    shows: { id: string; date: string }[];
+  };
+
+  const { data: tours = [] } = useQuery<TourSummary[]>({
+    queryKey: ["tours", "summary"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tours")
+        .select("id, name, shows(id, date)")
+        .order("start_date", { ascending: false });
+      if (error) throw error;
+      return data as TourSummary[];
+    },
+  });
+
+  const groupedTours = useMemo(() => {
+    const active: TourSummary[] = [];
+    const upcomingTours: TourSummary[] = [];
+    const pastTours: TourSummary[] = [];
+    for (const t of tours) {
+      const tShows = t.shows ?? [];
+      const hasUp = tShows.some((s) => {
+        const d = parseISO(s.date);
+        return isToday(d) || !isPast(d);
+      });
+      const hasPast = tShows.some((s) => {
+        const d = parseISO(s.date);
+        return isPast(d) && !isToday(d);
+      });
+      if (hasUp && hasPast) active.push(t);
+      else if (hasUp) upcomingTours.push(t);
+      else if (hasPast) pastTours.push(t);
+      else upcomingTours.push(t);
+    }
+    return { active, upcoming: upcomingTours, past: pastTours };
+  }, [tours]);
+
+  const [scopePopoverOpen, setScopePopoverOpen] = useState(false);
+
   const filtered = useMemo(() => {
     if (view === "tour") {
       if (!tourId) return [];
@@ -217,8 +258,6 @@ export default function ShowsPage() {
 
   const isTourScoped = view === "tour" && !!tourId && !!tour;
   const isTourPickerEmpty = view === "tour" && !tourId;
-
-  const selectedTourName = tour?.name ?? null;
 
   const chipFor = (show: ShowWithTour): "tour" | "standalone" | "none" => {
     if (view === "tour" || view === "standalone") return "none";
@@ -309,8 +348,8 @@ export default function ShowsPage() {
         </div>
       </div>
 
-      {/* Upcoming/past tabs + view pills */}
-      <div className="flex flex-wrap items-center gap-3 mb-5">
+      {/* Time scope + filter chip / funnel */}
+      <div className="flex items-center gap-2 mb-5">
         <div className="flex items-center gap-1 rounded-md border p-0.5 bg-card">
           {(["upcoming", "past"] as const).map((t) => (
             <button
@@ -330,31 +369,96 @@ export default function ShowsPage() {
 
         <div className="flex-1" />
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <ViewPill label="All" active={view === "all"} onClick={() => setView("all")} />
-          <TourPicker
-            selectedTourId={view === "tour" ? tourId : null}
-            selectedTourName={view === "tour" ? selectedTourName : null}
-            onSelect={(id) => setTourId(id)}
+        {view === "tour" && tourId && tour && (
+          <FilterChip
+            onEdit={() => setScopePopoverOpen(true)}
             onClear={clearTour}
-            onOpen={() => {
-              if (view !== "tour") setView("tour");
-            }}
-          />
-          <ViewPill
-            label="Standalone"
-            active={view === "standalone"}
-            onClick={() => setView("standalone")}
-          />
-        </div>
-      </div>
+            ariaLabelClear="Clear tour filter"
+          >
+            <span className="text-muted-foreground mr-1.5">Tour</span>
+            <span className="truncate max-w-[14ch]">{tour.name}</span>
+          </FilterChip>
+        )}
 
-      {/* Tour financials panel — admin only */}
-      {!isArtist && isTourScoped && tour && filtered.length > 0 && (
-        <div className="mb-5">
-          <TourRevenueSimulator tourId={tour.id} shows={filtered} />
-        </div>
-      )}
+        {view === "standalone" && (
+          <FilterChip
+            onEdit={() => setScopePopoverOpen(true)}
+            onClear={() => setView("all")}
+            ariaLabelClear="Clear filter"
+          >
+            Standalone
+          </FilterChip>
+        )}
+
+        <Popover open={scopePopoverOpen} onOpenChange={setScopePopoverOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label="Filter shows"
+              className={cn(
+                "h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors",
+                (view === "tour" || view === "standalone") && "hidden",
+              )}
+            >
+              <Filter className="h-3.5 w-3.5" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-72 p-0">
+            <div className="max-h-[360px] overflow-y-auto p-2">
+              <ScopeFilterRow
+                label="All shows"
+                selected={view === "all"}
+                onClick={() => {
+                  setView("all");
+                  setScopePopoverOpen(false);
+                }}
+              />
+              <ScopeFilterRow
+                label="Standalone"
+                selected={view === "standalone"}
+                onClick={() => {
+                  setView("standalone");
+                  setScopePopoverOpen(false);
+                }}
+              />
+              {tours.length > 0 && <div className="my-1 border-t" />}
+              {groupedTours.active.length > 0 && (
+                <ScopeFilterTourGroup
+                  label="Active"
+                  tours={groupedTours.active}
+                  selectedTourId={tourId}
+                  onSelect={(id) => {
+                    setTourId(id);
+                    setScopePopoverOpen(false);
+                  }}
+                />
+              )}
+              {groupedTours.upcoming.length > 0 && (
+                <ScopeFilterTourGroup
+                  label="Upcoming"
+                  tours={groupedTours.upcoming}
+                  selectedTourId={tourId}
+                  onSelect={(id) => {
+                    setTourId(id);
+                    setScopePopoverOpen(false);
+                  }}
+                />
+              )}
+              {groupedTours.past.length > 0 && (
+                <ScopeFilterTourGroup
+                  label="Past"
+                  tours={groupedTours.past}
+                  selectedTourId={tourId}
+                  onSelect={(id) => {
+                    setTourId(id);
+                    setScopePopoverOpen(false);
+                  }}
+                />
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
 
       {/* Tour picker empty state */}
       {isTourPickerEmpty && (
@@ -490,18 +594,102 @@ export default function ShowsPage() {
   );
 }
 
-function ViewPill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function FilterChip({
+  children,
+  onEdit,
+  onClear,
+  ariaLabelClear,
+}: {
+  children: React.ReactNode;
+  onEdit: () => void;
+  onClear: () => void;
+  ariaLabelClear: string;
+}) {
+  return (
+    <div className="inline-flex items-center h-8 rounded-full border border-foreground/30 bg-card overflow-hidden">
+      <button
+        type="button"
+        onClick={onEdit}
+        className="flex items-center pl-3 pr-2 h-full text-xs font-medium hover:bg-accent transition-colors"
+      >
+        {children}
+      </button>
+      <button
+        type="button"
+        onClick={onClear}
+        aria-label={ariaLabelClear}
+        className="h-full px-2 border-l border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
+function ScopeFilterRow({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex items-center h-9 px-3 rounded-md border text-sm font-medium transition-colors",
-        active
-          ? "bg-foreground text-background border-foreground"
-          : "bg-background text-foreground border-input hover:bg-accent",
+        "flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-md hover:bg-accent transition-colors",
+        selected && "bg-accent",
       )}
     >
-      {label}
+      <Check
+        className={cn(
+          "h-3.5 w-3.5 shrink-0 text-foreground",
+          !selected && "invisible",
+        )}
+      />
+      <span className="text-sm font-medium">{label}</span>
     </button>
+  );
+}
+
+function ScopeFilterTourGroup({
+  label,
+  tours,
+  selectedTourId,
+  onSelect,
+}: {
+  label: string;
+  tours: { id: string; name: string }[];
+  selectedTourId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div className="mt-1">
+      <div className="px-2 pt-1 pb-1.5 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+        {label}
+      </div>
+      {tours.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => onSelect(t.id)}
+          className={cn(
+            "flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-md hover:bg-accent transition-colors",
+            t.id === selectedTourId && "bg-accent",
+          )}
+        >
+          <Check
+            className={cn(
+              "h-3.5 w-3.5 shrink-0 text-foreground",
+              t.id !== selectedTourId && "invisible",
+            )}
+          />
+          <span className="text-sm font-medium truncate">{t.name}</span>
+        </button>
+      ))}
+    </div>
   );
 }
