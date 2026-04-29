@@ -825,7 +825,7 @@ export default function ShowDetailPage() {
       if (opts?.structuredTime) {
         return (
           <div ref={inlineRef} className="space-y-2">
-            <Label className="text-xs text-muted-foreground">{label}</Label>
+            <Label className="text-sm text-muted-foreground">{label}</Label>
             <TimeInput
               value={inlineValue}
               onChange={(val) => setInlineValue(val)}
@@ -839,7 +839,7 @@ export default function ShowDetailPage() {
 
       return (
         <div ref={inlineRef} className="space-y-1">
-          {!opts?.labelHidden && <Label className="text-xs text-muted-foreground">{label}</Label>}
+          {!opts?.labelHidden && <Label className="text-sm text-muted-foreground">{label}</Label>}
           <InlineEditable
             value={inlineValue}
             onChange={setInlineValue}
@@ -1457,7 +1457,7 @@ export default function ShowDetailPage() {
                   onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) departureEditor.save(); }}
                 >
                   <div className="space-y-2">
-                    <Label className="block text-xs text-muted-foreground">Time</Label>
+                    <Label className="block text-sm text-muted-foreground">Time</Label>
                     <TimeInput
                       value={departureEditor.get("departure_time")}
                       onChange={(val) => departureEditor.setField("departure_time", val)}
@@ -1467,7 +1467,7 @@ export default function ShowDetailPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Notes</Label>
+                    <Label className="text-sm text-muted-foreground">Notes</Label>
                     <InlineField
                       value={departureEditor.get("departure_notes")}
                       onChange={(v) => departureEditor.setField("departure_notes", v)}
@@ -1489,10 +1489,10 @@ export default function ShowDetailPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); departureEditor.startEdit(); }
                   }}
-                  className="w-full text-left card-pressable cursor-pointer grid grid-cols-1 sm:grid-cols-[120px_1fr] sm:items-baseline gap-y-1 sm:gap-x-6 py-1"
+                  className="w-full text-left card-pressable cursor-pointer grid grid-cols-1 sm:grid-cols-[128px_1fr] sm:items-baseline gap-y-1 sm:gap-x-3 py-1"
                 >
                   {show.departure_time ? (
-                    <span className="font-mono text-sm font-medium text-foreground">
+                    <span className="font-mono text-sm text-foreground">
                       {show.departure_time}
                     </span>
                   ) : (
@@ -1559,7 +1559,7 @@ export default function ShowDetailPage() {
                   onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) arrivalEditor.save(); }}
                 >
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Load In</Label>
+                    <Label className="text-sm text-muted-foreground">Load In</Label>
                     <InlineField
                       value={arrivalEditor.get("load_in_details")}
                       onChange={(v) => arrivalEditor.setField("load_in_details", v)}
@@ -1568,7 +1568,7 @@ export default function ShowDetailPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Parking</Label>
+                    <Label className="text-sm text-muted-foreground">Parking</Label>
                     <InlineField
                       value={arrivalEditor.get("parking_notes")}
                       onChange={(v) => arrivalEditor.setField("parking_notes", v)}
@@ -1580,7 +1580,7 @@ export default function ShowDetailPage() {
                   </Button>
                 </div>
               ) : arrivalEditor.empty ? (
-                <EmptyFieldPrompt label="arrival (load in / parking)" onClick={arrivalEditor.startEdit} />
+                <EmptyFieldPrompt label="arrival" onClick={arrivalEditor.startEdit} />
               ) : (
                 <div
                   role="button"
@@ -1609,7 +1609,7 @@ export default function ShowDetailPage() {
                   onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) venueEditor.save(); }}
                 >
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Green Room</Label>
+                    <Label className="text-sm text-muted-foreground">Green Room</Label>
                     <InlineField
                       value={venueEditor.get("green_room_info")}
                       onChange={(v) => venueEditor.setField("green_room_info", v)}
@@ -1619,7 +1619,7 @@ export default function ShowDetailPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">WiFi Network</Label>
+                      <Label className="text-sm text-muted-foreground">WiFi Network</Label>
                       <InlineField
                         value={venueEditor.get("wifi_network")}
                         onChange={(v) => venueEditor.setField("wifi_network", v)}
@@ -1627,7 +1627,7 @@ export default function ShowDetailPage() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">WiFi Password</Label>
+                      <Label className="text-sm text-muted-foreground">WiFi Password</Label>
                       <InlineField
                         value={venueEditor.get("wifi_password")}
                         onChange={(v) => venueEditor.setField("wifi_password", v)}
@@ -1636,7 +1636,7 @@ export default function ShowDetailPage() {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Hospitality</Label>
+                    <Label className="text-sm text-muted-foreground">Hospitality</Label>
                     <InlineField
                       value={venueEditor.get("hospitality")}
                       onChange={(v) => venueEditor.setField("hospitality", v)}
@@ -1648,7 +1648,7 @@ export default function ShowDetailPage() {
                   </Button>
                 </div>
               ) : venueEditor.empty ? (
-                <EmptyFieldPrompt label="venue details" onClick={venueEditor.startEdit} />
+                <EmptyFieldPrompt label="venue" onClick={venueEditor.startEdit} />
               ) : (
                 <div
                   role="button"
@@ -1661,38 +1661,22 @@ export default function ShowDetailPage() {
                 >
                   <FieldRow label="Green Room" value={show.green_room_info} placeholder="Add green room info…" />
                   {(show.wifi_network || show.wifi_password) ? (
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
-                      <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">WiFi</span>
-                      <div className="flex flex-col gap-1.5 min-w-0">
-                        <div className="flex items-baseline gap-3">
-                          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80 font-medium w-[68px] shrink-0">
-                            Network
-                          </span>
-                          {show.wifi_network ? (
-                            <span className="text-[13px] font-mono text-foreground break-all">
-                              {show.wifi_network}
+                    <>
+                      <FieldRow label="Network" value={show.wifi_network} mono placeholder="Add network…" />
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3">
+                        <span className="text-sm text-muted-foreground sm:shrink-0 sm:w-32">Password</span>
+                        {show.wifi_password ? (
+                          <span className="inline-flex items-center gap-2 min-w-0">
+                            <span className="text-sm font-mono text-foreground break-all">
+                              {show.wifi_password}
                             </span>
-                          ) : (
-                            <span className="text-sm text-muted-foreground/55 italic">Add network…</span>
-                          )}
-                        </div>
-                        <div className="flex items-baseline gap-3">
-                          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80 font-medium w-[68px] shrink-0">
-                            Password
+                            <CopyButton value={show.wifi_password} />
                           </span>
-                          {show.wifi_password ? (
-                            <>
-                              <span className="text-[13px] font-mono text-foreground break-all">
-                                {show.wifi_password}
-                              </span>
-                              <CopyButton value={show.wifi_password} />
-                            </>
-                          ) : (
-                            <span className="text-sm text-muted-foreground/55 italic">Add password…</span>
-                          )}
-                        </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground/55 italic">Add password…</span>
+                        )}
                       </div>
-                    </div>
+                    </>
                   ) : (
                     <FieldRow label="WiFi" value={null} placeholder="Add WiFi network and password…" />
                   )}
@@ -1744,20 +1728,20 @@ export default function ShowDetailPage() {
                   onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) hotelEditor.save(); }}
                 >
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Name</Label>
+                    <Label className="text-sm text-muted-foreground">Name</Label>
                     <InlineField value={hotelEditor.get("hotel_name")} onChange={(v) => hotelEditor.setField("hotel_name", v)} autoFocus />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Address</Label>
+                    <Label className="text-sm text-muted-foreground">Address</Label>
                     <InlineField value={hotelEditor.get("hotel_address")} onChange={(v) => hotelEditor.setField("hotel_address", v)} />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Confirmation #</Label>
+                    <Label className="text-sm text-muted-foreground">Confirmation #</Label>
                     <InlineField value={hotelEditor.get("hotel_confirmation")} onChange={(v) => hotelEditor.setField("hotel_confirmation", v)} mono />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Check In</Label>
+                      <Label className="text-sm text-muted-foreground">Check In</Label>
                       <div className="grid grid-cols-2 gap-3">
                         <InlineField
                           value={hotelEditor.get("hotel_checkin_date")}
@@ -1775,7 +1759,7 @@ export default function ShowDetailPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Check Out</Label>
+                      <Label className="text-sm text-muted-foreground">Check Out</Label>
                       <div className="grid grid-cols-2 gap-3">
                         <InlineField
                           value={hotelEditor.get("hotel_checkout_date")}
@@ -1852,19 +1836,19 @@ export default function ShowDetailPage() {
                         {show.hotel_confirmation && (
                           <div>
                             <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Confirmation #</div>
-                            <div className="font-mono text-[13px] text-foreground mt-1 break-all">{show.hotel_confirmation}</div>
+                            <div className="font-mono text-sm text-foreground mt-1 break-all">{show.hotel_confirmation}</div>
                           </div>
                         )}
                         {checkInDisplay && (
                           <div>
                             <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check In</div>
-                            <div className="font-mono text-[13px] text-foreground mt-1">{checkInDisplay}</div>
+                            <div className="font-mono text-sm text-foreground mt-1">{checkInDisplay}</div>
                           </div>
                         )}
                         {checkOutDisplay && (
                           <div>
                             <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Check Out</div>
-                            <div className="font-mono text-[13px] text-foreground mt-1">{checkOutDisplay}</div>
+                            <div className="font-mono text-sm text-foreground mt-1">{checkOutDisplay}</div>
                           </div>
                         )}
                       </div>
