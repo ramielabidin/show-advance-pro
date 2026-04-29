@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -n --arg branch \"$(git branch --show-current 2>/dev/null)\" --arg status \"$(git status -s 2>/dev/null)\" '{hookSpecificOutput: {hookEventName: \"SessionStart\", additionalContext: (\"Current git branch: \" + $branch + \"\\nWorking tree:\\n\" + (if $status == \"\" then \"(clean)\" else $status end))}}'"
+          }
+        ]
+      }
+    ]
+  }
+}
