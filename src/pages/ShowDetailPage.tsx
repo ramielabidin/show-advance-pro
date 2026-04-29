@@ -698,12 +698,12 @@ export default function ShowDetailPage() {
 
   const hotelEditor = useGroupEditor({
     groupKey: "hotel_group",
-    keys: ["hotel_name", "hotel_address", "hotel_confirmation", "hotel_checkin", "hotel_checkin_date", "hotel_checkout", "hotel_checkout_date"] as const,
+    keys: ["hotel_name", "hotel_address", "hotel_phone", "hotel_confirmation", "hotel_checkin", "hotel_checkin_date", "hotel_checkout", "hotel_checkout_date"] as const,
     show,
     inlineField,
     setInlineField,
     updateMutation,
-    isEmpty: s => !s.hotel_name && !s.hotel_address && !s.hotel_confirmation && !s.hotel_checkin && !s.hotel_checkin_date && !s.hotel_checkout && !s.hotel_checkout_date,
+    isEmpty: s => !s.hotel_name && !s.hotel_address && !s.hotel_phone && !s.hotel_confirmation && !s.hotel_checkin && !s.hotel_checkin_date && !s.hotel_checkout && !s.hotel_checkout_date,
   });
 
   if (isLoading) {
@@ -1710,7 +1710,7 @@ export default function ShowDetailPage() {
             <FieldGroup
               title="Accommodations"
               collapsible
-              defaultOpen={!!(show.hotel_name || show.hotel_address || show.hotel_confirmation || show.hotel_checkin || show.hotel_checkin_date || show.hotel_checkout || show.hotel_checkout_date)}
+              defaultOpen={!!(show.hotel_name || show.hotel_address || show.hotel_phone || show.hotel_confirmation || show.hotel_checkin || show.hotel_checkin_date || show.hotel_checkout || show.hotel_checkout_date)}
             >
               {hotelEditor.isEditing ? (
                 <div
@@ -1729,6 +1729,16 @@ export default function ShowDetailPage() {
                   <div className="space-y-1">
                     <Label className="text-sm text-muted-foreground">Confirmation #</Label>
                     <InlineField value={hotelEditor.get("hotel_confirmation")} onChange={(v) => hotelEditor.setField("hotel_confirmation", v)} mono />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm text-muted-foreground">Front desk phone</Label>
+                    <InlineField
+                      value={hotelEditor.get("hotel_phone")}
+                      onChange={(v) => hotelEditor.setField("hotel_phone", v)}
+                      type="tel"
+                      mono
+                      placeholder="(555) 123-4567"
+                    />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1812,6 +1822,18 @@ export default function ShowDetailPage() {
                         >
                           <MapPin className="h-3 w-3 shrink-0 mt-[3px]" />
                           <span>{show.hotel_address.replace(/,?\s*United States$/i, "")}</span>
+                        </a>
+                      )}
+                      {show.hotel_phone && (
+                        <a
+                          href={`tel:${show.hotel_phone.replace(/[^\d+]/g, "")}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className={cn(
+                            "block text-sm text-muted-foreground hover:text-foreground transition-colors",
+                            (show.hotel_name || show.hotel_address) && "mt-1.5"
+                          )}
+                        >
+                          {normalizePhone(show.hotel_phone)}
                         </a>
                       )}
                     </div>
