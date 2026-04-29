@@ -201,9 +201,11 @@ export default function ShowsPage() {
   });
 
   const groupedTours = useMemo(() => {
+    // Past-only tours are intentionally omitted — they're a Reports-style
+    // view (cross-tour financials) that lives elsewhere. Their shows still
+    // appear under the Past time tab, and the full list lives at /tours.
     const active: TourSummary[] = [];
     const upcomingTours: TourSummary[] = [];
-    const pastTours: TourSummary[] = [];
     for (const t of tours) {
       const tShows = t.shows ?? [];
       const hasUp = tShows.some((s) => {
@@ -215,11 +217,9 @@ export default function ShowsPage() {
         return isPast(d) && !isToday(d);
       });
       if (hasUp && hasPast) active.push(t);
-      else if (hasUp) upcomingTours.push(t);
-      else if (hasPast) pastTours.push(t);
-      else upcomingTours.push(t);
+      else if (hasUp || !hasPast) upcomingTours.push(t);
     }
-    return { active, upcoming: upcomingTours, past: pastTours };
+    return { active, upcoming: upcomingTours };
   }, [tours]);
 
   const [scopePopoverOpen, setScopePopoverOpen] = useState(false);
@@ -421,7 +421,9 @@ export default function ShowsPage() {
                   setScopePopoverOpen(false);
                 }}
               />
-              {tours.length > 0 && <div className="my-1 border-t" />}
+              {(groupedTours.active.length > 0 || groupedTours.upcoming.length > 0) && (
+                <div className="my-1 border-t" />
+              )}
               {groupedTours.active.length > 0 && (
                 <ScopeFilterTourGroup
                   label="Active"
@@ -437,17 +439,6 @@ export default function ShowsPage() {
                 <ScopeFilterTourGroup
                   label="Upcoming"
                   tours={groupedTours.upcoming}
-                  selectedTourId={tourId}
-                  onSelect={(id) => {
-                    setTourId(id);
-                    setScopePopoverOpen(false);
-                  }}
-                />
-              )}
-              {groupedTours.past.length > 0 && (
-                <ScopeFilterTourGroup
-                  label="Past"
-                  tours={groupedTours.past}
                   selectedTourId={tourId}
                   onSelect={(id) => {
                     setTourId(id);
