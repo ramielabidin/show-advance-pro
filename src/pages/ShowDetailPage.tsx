@@ -1463,6 +1463,7 @@ export default function ShowDetailPage() {
                       onChange={(val) => departureEditor.setField("departure_time", val)}
                       autoFocus
                       hideTbd
+                      compact
                     />
                   </div>
                   <div className="space-y-1">
@@ -1526,26 +1527,20 @@ export default function ShowDetailPage() {
                       </>
                     )}
                   </div>
-                  {recommendedDeparture && (
-                    show.departure_time ? (
-                      <div className="pl-5">
-                        leave by <span className="font-mono font-medium text-foreground">{recommendedDeparture}</span> to make load-in
-                      </div>
-                    ) : (
-                      <div className="pl-5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-2.5 text-[11px] gap-1.5"
-                          onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture })}
-                          disabled={updateMutation.isPending}
-                        >
-                          <Clock className="h-3 w-3" />
-                          Leave by <span className="font-mono font-medium">{recommendedDeparture}</span>
-                          <span className="text-muted-foreground/80">to make load-in</span>
-                        </Button>
-                      </div>
-                    )
+                  {recommendedDeparture && !show.departure_time && (
+                    <div className="pl-5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2.5 text-[11px] gap-1.5"
+                        onClick={() => updateMutation.mutate({ departure_time: recommendedDeparture })}
+                        disabled={updateMutation.isPending}
+                      >
+                        <Clock className="h-3 w-3" />
+                        Leave by <span className="font-mono font-medium">{recommendedDeparture}</span>
+                        <span className="text-muted-foreground/80">to make load-in</span>
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}
