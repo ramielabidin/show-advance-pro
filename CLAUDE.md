@@ -35,11 +35,12 @@ What this means for day-to-day work:
 
 **This is the most important workflow rule.** Multiple parallel Claude sessions run on this repo, and commits landing on the wrong branch — or on top of another session's in-flight work — has been the single biggest source of friction. Before any commit:
 
-- ALWAYS verify the current branch with `git branch --show-current` before making commits
+- ALWAYS verify the current branch with `git branch --show-current` immediately before EVERY `git commit` and EVERY `git push` — not just at session start. The harness can (and demonstrably does) silently switch branches between tool calls. The branch you created with `git checkout -b` is not necessarily the branch you're on now.
+- A `PreToolUse` hook in `.claude/settings.json` injects a branch-verification reminder before any `git commit` / `git push`. Treat that reminder as a hard checkpoint: if the branch isn't the one you explicitly created for this task, STOP and re-confirm with the user.
 - NEVER commit to an existing PR branch without explicit confirmation it's the right one
-- When starting new work, create a fresh branch off latest main: `git checkout main && git pull && git checkout -b <new-branch>`
+- When starting new work, create a fresh branch off latest main: `git checkout main && git pull && git checkout -b <new-branch>` (the `/start-work` skill does this safely)
 - Before pushing, verify commits aren't entangled with another agent's in-flight work (`git log main..HEAD --oneline` — every line should be yours)
-- If the harness routes you back to a different branch mid-session, stop and re-confirm before continuing edits
+- One PR per task: don't bundle unrelated parallel-session edits found in the worktree into your commit. If you find dirty files you didn't author, stash them with a labeled message and restore after pushing your branch.
 
 ## Tech Stack
 
