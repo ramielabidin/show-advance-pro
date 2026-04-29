@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import { NavLink, Outlet } from "react-router-dom";
-import { Calendar, Settings, LogOut, Moon, Sun, FileText } from "lucide-react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Calendar, Settings, LogOut, Moon, Sun, FileText, Search } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ const navItems = [
 export default function AppLayout() {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Refetch every query that's currently rendered on the page. `invalidateQueries`
   // alone only awaits active refetches, and with the default `staleTime: 0` the
@@ -59,6 +60,15 @@ export default function AppLayout() {
             <Button
               variant="ghost"
               size="sm"
+              aria-label="Search shows"
+              onClick={() => navigate("/shows", { state: { focusSearch: true } })}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="text-muted-foreground hover:text-foreground"
             >
@@ -86,6 +96,15 @@ export default function AppLayout() {
             Advance
           </NavLink>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground"
+              aria-label="Search shows"
+              onClick={() => navigate("/shows", { state: { focusSearch: true } })}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
