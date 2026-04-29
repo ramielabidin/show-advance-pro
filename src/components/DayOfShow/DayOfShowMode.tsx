@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Show } from "@/lib/types";
 import { useNowMinutes } from "@/hooks/useNowMinutes";
@@ -50,6 +50,7 @@ const SWIPE_TRANSITION_MS = 280;
  */
 export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
   const nowMin = useNowMinutes();
+  const queryClient = useQueryClient();
 
   const { data: show } = useQuery<Show>({
     queryKey: ["show", showId],
@@ -65,6 +66,8 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
   });
 
   // Lock body scroll while the overlay is mounted, and close on ESC.
+  // On close, invalidate the shows list so the dashboard refreshes and shows
+  // the next show if the current show was just settled.
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -77,8 +80,10 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKey);
+      // Invalidate shows list on close so dashboard updates if show was settled
+      queryClient.invalidateQueries({ queryKey: ["shows"] });
     };
-  }, [onClose]);
+  }, [onClose, queryClient]);
 
   // Swipe-down state. dragY drives the overlay's translateY; releasing
   // toggles the easing (off during drag for 1:1 finger tracking; on
@@ -225,7 +230,7 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
         style={{ overscrollBehavior: "contain" }}
       >
         {show ? (
-          <PhaseBody show={show} nowMin={nowMin} />
+          <PhaseBody show={show} nowMin={nowMin} onClose={onClose} />
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -240,14 +245,14 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
  *  React remounts on phase change and our `phase-morph` CSS animation runs.
  *  Artists skip Phase 2 (Settle) and land on Phase 3 once the same time-based
  *  trigger fires — see `useDayOfShowPhase`. */
-function PhaseBody({ show, nowMin }: { show: Show; nowMin: number }) {
+function PhaseBody({ show, nowMin, onClose }: { show: Show; nowMin: number; onClose: () => void }) {
   const { isArtist } = useTeam();
   const phase = useDayOfShowPhase(show, nowMin, isArtist);
   return (
     <div key={phase} className="phase-morph flex-1 flex flex-col">
       {phase === 1 && <PhasePreShow show={show} nowMin={nowMin} />}
       {phase === 2 && <PhaseSettle show={show} />}
-      {phase === 3 && <PhasePostSettle show={show} />}
+      {phase === 3 && <PhasePostSettle show={show} onShowDone={onClose} />}
     </div>
   );
 }
