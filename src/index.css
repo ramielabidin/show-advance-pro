@@ -97,6 +97,32 @@
   50%      { opacity: 0.78; }
 }
 
+/* Spine pulse — slow continuous loop on the green left edge of the
+   Phase 2 Settle CTA. Pure box-shadow change (no transform / no
+   layout), 3.6s ease-in-out infinite. Calls attention to "the moment
+   of arrival" without being aggressive. Disabled under
+   prefers-reduced-motion. */
+@keyframes spine-pulse {
+  0%, 100% { box-shadow: 0 0 24px 0 hsl(var(--success) / 0.55); }
+  50%      { box-shadow: 0 0 36px 2px hsl(var(--success) / 0.85); }
+}
+
+/* Timeline dot sparkler — one-shot fade + scale-in on Phase 2 entry.
+   Each dot's animation-delay is set inline based on its left%
+   position so the sweep traces the night left-to-right. Uses the
+   `scale` individual transform property so it stacks cleanly with
+   the existing `transform: translate(-50%, -50%)` centering. */
+@keyframes timeline-dot-sparkler {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
 @layer base {
   :root {
     --background: 40 30% 97%;
@@ -322,6 +348,27 @@
     animation: gentle-breathe 4.8s ease-in-out infinite;
   }
 
+  /* Spine pulse — applied to the green spine div inside the Phase 2
+     Settle CTA. The continuous box-shadow loop keeps the moment-of-
+     arrival feeling alive without crossing into "celebration" — Advance
+     stays serious. Reduced-motion disables it. */
+  .spine-pulse {
+    animation: spine-pulse 3.6s ease-in-out infinite;
+  }
+
+  /* Timeline dot — applied to each dot in the Phase 2 night-timeline
+     footer. Animation-delay is set inline based on the dot's left%
+     position so the dots fade + scale in left-to-right (sparkler
+     effect) when Phase 2 first mounts. Reduced-motion disables it
+     below — the dots still render at their final positions because
+     animation-fill-mode `both` is overridden by the disable. */
+  .timeline-dot {
+    animation-name: timeline-dot-sparkler;
+    animation-duration: 280ms;
+    animation-timing-function: var(--ease-out);
+    animation-fill-mode: both;
+  }
+
   /* Override tailwindcss-animate defaults with our stronger curves */
   [data-state] {
     animation-timing-function: var(--ease-out);
@@ -364,6 +411,16 @@
 
     .gentle-breathe {
       animation: none;
+    }
+
+    .spine-pulse {
+      animation: none;
+    }
+
+    .timeline-dot {
+      animation: none;
+      opacity: 1;
+      scale: 1;
     }
 
     /* Neutralize Radix animate-in/out transform motion; keep opacity fade only */

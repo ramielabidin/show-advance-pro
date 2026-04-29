@@ -73,13 +73,16 @@ export default function PhaseSettle({ show }: PhaseSettleProps) {
           padding: "24px 22px 22px 26px",
         }}
       >
-        {/* Glowing green spine */}
+        {/* Glowing green spine — slow box-shadow pulse loop (3.6s) makes
+            the moment-of-arrival feel alive without crossing into
+            celebration. The class drives the animation; background stays
+            inline so the green stays at full opacity. Disabled under
+            prefers-reduced-motion. */}
         <div
           aria-hidden
-          className="absolute left-0 top-0 bottom-0 w-1"
+          className="spine-pulse absolute left-0 top-0 bottom-0 w-1"
           style={{
             background: "hsl(var(--success))",
-            boxShadow: "0 0 24px 0 hsl(var(--success) / 0.55)",
           }}
         />
 
@@ -205,11 +208,18 @@ export default function PhaseSettle({ show }: PhaseSettleProps) {
                 const isBand = !!entry.is_band;
                 const size = isBand ? 10 : 6;
                 const display = to12Hour(entry.time) ?? entry.time;
+                // Sparkler: each dot fades + scales in with delay
+                // proportional to its left% position. 0% → 0ms,
+                // 100% → 400ms. Combined with the 280ms duration, the
+                // last dot settles ~680ms after Phase 2 mount — quick
+                // enough to feel responsive, slow enough to read as a
+                // sweep rather than all-at-once.
+                const delayMs = Math.round(pos * 4);
                 return (
                   <div
                     key={entry.id}
                     title={`${display} — ${entry.label}`}
-                    className="absolute top-1/2 rounded-full"
+                    className="timeline-dot absolute top-1/2 rounded-full"
                     style={{
                       left: `${pos}%`,
                       transform: "translate(-50%, -50%)",
@@ -221,6 +231,7 @@ export default function PhaseSettle({ show }: PhaseSettleProps) {
                       boxShadow: isBand
                         ? "0 0 0 3px hsl(var(--background)), 0 0 0 4px hsl(var(--badge-new) / 0.5)"
                         : "0 0 0 3px hsl(var(--background))",
+                      animationDelay: `${delayMs}ms`,
                     }}
                   />
                 );
