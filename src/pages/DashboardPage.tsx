@@ -18,6 +18,7 @@ import {
   DollarSign,
   CheckCircle2,
   Info,
+  Mic,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,7 +37,6 @@ import SectionLabel from "@/components/SectionLabel";
 import ShowCard from "@/components/ShowCard";
 import StatusDot from "@/components/StatusDot";
 import StatusLegend from "@/components/StatusLegend";
-import MicChip from "@/components/DayOfShow/MicChip";
 import DayOfShowMode from "@/components/DayOfShow/DayOfShowMode";
 import type { Show, Tour } from "@/lib/types";
 
@@ -453,21 +453,42 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Greeting + (on a show day) the mic chip, inline. flex-wrap so the
-          chip drops to the next line gracefully on very narrow widths. The
-          chip is mobile-only — Day of Show Mode is a phone-in-venue surface,
-          and showing it on desktop would invite a full-screen overlay onto
-          a screen it wasn't designed for. */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      {/* Greeting line — on show day (mobile only), the entire headline is
+          the Day of Show entry. A pulsing red mic at the right edge signals
+          tappability without crowding the row with a separate chip. On
+          desktop or non-show-days, it renders as a plain h1. Day of Show
+          Mode is a phone-in-venue surface, so desktop intentionally has no
+          entry. */}
+      {showToday ? (
+        <>
+          {/* Mobile show-day variant: tappable headline + glowing mic accent */}
+          <button
+            type="button"
+            onClick={() => setDayOfShowOpen(true)}
+            aria-label="Enter Day of Show Mode"
+            className="md:hidden w-full text-left flex items-center gap-3 [transition:transform_160ms_var(--ease-out)] active:scale-[0.985]"
+          >
+            <h1 className="min-w-0 flex-1 font-display text-3xl tracking-[-0.02em] leading-[1.1] text-foreground">
+              {headerLine}
+            </h1>
+            <span
+              className="day-of-active-pulse shrink-0"
+              style={{ color: "hsl(var(--day-of-active))" }}
+              aria-hidden
+            >
+              <Mic className="h-6 w-6" strokeWidth={2.4} />
+            </span>
+          </button>
+          {/* Desktop variant: plain headline, no DOS entry */}
+          <h1 className="hidden md:block min-w-0 flex-1 font-display text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
+            {headerLine}
+          </h1>
+        </>
+      ) : (
         <h1 className="min-w-0 flex-1 font-display text-3xl md:text-4xl tracking-[-0.02em] leading-[1.1] text-foreground">
           {headerLine}
         </h1>
-        {showToday && (
-          <div className="md:hidden">
-            <MicChip onClick={() => setDayOfShowOpen(true)} />
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 

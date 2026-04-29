@@ -111,19 +111,24 @@ export default function PhasePostSettle({ show }: PhasePostSettleProps) {
 
   return (
     <div className="px-[22px] pt-2 pb-7 flex-1 flex flex-col">
-      {/* Eyebrow + lead-in — aligned to Phase 1's pt-[14px] hero rhythm and
-          11px eyebrow scale for cohesion across the flow. Eyebrow is
-          a single confident word; lead-in is a statement, not advice. */}
-      <div className="pt-[14px]">
+      {/* Phase 3 hero — the lead-in is the moment. Dropped the small
+          "SETTLED" eyebrow and tiny 13px lead-in in favor of a big
+          display statement that gives the final screen real weight.
+          Clamps from 38px (small phones) to 52px (large), wraps via
+          textWrap: balance for clean two-line breaks. The empty space
+          below the statement is intentional — leave room for a
+          designy element here later (small SVG flourish, accent rule,
+          show-date badge — TBD). */}
+      <div className="pt-[14px] pb-3">
         <div
-          className="text-[11px] uppercase font-medium leading-none mb-2.5"
-          style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
-        >
-          Settled
-        </div>
-        <div
-          className="text-[13px] leading-[1.45]"
-          style={{ color: "hsl(var(--muted-foreground))" }}
+          className="font-display"
+          style={{
+            fontSize: "clamp(38px, 11vw, 52px)",
+            lineHeight: 1.05,
+            letterSpacing: "-0.03em",
+            color: "hsl(var(--foreground))",
+            textWrap: "balance",
+          }}
         >
           {leadInCopy(new Date().getHours())}
         </div>

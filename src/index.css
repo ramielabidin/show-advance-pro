@@ -97,6 +97,23 @@
   50%      { opacity: 0.78; }
 }
 
+/* Day-of-active pulse — soft glow on the inline mic icon at the end of
+   the dashboard headline on show day. Drop-shadow + opacity oscillation
+   in the day-of-active red, signaling tappability without competing
+   with the headline typography. Distinct from .mic-glow (pastel-red,
+   used on the show-card "tonight" indicator) and .mic-chip-pulse (the
+   chip-level halo). */
+@keyframes day-of-active-pulse {
+  0%, 100% {
+    opacity: 0.78;
+    filter: drop-shadow(0 0 2px hsl(var(--day-of-active) / 0.5));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px hsl(var(--day-of-active) / 0.85));
+  }
+}
+
 /* Spine pulse — slow continuous loop on the green left edge of the
    Phase 2 Settle CTA. Pure box-shadow change (no transform / no
    layout), 3.6s ease-in-out infinite. Calls attention to "the moment
@@ -324,6 +341,14 @@
     animation: mic-chip-pulse 2.4s ease-in-out infinite;
   }
 
+  /* Inline mic accent at the end of the show-day headline. Soft glow
+     pulse in the day-of-active red, paired with a Mic icon. Replaces
+     the standalone .mic-chip-pulse chip on the dashboard so the entry
+     integrates into the headline instead of crowding the row. */
+  .day-of-active-pulse {
+    animation: day-of-active-pulse 2.4s ease-in-out infinite;
+  }
+
   /* Day of Show phase swap — used on a keyed wrapper so React's remount on
      phase change replays the animation. 380ms is fast enough to not feel
      like a wait, slow enough to register as intentional. */
@@ -399,6 +424,11 @@
 
     .mic-chip-pulse {
       animation: none;
+    }
+
+    .day-of-active-pulse {
+      animation: none;
+      opacity: 1;
     }
 
     .phase-morph {
