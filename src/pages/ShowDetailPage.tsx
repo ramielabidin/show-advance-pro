@@ -1,7 +1,7 @@
 import { useParams, useNavigate, useLocation, useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Trash2, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, Check, Share2, Car, FileText, MoreHorizontal, ChevronDown, Pencil } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, X, Loader2, MapPin, CheckCircle2, Clock, Sparkles, Check, Share2, Car, FileText, MoreHorizontal, ChevronDown, Pencil, Bus } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -1035,64 +1035,29 @@ export default function ShowDetailPage() {
           </div>
         )}
 
-        {/* Back arrow */}
+        {/* Back link — doubles as the tour breadcrumb when the show belongs to
+            a tour. Bus icon mirrors the card treatment so the tour signifier is
+            consistent across surfaces; arrow stays as the universal back glyph. */}
         <div className="flex items-center">
-          <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 -ml-1" onClick={() => navigate("/")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          {show.tours?.name ? (
+            <Link
+              to={`/shows?view=tour&tourId=${show.tours.id}`}
+              className="inline-flex items-center gap-1.5 -ml-1 h-7 pl-1 pr-2 rounded-md text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4 shrink-0" />
+              <Bus className="h-3 w-3 shrink-0" strokeWidth={1.75} aria-hidden />
+              <span className="truncate max-w-[60vw] sm:max-w-none">{show.tours.name}</span>
+            </Link>
+          ) : (
+            <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 -ml-1" onClick={() => navigate("/")}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
-        {/* Title row — eyebrow / venue / meta on the left, action buttons on the right (desktop) */}
+        {/* Title row — venue / meta on the left, action buttons on the right (desktop) */}
         <div className="mt-2 sm:flex sm:items-end sm:justify-between sm:gap-6 sm:flex-wrap">
           <div className="min-w-0 sm:flex-1">
-            {/* Eyebrow — combined tour + date */}
-            {inlineField === "date" ? (
-              <div ref={inlineRef}>
-                <Input
-                  type="date"
-                  autoFocus
-                  value={inlineValue}
-                  onChange={(e) => setInlineValue(e.target.value)}
-                  onBlur={() => {
-                    if (inlineValue && inlineValue !== show.date) {
-                      updateMutation.mutate({ date: inlineValue });
-                    } else {
-                      setInlineField(null);
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      (e.target as HTMLInputElement).blur();
-                    } else if (e.key === "Escape") {
-                      setInlineField(null);
-                    }
-                  }}
-                  className="h-auto py-0 px-1 text-xs w-auto inline-block"
-                />
-              </div>
-            ) : (
-              <p className="mb-2 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                {show.tours?.name && (
-                  <>
-                    <Link
-                      to={`/shows?view=tour&tourId=${show.tours.id}`}
-                      className="hover:text-foreground transition-colors"
-                    >
-                      {show.tours.name}
-                    </Link>
-                    <span className="mx-1.5" aria-hidden>·</span>
-                  </>
-                )}
-                <button
-                  type="button"
-                  onClick={() => { setInlineField("date"); setInlineValue(show.date); }}
-                  className="hover:text-foreground transition-colors"
-                >
-                  {format(parseISO(show.date), "MMM d EEE")}
-                </button>
-              </p>
-            )}
-
             {/* Venue name — inline editable */}
             {inlineField === "venue_name" ? (
               <div ref={inlineRef}>
@@ -1181,7 +1146,7 @@ export default function ShowDetailPage() {
               </div>
             ) : (
               <>
-                {/* Desktop meta row — address · drive-time inline */}
+                {/* Desktop meta row — address · date inline */}
                 <div className="hidden sm:flex items-center gap-3 mt-2.5 text-sm text-muted-foreground flex-wrap">
                   {show.venue_address ? (
                     <span className="inline-flex items-center gap-1.5">
@@ -1234,6 +1199,40 @@ export default function ShowDetailPage() {
                         Enter manually
                       </Button>
                     </span>
+                  )}
+                  <span className="text-muted-foreground/50" aria-hidden>·</span>
+                  {inlineField === "date" ? (
+                    <div ref={inlineRef}>
+                      <Input
+                        type="date"
+                        autoFocus
+                        value={inlineValue}
+                        onChange={(e) => setInlineValue(e.target.value)}
+                        onBlur={() => {
+                          if (inlineValue && inlineValue !== show.date) {
+                            updateMutation.mutate({ date: inlineValue });
+                          } else {
+                            setInlineField(null);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            (e.target as HTMLInputElement).blur();
+                          } else if (e.key === "Escape") {
+                            setInlineField(null);
+                          }
+                        }}
+                        className="h-auto py-0 px-1 text-sm w-auto inline-block"
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { setInlineField("date"); setInlineValue(show.date); }}
+                      className="hover:text-foreground transition-colors"
+                    >
+                      {format(parseISO(show.date), "EEE, MMM d")}
+                    </button>
                   )}
                 </div>
 
@@ -1288,6 +1287,41 @@ export default function ShowDetailPage() {
                       </Button>
                     </div>
                   )}
+                  <div className="mt-1">
+                    {inlineField === "date" ? (
+                      <div ref={inlineRef}>
+                        <Input
+                          type="date"
+                          autoFocus
+                          value={inlineValue}
+                          onChange={(e) => setInlineValue(e.target.value)}
+                          onBlur={() => {
+                            if (inlineValue && inlineValue !== show.date) {
+                              updateMutation.mutate({ date: inlineValue });
+                            } else {
+                              setInlineField(null);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              (e.target as HTMLInputElement).blur();
+                            } else if (e.key === "Escape") {
+                              setInlineField(null);
+                            }
+                          }}
+                          className="h-auto py-0 px-1 text-[13px] w-auto inline-block"
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setInlineField("date"); setInlineValue(show.date); }}
+                        className="hover:text-foreground transition-colors"
+                      >
+                        {format(parseISO(show.date), "EEE, MMM d")}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </>
             )}
