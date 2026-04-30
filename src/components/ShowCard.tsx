@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { format, parseISO, isPast, isToday } from "date-fns";
-import { MapPin, ChevronRight, Sparkles, CheckCircle2, Trash2 } from "lucide-react";
+import { MapPin, ChevronRight, Sparkles, CheckCircle2, Trash2, Car } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn, formatCityState } from "@/lib/utils";
 import StatusDot from "@/components/StatusDot";
@@ -205,9 +205,9 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
               creates a small editorial indent. Desktop drops the glyph since the byline lives
               in its own right column there and the narrative tie is gone. */}
           {chip === "byline" && show.tours?.name && (
-            <div className="sm:hidden mt-1.5 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 truncate">
-              <span aria-hidden className="mr-1.5">›</span>
-              {show.tours.name}
+            <div className="sm:hidden mt-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80">
+              <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} aria-hidden />
+              <span className="truncate">{show.tours.name}</span>
             </div>
           )}
         </div>
