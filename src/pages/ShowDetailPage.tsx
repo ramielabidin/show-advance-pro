@@ -1128,10 +1128,10 @@ export default function ShowDetailPage() {
                 {show.advanced_at && (
                   isArtist ? (
                     <span
-                      className="hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium leading-none"
-                      style={{ background: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+                      className="hidden sm:inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-mono leading-none"
+                      style={{ color: "var(--pastel-green-fg)" }}
                     >
-                      <Check className="h-3 w-3" />
+                      <Check className="h-3 w-3" strokeWidth={2} />
                       Advanced
                     </span>
                   ) : (
@@ -1141,10 +1141,10 @@ export default function ShowDetailPage() {
                       disabled={toggleAdvancedMutation.isPending}
                       aria-label="Unmark advanced"
                       title="Click to unmark as advanced"
-                      className="hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium leading-none transition-opacity hover:opacity-80 disabled:opacity-50"
-                      style={{ background: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+                      className="hidden sm:inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-mono leading-none transition-opacity hover:opacity-60 disabled:opacity-50"
+                      style={{ color: "var(--pastel-green-fg)" }}
                     >
-                      <Check className="h-3 w-3" />
+                      <Check className="h-3 w-3" strokeWidth={2} />
                       Advanced
                     </button>
                   )
