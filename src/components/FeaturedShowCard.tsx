@@ -20,18 +20,6 @@ export default function FeaturedShowCard({ show, mode, tour }: FeaturedShowCardP
   const date = parseISO(show.date);
   const daysAway = differenceInCalendarDays(date, new Date());
 
-  const daysLabel =
-    daysAway <= 0
-      ? "Today"
-      : daysAway === 1
-        ? "Tomorrow"
-        : daysAway < 7
-          ? `${daysAway} days away`
-          : daysAway < 14
-            ? "Next week"
-            : `${Math.ceil(daysAway / 7)} weeks away`;
-
-  const isUrgent = daysAway >= 0 && daysAway < 7;
   const showFinalDate = mode === "final";
 
   const nowMin = useNowMinutes();
@@ -88,46 +76,28 @@ export default function FeaturedShowCard({ show, mode, tour }: FeaturedShowCardP
 
             {/* Info */}
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-xl sm:text-2xl font-display text-foreground truncate tracking-[-0.02em] min-w-0">
-                  {show.venue_name}
-                </h2>
-                {tour && (
-                  <span
-                    className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0"
-                    style={{ backgroundColor: "var(--pastel-blue-bg)", color: "var(--pastel-blue-fg)" }}
-                  >
-                    {tour.name}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
+              <h2 className="text-2xl sm:text-3xl font-display text-foreground truncate tracking-[-0.02em] min-w-0">
+                {show.venue_name}
+              </h2>
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{formatCityState(show.city)}</span>
               </div>
-              {showFinalDate ? (
-                <span className="inline-flex items-center mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+              {tour && (
+                <div className="flex items-center gap-2 mt-2 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 truncate">
+                  <span className="h-px w-3.5 bg-muted-foreground/30 shrink-0" aria-hidden />
+                  <span className="truncate">{tour.name}</span>
+                </div>
+              )}
+              {showFinalDate && (
+                <div className="mt-2 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80">
                   {format(date, "MMM d, yyyy")}
-                </span>
-              ) : daysAway > 0 ? (
-                <span
-                  className={cn(
-                    "inline-flex items-center mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full",
-                    !isUrgent && "bg-secondary text-muted-foreground",
-                  )}
-                  style={
-                    isUrgent
-                      ? { backgroundColor: "var(--pastel-yellow-bg)", color: "var(--pastel-yellow-fg)" }
-                      : undefined
-                  }
-                >
-                  {daysLabel}
-                </span>
-              ) : null}
+                </div>
+              )}
               {countdownText && daysAway === 0 && (
-                <span className="inline-flex items-center mt-2 text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                  {countdownText}
-                </span>
+                <div className="mt-2 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80">
+                  Set {countdownText}
+                </div>
               )}
             </div>
 
