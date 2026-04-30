@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Phone } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { to24Hour } from "@/lib/timeFormat";
 import type { Show, ScheduleEntry } from "@/lib/types";
 import ScheduleList from "./ScheduleList";
@@ -66,6 +67,32 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
     [show.show_contacts],
   );
 
+  // Top/bottom fade should only appear when the schedule is actually clipped
+  // in that direction. Without this, a non-scrolling list still gets a
+  // ghost-fade at the top that dims the first row for no reason.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showTopFade, setShowTopFade] = useState(false);
+  const [showBottomFade, setShowBottomFade] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const update = () => {
+      const overflow = el.scrollHeight - el.clientHeight;
+      setShowTopFade(el.scrollTop > 1);
+      setShowBottomFade(overflow > 1 && el.scrollTop < overflow - 1);
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro.disconnect();
+    };
+  }, [sortedEntries.length]);
+
   return (
     <div
       className="px-[22px] pt-2 pb-7 flex-1 flex flex-col gap-4"
@@ -74,74 +101,84 @@ export default function PhasePreShow({ show, nowMin }: PhasePreShowProps) {
       // pinned footer + contact card off the device frame.
       style={{ minHeight: 0 }}
     >
-      {/* Hero (pinned top) */}
-      <div className="pt-[10px] pb-1" data-stagger="0">
-        <div
-          className="text-[11px] uppercase font-medium leading-none mb-2.5"
-          style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
-        >
-          {isFuture ? "Up next" : "Now"}
+      {/* Hero (pinned top) — left column carries eyebrow + label + countdown,
+          right column carries the big time so the row reads as a balanced pair. */}
+      <div
+        className="pt-[10px] pb-1 flex items-center justify-between gap-4"
+        data-stagger="0"
+      >
+        <div className="flex-1 min-w-0">
+          <div
+            className="text-[11px] uppercase font-medium leading-none mb-2.5"
+            style={{ letterSpacing: "0.18em", color: "hsl(var(--muted-foreground))" }}
+          >
+            {isFuture ? "Up next" : "Now"}
+          </div>
+          {hero && (
+            <>
+              <div
+                className="text-[22px] font-medium leading-[1.05]"
+                style={{ letterSpacing: "-0.02em", color: "hsl(var(--foreground))" }}
+              >
+                {hero.label}
+              </div>
+              {remaining !== null && (
+                <div
+                  className="mt-2.5 text-[13px] font-medium leading-[1.2]"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  {isFuture ? formatRelative(remaining) : "now"}
+                </div>
+              )}
+            </>
+          )}
         </div>
-        {hero && (
-          <>
-            <div
-              className="text-[22px] font-medium leading-[1.05]"
-              style={{ letterSpacing: "-0.02em", color: "hsl(var(--foreground))" }}
+        {hero && heroParts && (
+          <div
+            className="shrink-0 flex items-baseline gap-1.5 tabular-nums"
+            style={{ letterSpacing: "-0.03em" }}
+          >
+            <span
+              className="font-display"
+              style={{
+                fontSize: 64,
+                lineHeight: 0.92,
+                color: "hsl(var(--foreground))",
+              }}
             >
-              {hero.label}
-            </div>
-            {heroParts && (
-              <div
-                className="mt-3 flex items-baseline gap-2 tabular-nums"
-                style={{ letterSpacing: "-0.03em" }}
-              >
-                <span
-                  className="font-display"
-                  style={{
-                    fontSize: 64,
-                    lineHeight: 0.92,
-                    color: "hsl(var(--foreground))",
-                  }}
-                >
-                  {heroParts.n}
-                </span>
-                <span
-                  className="font-display"
-                  style={{
-                    fontSize: 22,
-                    lineHeight: 0.92,
-                    letterSpacing: "-0.02em",
-                    color: "hsl(var(--muted-foreground))",
-                  }}
-                >
-                  {heroParts.u}
-                </span>
-              </div>
-            )}
-            {remaining !== null && (
-              <div
-                className="mt-2.5 text-[13px] font-medium leading-[1.2]"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
-                {isFuture ? formatRelative(remaining) : "now"}
-              </div>
-            )}
-          </>
+              {heroParts.n}
+            </span>
+            <span
+              className="font-display"
+              style={{
+                fontSize: 22,
+                lineHeight: 0.92,
+                letterSpacing: "-0.02em",
+                color: "hsl(var(--muted-foreground))",
+              }}
+            >
+              {heroParts.u}
+            </span>
+          </div>
         )}
       </div>
 
       {/* Schedule (scrolls in middle) */}
       {sortedEntries.length > 0 && (
         <div className="dos-p1-scroll-wrap" data-stagger="2">
-          <div className="dos-p1-scroll-fade top" />
-          <div className="dos-p1-scroll">
+          <div
+            className={cn("dos-p1-scroll-fade top", !showTopFade && "opacity-0")}
+          />
+          <div ref={scrollRef} className="dos-p1-scroll">
             <ScheduleList
               entries={sortedEntries}
               nowMin={nowMin}
               heroIndex={heroIndex}
             />
           </div>
-          <div className="dos-p1-scroll-fade bottom" />
+          <div
+            className={cn("dos-p1-scroll-fade bottom", !showBottomFade && "opacity-0")}
+          />
         </div>
       )}
 

@@ -22,7 +22,32 @@ interface DayOfShowModeProps {
 // you trigger it accidentally on a tap.
 const SWIPE_DISMISS_DISTANCE = 120;
 const SWIPE_DISMISS_VELOCITY = 0.5; // px / ms
-const SWIPE_TRANSITION_MS = 280;
+const SWIPE_TRANSITION_MS = 300;
+// Drag distance over which the "lifting" affordances (scale + corner radius)
+// reach their full value. After this point further drag just translates.
+const SWIPE_LIFT_RANGE = 240;
+
+/**
+ * Walk up from a touched element to find the nearest scrollable ancestor
+ * (excluding the overlay root itself). We use this to decide whether a
+ * downward swipe should dismiss the overlay or be deferred to native
+ * scroll — if the user grabs inside a list that's scrolled past the top,
+ * we want their finger to scroll the list, not dismiss.
+ */
+function findScrollableAncestor(
+  target: HTMLElement,
+  root: HTMLElement,
+): HTMLElement | null {
+  let cur: HTMLElement | null = target;
+  while (cur && cur !== root) {
+    if (cur.scrollHeight > cur.clientHeight) {
+      const overflowY = window.getComputedStyle(cur).overflowY;
+      if (overflowY === "auto" || overflowY === "scroll") return cur;
+    }
+    cur = cur.parentElement;
+  }
+  return null;
+}
 
 /**
  * Full-screen overlay that takes over the viewport when the user enters Day
@@ -37,11 +62,14 @@ const SWIPE_TRANSITION_MS = 280;
  * content fades between phases in place, no hard cuts.
  *
  * Dismissal: tap the chevron, press Escape, or swipe the overlay down.
- * The swipe handler tracks pointerdown→up at the overlay level and only
- * initiates if the inner scrollable body is at scrollTop=0 (otherwise
- * native scroll wins). Release with > 120px traveled OR > 0.5 px/ms
- * velocity dismisses; otherwise the overlay springs back. Reduced-motion
- * users get instant dismiss / snap-back without the transition.
+ * The swipe handler tracks pointerdown→up at the overlay level and walks
+ * up from the touched element to find the nearest scrollable ancestor; if
+ * that ancestor has scrolled past the top, native scroll wins (iOS sheet
+ * rule). Otherwise the overlay translates 1:1 with the finger and the top
+ * corners round to read as a sheet being lifted away. Release with > 120px
+ * traveled OR > 0.5 px/ms velocity dismisses; otherwise the overlay springs
+ * back. Components can opt out of the gesture with `data-no-dismiss-drag`.
+ * Reduced-motion users get instant dismiss / snap-back without transitions.
  *
  * Fetches the full show by ID on mount so we get show_contacts (the
  * dashboard's list query doesn't include them — joining show_contacts on
@@ -88,16 +116,20 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
   // Swipe-down state. dragY drives the overlay's translateY; releasing
   // toggles the easing (off during drag for 1:1 finger tracking; on
   // during settle/dismiss). dragStateRef tracks the active pointer so
-  // multi-touch and stray pointers don't confuse the gesture.
+  // multi-touch and stray pointers don't confuse the gesture. The
+  // captured `scrollable` is the inner scroll container (if any) the
+  // user grabbed — we re-check its scrollTop mid-gesture to abort if
+  // the user starts scrolling the list instead.
   const [dragY, setDragY] = useState(0);
   const [releasing, setReleasing] = useState(false);
   const [dismissing, setDismissing] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const dragStateRef = useRef<{
     startY: number;
     startTime: number;
     pointerId: number;
+    scrollable: HTMLElement | null;
   } | null>(null);
-  const bodyRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
 
   const reducedMotion =
@@ -106,25 +138,34 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
 
   const startSwipe = (e: React.PointerEvent<HTMLDivElement>) => {
     if (dismissing) return;
-    // Don't intercept taps on interactive elements (chevron button, links
-    // inside phase surfaces). closest() walks up the tree so any descendant
-    // tap target is excluded.
+    // Don't intercept taps/drags on interactive controls. Any element opting
+    // out of the dismiss gesture (e.g. the slide-to-settle slider in Phase 2,
+    // a future slider/draggable card) can mark itself with
+    // `data-no-dismiss-drag` to be excluded without changing this list.
     const target = e.target as HTMLElement;
-    if (target.closest("button, a, input, textarea, select, [role='button']")) {
+    if (
+      target.closest(
+        "button, a, input, textarea, select, [role='button'], [role='slider'], [data-no-dismiss-drag]",
+      )
+    ) {
       return;
     }
     // Single-touch only — ignore additional pointers mid-gesture.
     if (dragStateRef.current) return;
-    // Only initiate when the scrollable body is at the top — otherwise
-    // let the body handle native scroll.
-    if (bodyRef.current && bodyRef.current.scrollTop > 0) return;
+    if (!overlayRef.current) return;
+    // Walk up to the first scrollable ancestor. If the user grabbed inside
+    // a list that's scrolled past the top, defer to native scroll — they're
+    // trying to read, not dismiss. This is the iOS sheet rule.
+    const scrollable = findScrollableAncestor(target, overlayRef.current);
+    if (scrollable && scrollable.scrollTop > 0) return;
     dragStateRef.current = {
       startY: e.clientY,
       startTime: performance.now(),
       pointerId: e.pointerId,
+      scrollable,
     };
     setReleasing(false);
-    overlayRef.current?.setPointerCapture(e.pointerId);
+    overlayRef.current.setPointerCapture(e.pointerId);
   };
 
   const continueSwipe = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -139,11 +180,13 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
       cancelSwipe();
       return;
     }
-    // If the body has scrolled (direction change mid-drag), abort.
-    if (bodyRef.current && bodyRef.current.scrollTop > 0) {
+    // If the originally-grabbed scrollable started scrolling mid-gesture,
+    // abort — the user pivoted to reading the list.
+    if (state.scrollable && state.scrollable.scrollTop > 0) {
       cancelSwipe();
       return;
     }
+    if (!dragging) setDragging(true);
     setDragY(Math.max(0, delta));
   };
 
@@ -158,6 +201,8 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
     const shouldDismiss =
       distance > SWIPE_DISMISS_DISTANCE ||
       (distance > 40 && velocity > SWIPE_DISMISS_VELOCITY);
+
+    setDragging(false);
 
     if (shouldDismiss) {
       if (reducedMotion) {
@@ -176,14 +221,24 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
 
   const cancelSwipe = () => {
     dragStateRef.current = null;
+    setDragging(false);
     setReleasing(true);
     setDragY(0);
   };
 
+  const transitionProps = ["transform", "border-radius", "background-color"];
   const transitionStyle =
     releasing && !reducedMotion
-      ? `transform ${SWIPE_TRANSITION_MS}ms var(--ease-out)`
+      ? transitionProps
+          .map((p) => `${p} ${SWIPE_TRANSITION_MS}ms var(--ease-out)`)
+          .join(", ")
       : "none";
+
+  // Visual lift: as the user drags, round the top corners and tint the
+  // chrome slightly darker. Subtle but enough to read as "this surface is
+  // being pulled away" rather than just translating off-screen.
+  const liftProgress = Math.min(1, dragY / SWIPE_LIFT_RANGE);
+  const liftRadius = liftProgress * 18;
 
   return (
     <div
@@ -196,7 +251,15 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
         background: "hsl(var(--background))",
         transform: `translateY(${dragY}px)`,
         transition: transitionStyle,
-        willChange: "transform",
+        willChange: "transform, border-radius",
+        // Round the top corners as the user drags, so the surface reads
+        // as a sheet being pulled away rather than the whole page sliding.
+        borderTopLeftRadius: liftRadius,
+        borderTopRightRadius: liftRadius,
+        // pan-y lets iOS know we want vertical pan gestures; during an
+        // active drag we lock to `none` so native scroll on inner regions
+        // (or rubberband) doesn't fight the dismiss translation.
+        touchAction: dragging ? "none" : "pan-y",
       }}
       onPointerDown={startSwipe}
       onPointerMove={continueSwipe}
@@ -222,12 +285,15 @@ export default function DayOfShowMode({ showId, onClose }: DayOfShowModeProps) {
       </div>
 
       {/* Body — overscroll-contain so swipe-up-then-down doesn't bubble to the
-          dashboard pull-to-refresh underneath. The body's scrollTop is read
-          by the swipe handlers to know when to initiate vs. defer to scroll. */}
+          dashboard pull-to-refresh underneath. While a dismiss drag is in
+          flight we also pin the body's overflow so iOS can't run a scroll
+          in parallel with our translate. */}
       <div
-        ref={bodyRef}
-        className="flex-1 overflow-auto flex flex-col"
-        style={{ overscrollBehavior: "contain" }}
+        className="flex-1 flex flex-col"
+        style={{
+          overflowY: dragging ? "hidden" : "auto",
+          overscrollBehavior: "contain",
+        }}
       >
         {show ? (
           <PhaseBody show={show} nowMin={nowMin} onClose={onClose} />

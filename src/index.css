@@ -576,6 +576,7 @@
   height: 28px;
   pointer-events: none;
   z-index: 2;
+  transition: opacity 150ms ease-out;
 }
 .dos-p1-scroll-fade.top {
   top: 0;
