@@ -1,5 +1,5 @@
 import { format, parseISO, differenceInCalendarDays } from "date-fns";
-import { MapPin, Car } from "lucide-react";
+import { MapPin, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn, formatCityState } from "@/lib/utils";
@@ -89,7 +89,7 @@ export default function FeaturedShowCard({ show, mode, tour }: FeaturedShowCardP
                   already separates it from the body. */}
               {tour && (
                 <div className="sm:hidden mt-2 flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80">
-                  <Car className="h-3 w-3 shrink-0" strokeWidth={1.75} aria-hidden />
+                  <Truck className="h-3 w-3 shrink-0" strokeWidth={1.75} aria-hidden />
                   <span className="truncate">{tour.name}</span>
                 </div>
               )}
