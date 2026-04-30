@@ -259,9 +259,9 @@ export default function ShowsPage() {
   const isTourScoped = view === "tour" && !!tourId && !!tour;
   const isTourPickerEmpty = view === "tour" && !tourId;
 
-  const chipFor = (show: ShowWithTour): "tour" | "standalone" | "none" => {
+  const chipFor = (show: ShowWithTour): "byline" | "standalone" | "none" => {
     if (view === "tour" || view === "standalone") return "none";
-    if (show.tour_id && show.tours?.name) return "tour";
+    if (show.tour_id && show.tours?.name) return "byline";
     return "standalone";
   };
 
