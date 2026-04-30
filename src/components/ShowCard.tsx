@@ -202,9 +202,8 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
           </div>
           {/* Mobile-only byline (below city). Desktop renders it in the right column for balance. */}
           {chip === "byline" && show.tours?.name && (
-            <div className="sm:hidden flex items-center gap-2 mt-1.5 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 truncate">
-              <span className="h-px w-3.5 bg-muted-foreground/30 shrink-0" aria-hidden />
-              <span className="truncate">{show.tours.name}</span>
+            <div className="sm:hidden mt-1.5 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 truncate">
+              {show.tours.name}
             </div>
           )}
         </div>
@@ -212,9 +211,8 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
       <div className="flex items-center gap-2 shrink-0 ml-2">
         {/* Desktop-only byline — sits as a right-margin caption, balancing the card horizontally. */}
         {chip === "byline" && show.tours?.name && (
-          <div className="hidden sm:flex items-center gap-2 max-w-[240px] text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 mr-2">
-            <span className="h-px w-3.5 bg-muted-foreground/30 shrink-0" aria-hidden />
-            <span className="truncate">{show.tours.name}</span>
+          <div className="hidden sm:block max-w-[240px] mr-2 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 truncate">
+            {show.tours.name}
           </div>
         )}
         <StatusDot show={show} />
