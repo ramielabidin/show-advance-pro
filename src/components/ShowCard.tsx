@@ -213,8 +213,8 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
         {/* Desktop-only byline — sits as a right-margin caption, balancing the card horizontally. */}
         {chip === "byline" && show.tours?.name && (
           <div className="hidden sm:flex items-center gap-2 max-w-[240px] text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 mr-2">
-            <span className="truncate">{show.tours.name}</span>
             <span className="h-px w-3.5 bg-muted-foreground/30 shrink-0" aria-hidden />
+            <span className="truncate">{show.tours.name}</span>
           </div>
         )}
         <StatusDot show={show} />
