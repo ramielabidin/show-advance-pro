@@ -1310,20 +1310,20 @@ export default function ShowDetailPage() {
         <div ref={headerSentinelRef} aria-hidden className="h-px" />
 
         {/* Underlined text tabs */}
-        <div className="pt-3 border-b border-border">
-          <TabsList className="h-auto bg-transparent p-0 gap-5 rounded-none">
+        <div className="pt-3 border-b border-border overflow-x-auto no-scrollbar">
+          <TabsList className="h-auto bg-transparent p-0 gap-5 rounded-none w-max">
             <TabsTrigger
               value="show"
               className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
             >
-              Show Info
+              Show
             </TabsTrigger>
             {!isArtist && (
               <TabsTrigger
                 value="deal"
                 className="relative h-auto px-0 pb-2 rounded-none bg-transparent text-sm font-medium text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100"
               >
-                Deal Info
+                Deal
                 {!dealTabSeen && hasDealData && (
                   <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" aria-hidden />
                 )}
