@@ -89,7 +89,7 @@ export default function FeaturedShowCard({ show, mode, tour }: FeaturedShowCardP
                   already separates it from the body. */}
               {tour && (
                 <div className="sm:hidden mt-2 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 truncate">
-                  <span aria-hidden className="mr-1.5">↳</span>
+                  <span aria-hidden className="mr-1.5">›</span>
                   {tour.name}
                 </div>
               )}

@@ -206,7 +206,7 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
               in its own right column there and the narrative tie is gone. */}
           {chip === "byline" && show.tours?.name && (
             <div className="sm:hidden mt-1.5 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 truncate">
-              <span aria-hidden className="mr-1.5">↳</span>
+              <span aria-hidden className="mr-1.5">›</span>
               {show.tours.name}
             </div>
           )}
