@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { format, parseISO, isPast, isToday } from "date-fns";
-import { MapPin, ChevronRight, Sparkles, CheckCircle2, Trash2 } from "lucide-react";
+import { MapPin, ChevronRight, Sparkles, CheckCircle2, Trash2, Bus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn, formatCityState } from "@/lib/utils";
 import StatusDot from "@/components/StatusDot";
@@ -12,7 +12,14 @@ interface ShowCardProps {
   show: ShowWithTour;
   onDelete?: () => void;
   onRemoveFromTour?: () => void;
-  chip?: "tour" | "standalone" | "none";
+  /**
+   * Tour-name presentation:
+   * - "tour"       — colored pill inline with venue (Shows page, cross-tour browsing)
+   * - "byline"     — mono uppercase caption below city (Dashboard, V2 editorial voice)
+   * - "standalone" — muted "Standalone" pill (Shows page, untoured shows)
+   * - "none"       — nothing
+   */
+  chip?: "tour" | "standalone" | "none" | "byline";
 }
 
 const REVEAL_WIDTH = 88;
@@ -134,6 +141,10 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
     onDelete?.();
   };
 
+  // Venue is the focal point when no chip competes with it (Dashboard "byline"
+  // mode, or chipless usage). Bump up the type a step so it claims the card.
+  const venueIsHero = chip === "byline" || chip === "none";
+
   const cardContent = (
     <>
       <div className="flex items-center gap-3 sm:gap-5 min-w-0">
@@ -148,7 +159,14 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
         </div>
         <div className="border-l pl-3 sm:pl-5 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-medium text-foreground text-sm sm:text-base truncate min-w-0">{show.venue_name}</h3>
+            <h3
+              className={cn(
+                "font-medium text-foreground truncate min-w-0",
+                venueIsHero ? "text-base sm:text-lg" : "text-sm sm:text-base",
+              )}
+            >
+              {show.venue_name}
+            </h3>
             {chip === "tour" && show.tours?.name && (
               <span
                 className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0"
@@ -163,17 +181,17 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
               </span>
             )}
             {!show.is_reviewed && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-badge-new/10 px-2 py-0.5 text-[11px] font-medium text-badge-new shrink-0">
-                <Sparkles className="h-3 w-3" />
+              <span className="inline-flex items-center text-[10px] uppercase tracking-wider font-mono text-badge-new shrink-0">
+                <Sparkles className="h-3 w-3 mr-1" strokeWidth={2} />
                 New
               </span>
             )}
             {show.is_settled && (
               <span
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0"
-                style={{ backgroundColor: "var(--pastel-green-bg)", color: "var(--pastel-green-fg)" }}
+                className="inline-flex items-center text-[10px] uppercase tracking-wider font-mono shrink-0"
+                style={{ color: "var(--pastel-green-fg)" }}
               >
-                <CheckCircle2 className="h-3 w-3" />
+                <CheckCircle2 className="h-3 w-3 mr-1" strokeWidth={2} />
                 Settled
               </span>
             )}
@@ -182,9 +200,26 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
             <MapPin className="h-3 w-3 shrink-0" />
             <span className="truncate">{formatCityState(show.city)}</span>
           </div>
+          {/* Mobile-only byline (below city). Desktop renders it in the right column for balance.
+              The leading "↳" glyph acts as a typographic kicker — "extends from above" — and
+              creates a small editorial indent. Desktop drops the glyph since the byline lives
+              in its own right column there and the narrative tie is gone. */}
+          {chip === "byline" && show.tours?.name && (
+            <div className="sm:hidden mt-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80">
+              <Bus className="h-3 w-3 shrink-0" strokeWidth={1.75} aria-hidden />
+              <span className="truncate">{show.tours.name}</span>
+            </div>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
+        {/* Desktop-only byline — sits as a right-margin caption, balancing the card horizontally. */}
+        {chip === "byline" && show.tours?.name && (
+          <div className="hidden sm:flex items-center gap-1.5 max-w-[240px] mr-2 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80">
+            <Bus className="h-3 w-3 shrink-0" strokeWidth={1.75} aria-hidden />
+            <span className="truncate">{show.tours.name}</span>
+          </div>
+        )}
         <StatusDot show={show} />
         {onRemoveFromTour && (
           <button

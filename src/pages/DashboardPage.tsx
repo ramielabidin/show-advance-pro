@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { format, parseISO, isPast, isToday, subDays } from "date-fns";
+import { format, parseISO, isPast, isToday, subDays, differenceInCalendarDays } from "date-fns";
 import { Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +23,16 @@ const PAGE_SIZE = 3;
 function isUpcomingDate(date: string): boolean {
   const d = parseISO(date);
   return isToday(d) || !isPast(d);
+}
+
+// Section label for the featured (next/tonight) slot. Carries the urgency
+// cue that used to live in the colored "Tomorrow" pill on FeaturedShowCard.
+function featuredSectionLabel(showDate: string, todayStr: string): string {
+  if (showDate === todayStr) return "Tonight";
+  const days = differenceInCalendarDays(parseISO(showDate), parseISO(todayStr));
+  if (days === 1) return "Next Show · Tomorrow";
+  if (days > 1 && days < 7) return `Next Show · in ${days} days`;
+  return "Next Show";
 }
 
 export default function DashboardPage() {
@@ -225,9 +235,7 @@ export default function DashboardPage() {
         <>
           {featured && (
             <div>
-              <SectionLabel>
-                {featured.show.date === todayStr ? "Tonight" : "Next Show"}
-              </SectionLabel>
+              <SectionLabel>{featuredSectionLabel(featured.show.date, todayStr)}</SectionLabel>
               <FeaturedShowCard
                 show={featured.show}
                 mode={featured.mode}
@@ -262,7 +270,7 @@ export default function DashboardPage() {
                   >
                     <ShowCard
                       show={show}
-                      chip={show.tour_id ? "tour" : "none"}
+                      chip={show.tour_id ? "byline" : "none"}
                     />
                   </div>
                 ))}

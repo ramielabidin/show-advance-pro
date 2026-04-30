@@ -15,19 +15,12 @@ export function getShowStatus(show: Pick<Show, "date" | "advanced_at">): ShowSta
   return "pending";
 }
 
-type LiveStatus = Exclude<ShowStatus, "past">;
-
-export const STATUS_COLOR: Record<LiveStatus, string> = {
-  advanced: "var(--pastel-green-fg)",
-  pending: "var(--pastel-yellow-fg)",
-  urgent: "var(--pastel-red-fg)",
-};
-
-export const STATUS_LABEL: Record<LiveStatus, string> = {
-  advanced: "Advanced",
-  pending: "Not yet advanced",
-  urgent: "Within 7 days, not advanced",
-};
+// Visual grammar collapsed to two states: silent for advanced, single warm
+// dot for anything that needs attention. The four-value `ShowStatus` type
+// stays so callers that distinguish urgent/pending (e.g. future filters)
+// don't have to recompute it from raw fields.
+export const NEEDS_ATTENTION_COLOR = "var(--pastel-yellow-fg)";
+export const NEEDS_ATTENTION_LABEL = "Not yet advanced";
 
 interface StatusDotProps {
   show: Pick<Show, "date" | "advanced_at">;
@@ -36,18 +29,18 @@ interface StatusDotProps {
 
 export default function StatusDot({ show, className }: StatusDotProps) {
   const status = getShowStatus(show);
-  if (status === "past") return null;
+  if (status === "past" || status === "advanced") return null;
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span
           className={cn("inline-block h-2 w-2 rounded-full shrink-0", className)}
-          style={{ backgroundColor: STATUS_COLOR[status] }}
-          aria-label={STATUS_LABEL[status]}
+          style={{ backgroundColor: NEEDS_ATTENTION_COLOR }}
+          aria-label={NEEDS_ATTENTION_LABEL}
         />
       </TooltipTrigger>
-      <TooltipContent>{STATUS_LABEL[status]}</TooltipContent>
+      <TooltipContent>{NEEDS_ATTENTION_LABEL}</TooltipContent>
     </Tooltip>
   );
 }
