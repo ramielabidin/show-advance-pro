@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { format, parseISO, isPast, isToday } from "date-fns";
-import { MapPin, ChevronRight, Sparkles, CheckCircle2, Trash2, Truck } from "lucide-react";
+import { MapPin, ChevronRight, Sparkles, CheckCircle2, Trash2, Bus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn, formatCityState } from "@/lib/utils";
 import StatusDot from "@/components/StatusDot";
@@ -206,7 +206,7 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
               in its own right column there and the narrative tie is gone. */}
           {chip === "byline" && show.tours?.name && (
             <div className="sm:hidden mt-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80">
-              <Truck className="h-3 w-3 shrink-0" strokeWidth={1.75} aria-hidden />
+              <Bus className="h-3 w-3 shrink-0" strokeWidth={1.75} aria-hidden />
               <span className="truncate">{show.tours.name}</span>
             </div>
           )}
@@ -215,8 +215,9 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
       <div className="flex items-center gap-2 shrink-0 ml-2">
         {/* Desktop-only byline — sits as a right-margin caption, balancing the card horizontally. */}
         {chip === "byline" && show.tours?.name && (
-          <div className="hidden sm:block max-w-[240px] mr-2 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 truncate">
-            {show.tours.name}
+          <div className="hidden sm:flex items-center gap-1.5 max-w-[240px] mr-2 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80">
+            <Bus className="h-3 w-3 shrink-0" strokeWidth={1.75} aria-hidden />
+            <span className="truncate">{show.tours.name}</span>
           </div>
         )}
         <StatusDot show={show} />

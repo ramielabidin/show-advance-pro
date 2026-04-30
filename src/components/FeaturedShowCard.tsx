@@ -1,5 +1,5 @@
 import { format, parseISO, differenceInCalendarDays } from "date-fns";
-import { MapPin, Truck } from "lucide-react";
+import { MapPin, Bus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn, formatCityState } from "@/lib/utils";
@@ -89,7 +89,7 @@ export default function FeaturedShowCard({ show, mode, tour }: FeaturedShowCardP
                   already separates it from the body. */}
               {tour && (
                 <div className="sm:hidden mt-2 flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80">
-                  <Truck className="h-3 w-3 shrink-0" strokeWidth={1.75} aria-hidden />
+                  <Bus className="h-3 w-3 shrink-0" strokeWidth={1.75} aria-hidden />
                   <span className="truncate">{tour.name}</span>
                 </div>
               )}
@@ -108,8 +108,9 @@ export default function FeaturedShowCard({ show, mode, tour }: FeaturedShowCardP
             {/* Right meta column. Desktop: tour byline above the dot; mobile: just the dot. */}
             <div className="flex flex-col items-end gap-2 shrink-0">
               {tour && (
-                <div className="hidden sm:block max-w-[240px] mt-1 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 truncate">
-                  {tour.name}
+                <div className="hidden sm:flex items-center gap-1.5 max-w-[240px] mt-1 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80">
+                  <Bus className="h-3 w-3 shrink-0" strokeWidth={1.75} aria-hidden />
+                  <span className="truncate">{tour.name}</span>
                 </div>
               )}
               <StatusDot show={show} className="mt-1.5 sm:mt-0" />
