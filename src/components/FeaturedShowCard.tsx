@@ -83,8 +83,9 @@ export default function FeaturedShowCard({ show, mode, tour }: FeaturedShowCardP
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{formatCityState(show.city)}</span>
               </div>
+              {/* Mobile-only tour byline. Desktop renders it in the right column for balance. */}
               {tour && (
-                <div className="flex items-center gap-2 mt-2 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 truncate">
+                <div className="sm:hidden flex items-center gap-2 mt-2 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 truncate">
                   <span className="h-px w-3.5 bg-muted-foreground/30 shrink-0" aria-hidden />
                   <span className="truncate">{tour.name}</span>
                 </div>
@@ -101,8 +102,16 @@ export default function FeaturedShowCard({ show, mode, tour }: FeaturedShowCardP
               )}
             </div>
 
-            {/* Advance status dot */}
-            <StatusDot show={show} className="mt-1.5" />
+            {/* Right meta column. Desktop: tour byline above the dot; mobile: just the dot. */}
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              {tour && (
+                <div className="hidden sm:flex items-center gap-2 max-w-[240px] mt-1 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80">
+                  <span className="truncate">{tour.name}</span>
+                  <span className="h-px w-3.5 bg-muted-foreground/30 shrink-0" aria-hidden />
+                </div>
+              )}
+              <StatusDot show={show} className="mt-1.5 sm:mt-0" />
+            </div>
           </div>
         </CardContent>
         {hasAnyFooterData && (
