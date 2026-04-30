@@ -13,26 +13,8 @@ import {
   hasData,
   val,
   type ShowLike,
-  type ShowContactLike,
   type SectionKey,
 } from "./sections.ts";
-
-// Keep in sync with `src/lib/contactRoles.ts` (Deno can't import from src/).
-const ROLE_LABELS_EDGE: Record<string, string> = {
-  day_of_show: "Day of Show",
-  promoter: "Promoter",
-  production: "Production",
-  hospitality: "Hospitality",
-  custom: "Contact",
-};
-
-function roleLabelEdge(c: Pick<ShowContactLike, "role" | "role_label">): string {
-  if (c.role === "custom") {
-    const label = c.role_label?.trim();
-    return label || "Contact";
-  }
-  return ROLE_LABELS_EDGE[c.role] ?? "Contact";
-}
 
 // ---------------------------------------------------------------------------
 // Theme (flattened from src/index.css light-mode tokens)
@@ -352,47 +334,17 @@ function renderSchedule(show: RenderShow): string {
 }
 
 function renderContact(show: RenderShow): string {
-  const contacts = [...(show.show_contacts ?? [])].sort(
-    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
-  );
-  if (contacts.length === 0) return "";
+  const contacts = show.show_contacts ?? [];
   const dos = contacts.find((c) => c.role === "day_of_show");
-  const others = contacts.filter((c) => c !== dos);
-
-  let out = "";
-  if (dos) {
-    out += section(
-      "Day of Show Contact",
-      fieldTable([
-        { label: "Name", value: dos.name },
-        { label: "Phone", value: dos.phone, mono: true },
-        { label: "Email", value: dos.email, mono: true },
-      ]),
-    );
-  }
-  if (others.length > 0) {
-    const blocks = others
-      .map((c) => {
-        const table = fieldTable([
-          { label: "Name", value: c.name },
-          { label: "Phone", value: c.phone, mono: true },
-          { label: "Email", value: c.email, mono: true },
-          { label: "Notes", value: c.notes },
-        ]);
-        if (!table) return "";
-        return `
-          <div style="padding:12px 0;">
-            <div style="font-family:${T.sans};font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:${T.muted};padding-bottom:6px;">${escapeHtml(roleLabelEdge(c))}</div>
-            ${table}
-          </div>`;
-      })
-      .filter(Boolean)
-      .join("");
-    if (blocks) {
-      out += section(dos ? "Other Contacts" : "Contacts", blocks);
-    }
-  }
-  return out;
+  if (!dos) return "";
+  return section(
+    "Day of Show Contact",
+    fieldTable([
+      { label: "Name", value: dos.name },
+      { label: "Phone", value: dos.phone, mono: true },
+      { label: "Email", value: dos.email, mono: true },
+    ]),
+  );
 }
 
 function renderDeparture(show: RenderShow): string {
@@ -618,35 +570,6 @@ function renderPlainText(show: RenderShow, opts: RenderOptions): string {
     parts.push(plainSection("Schedule", lines));
   }
 
-  if (hasData(show, "contact")) {
-    const contacts = [...(show.show_contacts ?? [])].sort(
-      (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
-    );
-    const dos = contacts.find((c) => c.role === "day_of_show");
-    const others = contacts.filter((c) => c !== dos);
-    if (dos) {
-      parts.push(
-        plainSection("Day of Show Contact", [
-          plainField("Name", dos.name),
-          plainField("Phone", dos.phone),
-          plainField("Email", dos.email),
-        ]),
-      );
-    }
-    if (others.length > 0) {
-      const lines: string[] = [];
-      for (const c of others) {
-        lines.push(roleLabelEdge(c).toUpperCase());
-        lines.push(plainField("Name", c.name));
-        lines.push(plainField("Phone", c.phone));
-        lines.push(plainField("Email", c.email));
-        if (val(c.notes)) lines.push(plainField("Notes", c.notes));
-        lines.push("");
-      }
-      parts.push(plainSection(dos ? "Other Contacts" : "Contacts", lines));
-    }
-  }
-
   if (hasData(show, "departure")) {
     parts.push(
       plainSection("Departure", [
@@ -670,6 +593,19 @@ function renderPlainText(show: RenderShow, opts: RenderOptions): string {
     if (val(show.wifi_network)) lines.push(`WiFi Network: ${val(show.wifi_network)}`);
     if (val(show.wifi_password)) lines.push(`WiFi Password: ${val(show.wifi_password)}`);
     parts.push(plainSection("At The Venue", lines));
+  }
+
+  if (hasData(show, "contact")) {
+    const dos = (show.show_contacts ?? []).find((c) => c.role === "day_of_show");
+    if (dos) {
+      parts.push(
+        plainSection("Day of Show Contact", [
+          plainField("Name", dos.name),
+          plainField("Phone", dos.phone),
+          plainField("Email", dos.email),
+        ]),
+      );
+    }
   }
 
   if (hasData(show, "hotel")) {
@@ -715,13 +651,13 @@ export function renderDaysheetEmail(show: RenderShow, opts: RenderOptions = {}):
   blocks.push(renderPersonalMessage(opts.personalMessage, opts.senderName));
   blocks.push(renderKeyMoments(show));
 
-  // Order mirrors DaysheetGuestView: Schedule, Contact, Departure, Arrival,
-  // At The Venue, Accommodations, Guest List, Notes.
+  // Email section order: Schedule → Departure → Arrival → At The Venue →
+  // Day of Show Contact → Accommodations → Guest List → Notes.
   if (hasData(show, "schedule")) blocks.push(renderSchedule(show));
-  if (hasData(show, "contact")) blocks.push(renderContact(show));
   if (hasData(show, "departure")) blocks.push(renderDeparture(show));
   if (hasData(show, "loadIn") || hasData(show, "parking")) blocks.push(renderArrival(show));
   if (hasData(show, "greenRoom") || hasData(show, "wifi")) blocks.push(renderAtVenue(show));
+  if (hasData(show, "contact")) blocks.push(renderContact(show));
   if (hasData(show, "hotel")) blocks.push(renderHotel(show));
   if (parseGuestListEntries(show.guest_list_details).length > 0) blocks.push(renderGuestList(show));
   if (val(show.additional_info)) blocks.push(renderNotes(show));
@@ -772,12 +708,12 @@ export function renderDaysheetEmail(show: RenderShow, opts: RenderOptions = {}):
 // for telemetry / debugging — not used by the renderer itself.
 export const SECTION_ORDER: SectionKey[] = [
   "schedule",
-  "contact",
   "departure",
   "loadIn",
   "parking",
   "greenRoom",
   "wifi",
+  "contact",
   "hotel",
   "guestList",
 ];
