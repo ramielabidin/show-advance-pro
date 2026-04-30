@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Mic } from "lucide-react";
+import { Bed, Mic } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DayOfShowMode from "@/components/DayOfShow/DayOfShowMode";
@@ -103,7 +103,11 @@ export default function DayOfShowFloatingButton({ showId }: DayOfShowFloatingBut
         <span
           className={`inline-flex items-center justify-center ${isPoweredDown ? "h-6 w-6" : "h-7 w-7 rounded-full bg-white/20"} ${isFlickering ? "pill-powerdown-flicker" : ""}`}
         >
-          <Mic className={isPoweredDown ? "h-3.5 w-3.5" : "h-4 w-4"} strokeWidth={2.4} />
+          {isPoweredDown ? (
+            <Bed className="h-3.5 w-3.5" strokeWidth={2.2} />
+          ) : (
+            <Mic className="h-4 w-4" strokeWidth={2.4} />
+          )}
         </span>
         {!isPoweredDown && (
           <span className="text-sm font-medium tracking-tight">Day of Show</span>
