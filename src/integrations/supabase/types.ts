@@ -447,6 +447,7 @@ export type Database = {
           date: string
           departure_notes: string | null
           departure_time: string | null
+          dos_closed_at: string | null
           green_room_info: string | null
           guarantee: string | null
           guest_list_details: string | null
@@ -458,6 +459,7 @@ export type Database = {
           hotel_checkout_date: string | null
           hotel_confirmation: string | null
           hotel_name: string | null
+          hotel_phone: string | null
           id: string
           is_reviewed: boolean
           is_settled: boolean
@@ -499,6 +501,7 @@ export type Database = {
           date: string
           departure_notes?: string | null
           departure_time?: string | null
+          dos_closed_at?: string | null
           green_room_info?: string | null
           guarantee?: string | null
           guest_list_details?: string | null
@@ -510,6 +513,7 @@ export type Database = {
           hotel_checkout_date?: string | null
           hotel_confirmation?: string | null
           hotel_name?: string | null
+          hotel_phone?: string | null
           id?: string
           is_reviewed?: boolean
           is_settled?: boolean
@@ -551,6 +555,7 @@ export type Database = {
           date?: string
           departure_notes?: string | null
           departure_time?: string | null
+          dos_closed_at?: string | null
           green_room_info?: string | null
           guarantee?: string | null
           guest_list_details?: string | null
@@ -562,6 +567,7 @@ export type Database = {
           hotel_checkout_date?: string | null
           hotel_confirmation?: string | null
           hotel_name?: string | null
+          hotel_phone?: string | null
           id?: string
           is_reviewed?: boolean
           is_settled?: boolean

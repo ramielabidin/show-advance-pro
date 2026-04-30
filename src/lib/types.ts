@@ -59,6 +59,7 @@ export interface Show {
   settlement_guarantee: string | null;
   hotel_name: string | null;
   hotel_address: string | null;
+  hotel_phone: string | null;
   hotel_confirmation: string | null;
   hotel_checkin: string | null;
   hotel_checkin_date: string | null;
@@ -82,6 +83,7 @@ export interface Show {
   catering_details: string | null;
   is_reviewed: boolean;
   is_settled: boolean;
+  dos_closed_at: string | null;
   advanced_at: string | null;
   advance_imported_at: string | null;
   actual_tickets_sold: string | null;
