@@ -200,9 +200,13 @@ export default function ShowCard({ show, onDelete, onRemoveFromTour, chip = "non
             <MapPin className="h-3 w-3 shrink-0" />
             <span className="truncate">{formatCityState(show.city)}</span>
           </div>
-          {/* Mobile-only byline (below city). Desktop renders it in the right column for balance. */}
+          {/* Mobile-only byline (below city). Desktop renders it in the right column for balance.
+              The leading "↳" glyph acts as a typographic kicker — "extends from above" — and
+              creates a small editorial indent. Desktop drops the glyph since the byline lives
+              in its own right column there and the narrative tie is gone. */}
           {chip === "byline" && show.tours?.name && (
             <div className="sm:hidden mt-1.5 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 truncate">
+              <span aria-hidden className="mr-1.5">↳</span>
               {show.tours.name}
             </div>
           )}

@@ -83,9 +83,13 @@ export default function FeaturedShowCard({ show, mode, tour }: FeaturedShowCardP
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{formatCityState(show.city)}</span>
               </div>
-              {/* Mobile-only tour byline. Desktop renders it in the right column for balance. */}
+              {/* Mobile-only tour byline. Desktop renders it in the right column for balance.
+                  The leading "↳" glyph reads as a typographic kicker that ties the byline to
+                  the venue/city above. Desktop drops it since the right-column position
+                  already separates it from the body. */}
               {tour && (
                 <div className="sm:hidden mt-2 text-[10px] uppercase tracking-widest font-mono text-muted-foreground/80 truncate">
+                  <span aria-hidden className="mr-1.5">↳</span>
                   {tour.name}
                 </div>
               )}
